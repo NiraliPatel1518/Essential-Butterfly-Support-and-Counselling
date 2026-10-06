@@ -95,7 +95,8 @@ public class SecurityConfig {
                             "/api/auth/login",
                             "/api/admin/login",
                             "/api/password/forgot",
-                            "/api/password/reset"
+                            "/api/password/reset",
+                            "/api/contact"
                     ).permitAll()
                     .anyRequest().authenticated()
             )

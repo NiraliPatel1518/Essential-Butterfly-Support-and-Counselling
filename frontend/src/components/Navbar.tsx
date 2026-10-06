@@ -1,17 +1,17 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
 function Navbar() {
   const navigate = useNavigate();
 
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem("authToken")
-  );
+  const isLoggedIn =
+    !!localStorage.getItem("authToken") ||
+    !!localStorage.getItem("adminToken");
 
   const handleSignOut = () => {
     localStorage.removeItem("authToken");
-    setIsLoggedIn(false);
+    localStorage.removeItem("adminToken");
+
     navigate("/");
   };
 

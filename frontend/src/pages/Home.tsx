@@ -5,9 +5,7 @@ function Home() {
   return (
     <main className="home-page">
 
-      {/* =====================================================
-          HERO
-      ===================================================== */}
+      {/* HERO */}
 
       <section className="hero-section">
 
@@ -95,9 +93,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          INTRODUCTION
-      ===================================================== */}
+      {/* INTRODUCTION */}
 
       <section className="intro-section">
 
@@ -157,9 +153,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          EXPERIENCE
-      ===================================================== */}
+      {/* EXPERIENCE */}
 
       <section className="experience-section">
 
@@ -232,9 +226,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          SERVICES
-      ===================================================== */}
+      {/* SERVICEs */}
 
       <section className="services-section">
 
@@ -299,9 +291,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          CASEY
-      ===================================================== */}
+      {/* CASEY */}
 
       <section className="casey-section">
 
@@ -360,9 +350,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          WHY ESSENTIAL BUTTERFLY
-      ===================================================== */}
+      {/* WHY ESSENTIAL BUTTERFLY */}
 
       <section className="why-section">
 
@@ -412,9 +400,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          BOOKING
-      ===================================================== */}
+      {/* BOOKING */}
 
       <section className="booking-section">
 
@@ -478,9 +464,7 @@ function Home() {
       </section>
 
 
-      {/* =====================================================
-          FINAL CTA
-      ===================================================== */}
+      {/* FINAL CTA */}
 
       <section className="final-cta">
 
@@ -517,9 +501,7 @@ function Home() {
 }
 
 
-/* =====================================================
-   HERO FEATURE
-===================================================== */
+/* HERO FEATURE */
 
 function HeroFeature({
   icon,
@@ -548,9 +530,7 @@ function HeroFeature({
 }
 
 
-/* =====================================================
-   INFO CARD
-===================================================== */
+/* INFO CARD */
 
 function InfoCard({
   icon,
@@ -577,9 +557,7 @@ function InfoCard({
 }
 
 
-/* =====================================================
-   SERVICE ITEM
-===================================================== */
+/* SERVICE ITEM */
 
 function ServiceItem({
   title,
@@ -608,9 +586,7 @@ function ServiceItem({
 }
 
 
-/* =====================================================
-   BOOKING ITEM
-===================================================== */
+/* BOOKING ITEM */
 
 function BookingItem({
   title,

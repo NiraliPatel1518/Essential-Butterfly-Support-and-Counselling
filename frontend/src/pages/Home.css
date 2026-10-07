@@ -2536,3 +2536,8 @@
   }
 
 }
+
+/* Accessibility overrides: preserve the design without relying on tiny text. */
+.section-label { font-size: 13px; }
+.purple-button, .outline-button, .service-item, .info-card { font-size: 16px; }
+.home-page a:focus-visible, .home-page button:focus-visible { outline: 3px solid #ffbf00; outline-offset: 4px; }

@@ -459,3 +459,15 @@
     height: 44px;
   }
 }
+
+/* Accessible type and control sizing */
+.form-group label,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.success-message,
+.error-message { font-size: 16px; }
+.privacy-note { font-size: 14px; }
+.form-group input,
+.form-group select,
+.intake-form-card button[type="submit"] { min-height: 48px; }

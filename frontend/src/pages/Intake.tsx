@@ -71,7 +71,7 @@ function Intake() {
       setSubjectFocus("");
       setAdditionalNotes("");
 
-    } catch (err) {
+    } catch {
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
@@ -115,6 +115,7 @@ function Intake() {
               <input
                 id="fullName"
                 type="text"
+                autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -129,6 +130,7 @@ function Intake() {
               <input
                 id="guardianName"
                 type="text"
+                autoComplete="name"
                 value={guardianName}
                 onChange={(e) => setGuardianName(e.target.value)}
               />
@@ -142,6 +144,7 @@ function Intake() {
               <input
                 id="contactInfo"
                 type="text"
+                autoComplete="email"
                 value={contactInfo}
                 onChange={(e) => setContactInfo(e.target.value)}
                 required
@@ -230,18 +233,18 @@ function Intake() {
             </div>
 
             {error && (
-              <p className="error-message">
+              <p className="error-message" role="alert">
                 {error}
               </p>
             )}
 
             {message && (
-              <p className="success-message">
+              <p className="success-message" role="status" aria-live="polite">
                 {message}
               </p>
             )}
 
-            <button type="submit" disabled={isSubmitting}>
+            <button type="submit" disabled={isSubmitting} aria-disabled={isSubmitting}>
               {isSubmitting
                 ? "Submitting..."
                 : "Continue to Secure Intake"}

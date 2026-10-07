@@ -1,0 +1,37 @@
+/* Loaded last so accessible sizing and focus indicators remain consistent. */
+.section-label,
+.intake-eyebrow,
+.contact-eyebrow { font-size: .875rem; }
+
+.form-group label,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.contact-field label,
+.contact-field input,
+.contact-field select,
+.contact-field textarea,
+.success-message,
+.error-message,
+.contact-success,
+.contact-error { font-size: 1rem; }
+
+.privacy-note { font-size: .875rem; }
+
+.form-group input,
+.form-group select,
+.contact-field input,
+.contact-field select,
+.intake-form-card button[type="submit"],
+.contact-submit-button { min-height: 48px; }
+
+.home-page a:focus-visible,
+.home-page button:focus-visible,
+.detail-page a:focus-visible,
+.information-page a:focus-visible { outline: 3px solid #ffbf00; outline-offset: 4px; }
+
+@media (max-width: 600px) {
+  .footer-column a,
+  .footer-location,
+  .footer-brand > p { font-size: .95rem; }
+}

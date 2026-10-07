@@ -102,7 +102,7 @@ function Contact() {
 
               <div>
                 <h2>Email</h2>
-                <p>casey@essentialbutterfly.com</p>
+                <a href="mailto:casey@essentialbutterfly.com">casey@essentialbutterfly.com</a>
               </div>
             </div>
 
@@ -123,7 +123,7 @@ function Contact() {
 
               <div>
                 <h2>Phone</h2>
-                <p>(209) 258-0202</p>
+                <a href="tel:+12092582002">(209) 258-0202</a>
               </div>
             </div>
 
@@ -173,6 +173,7 @@ function Contact() {
                   name="fullName"
                   type="text"
                   placeholder="Your full name"
+                  autoComplete="name"
                   required
                 />
               </div>
@@ -187,6 +188,8 @@ function Contact() {
                   name="email"
                   type="email"
                   placeholder="you@example.com"
+                  autoComplete="email"
+                  inputMode="email"
                   required
                 />
               </div>
@@ -266,13 +269,13 @@ function Contact() {
             </div>
 
             {submitted && (
-              <p className="contact-success" role="status">
+              <p className="contact-success" role="status" aria-live="polite">
                 Thank you. Your message has been received.
               </p>
             )}
 
             {error && (
-              <p className="contact-success" role="alert">
+              <p className="contact-error" role="alert">
                 {error}
               </p>
             )}
@@ -281,6 +284,7 @@ function Contact() {
               type="submit"
               className="contact-submit-button"
               disabled={isSubmitting}
+              aria-disabled={isSubmitting}
             >
               {isSubmitting ? "Sending..." : "Send Message"}
             </button>

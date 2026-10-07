@@ -4,6 +4,7 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -20,6 +21,23 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminForgotPassword from "./pages/AdminForgotPassword";
 import AdminResetPassword from "./pages/AdminResetPassword";
+import { Accessibility, Privacy, Sitemap } from "./pages/InformationPages";
+import "./AccessibilityOverrides.css";
+
+function RouteFocus() {
+  const { pathname } = useLocation();
+  const announcement = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    document.getElementById("main-content")?.focus();
+    if (announcement.current) {
+      announcement.current.textContent = `Page changed to ${document.title}`;
+    }
+  }, [pathname]);
+
+  return <p ref={announcement} className="sr-only" aria-live="polite" />;
+}
 
 function AppLayout() {
   const location = useLocation();
@@ -28,9 +46,12 @@ function AppLayout() {
 
   return (
     <>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <RouteFocus />
       {!isAdminLogin && <Navbar />}
 
-      <Routes>
+      <div id="main-content" tabIndex={-1}>
+        <Routes>
         {/* Main Website */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -60,7 +81,11 @@ function AppLayout() {
           path="/admin/reset-password"
           element={<AdminResetPassword />}
         />
-      </Routes>
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/accessibility" element={<Accessibility />} />
+          <Route path="/sitemap" element={<Sitemap />} />
+        </Routes>
+      </div>
 
       {!isAdminLogin && <Footer />}
     </>

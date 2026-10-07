@@ -142,8 +142,8 @@ function Home() {
           <div className="intro-image-wrapper">
 
             <img
-              src="/images/support-mountain.jpg"
-              alt="Person sitting peacefully in a mountain landscape"
+              src="/images/purple-butterfly.jpeg"
+              alt="Purple butterfly with its wings open"
             />
 
           </div>

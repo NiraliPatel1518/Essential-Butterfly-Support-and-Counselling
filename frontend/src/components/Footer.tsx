@@ -11,7 +11,7 @@ function Footer() {
         <div className="footer-brand">
 
           <Link to="/" className="footer-logo">
-            <span className="footer-butterfly">🦋</span>
+            <img className="footer-butterfly" src="/images/butterfly-mark.png" alt="" />
 
             <span className="footer-brand-text">
               <strong>Essential Butterfly</strong>
@@ -47,12 +47,12 @@ function Footer() {
               Services & Supports
             </Link>
 
-            <a href="#resources">
-              Resources
-            </a>
-
             <Link to="/contact">
               Contact
+            </Link>
+
+            <Link to="/intake">
+              Secure Intake
             </Link>
 
           </nav>
@@ -81,31 +81,6 @@ function Footer() {
           </div>
 
 
-          <div className="social-links">
-
-            <a
-              href="#instagram"
-              aria-label="Instagram"
-            >
-              ◎
-            </a>
-
-            <a
-              href="#facebook"
-              aria-label="Facebook"
-            >
-              f
-            </a>
-
-            <a
-              href="#linkedin"
-              aria-label="LinkedIn"
-            >
-              in
-            </a>
-
-          </div>
-
         </div>
 
       </div>
@@ -126,13 +101,9 @@ function Footer() {
             Privacy Policy
           </Link>
 
-          <span>|</span>
-
           <Link to="/accessibility">
             Accessibility
           </Link>
-
-          <span>|</span>
 
           <Link to="/sitemap">
             Site Map

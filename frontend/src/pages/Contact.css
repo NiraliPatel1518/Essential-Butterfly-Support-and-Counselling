@@ -441,3 +441,29 @@
     transition: none;
   }
 }
+
+/* Accessible overrides */
+.contact-information-item a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #4b0082;
+  font-size: 16px;
+  font-weight: 650;
+  text-underline-offset: 3px;
+}
+
+.contact-error {
+  margin: -3px 0 18px;
+  padding: 11px 14px;
+  border: 1px solid #bd5368;
+  border-radius: 9px;
+  background: #fde8ed;
+  color: #7b1028;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .contact-information-item a { font-size: 16px; }
+}

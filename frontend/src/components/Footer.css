@@ -50,7 +50,8 @@
   width: 52px;
   height: 52px;
 
-  font-size: 42px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .footer-brand-text {
@@ -69,7 +70,7 @@
 
   color: #ddd0eb;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .footer-brand > p {
@@ -79,7 +80,7 @@
 
   color: #d9cee5;
 
-  font-size: 11px;
+  font-size: 15px;
   line-height: 1.65;
 }
 
@@ -93,7 +94,7 @@
 
   color: #d8a8ff;
 
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
 
   letter-spacing: 0.18em;
@@ -109,7 +110,7 @@
 .footer-location {
   color: #eee8f3;
 
-  font-size: 11px;
+  font-size: 14px;
 
   text-decoration: none;
 }
@@ -207,7 +208,7 @@
 
   color: #bfb1cc;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .footer-bottom nav {
@@ -220,7 +221,7 @@
 .footer-bottom span {
   color: #cfc1db;
 
-  font-size: 10px;
+  font-size: 12px;
 
   text-decoration: none;
 }

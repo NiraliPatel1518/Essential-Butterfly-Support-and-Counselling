@@ -20,11 +20,32 @@ import { mockFetch, renderPage } from "../test/helpers";
 // It does not click the submit button.
 async function fillRequiredFields() {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText(/client's full name/i), "Sam Lee");
-  await user.type(screen.getByLabelText(/contact information/i), "alex@mail.com");
-  await user.selectOptions(screen.getByLabelText(/preferred contact method/i), "email");
-  await user.type(screen.getByLabelText(/^overview/i), "Some overview");
-  await user.type(screen.getByLabelText(/support needs/i), "Some needs");
+
+  await user.type(
+    screen.getByLabelText(/client's full name/i),
+    "Sam Lee"
+  );
+
+  await user.selectOptions(
+    screen.getByLabelText(/preferred contact method/i),
+    "email"
+  );
+
+  await user.type(
+    screen.getByLabelText(/contact information/i),
+    "alex@mail.com"
+  );
+
+  await user.type(
+    screen.getByLabelText(/^overview/i),
+    "Some overview"
+  );
+
+  await user.type(
+    screen.getByLabelText(/support needs/i),
+    "Some needs"
+  );
+
   return user;
 }
 
@@ -50,7 +71,9 @@ describe("Intake page", () => {
 
     // Assert: login message is shown and backend is not called
     expect(
-      await screen.findByText("Please log in before submitting the intake form.")
+      await screen.findByText(
+        "Please log in before submitting the intake form."
+      )
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -67,7 +90,10 @@ describe("Intake page", () => {
   test("sends form with Bearer token and clears form on success", async () => {
     // Arrange: user is logged in, backend will answer "success"
     localStorage.setItem("authToken", "client.jwt");
-    const fetchMock = mockFetch(true, "Intake submission received successfully");
+    const fetchMock = mockFetch(
+      true,
+      "Intake submission received successfully"
+    );
     renderPage("/intake", <Intake />);
 
     // Act: fill the form and click submit
@@ -89,7 +115,9 @@ describe("Intake page", () => {
     expect(
       await screen.findByText(/submitted successfully/i)
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/client's full name/i)).toHaveValue("");
+    expect(
+      screen.getByLabelText(/client's full name/i)
+    ).toHaveValue("");
   });
 
   /*
@@ -108,7 +136,9 @@ describe("Intake page", () => {
     await user.click(submitButton());
 
     // Assert: backend error is shown on the page
-    expect(await screen.findByText("User account not found")).toBeInTheDocument();
+    expect(
+      await screen.findByText("User account not found")
+    ).toBeInTheDocument();
   });
 
   /*

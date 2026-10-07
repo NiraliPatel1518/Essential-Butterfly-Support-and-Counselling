@@ -877,3 +877,15 @@
   }
 
 }
+
+.login-session-expired {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #d8c8e8;
+  border-radius: 10px;
+  background: #f7f1fa;
+  color: #5b3d68;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}

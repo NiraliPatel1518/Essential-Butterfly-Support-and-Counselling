@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import SessionTimeout from "./components/SessionTimeout";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -46,6 +47,8 @@ function AppLayout() {
 
   return (
     <>
+      <SessionTimeout />
+
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <RouteFocus />
       {!isAdminLogin && <Navbar />}

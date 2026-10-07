@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,6 +12,8 @@ function Login() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const sessionExpired = searchParams.get("sessionExpired") === "true";
 
   const handleLogin = async () => {
     setError("");
@@ -146,6 +149,17 @@ function Login() {
             {/* NO FORM ELEMENT — LOGIN IS HANDLED BY BUTTON */}
 
             <div className="login-form">
+
+              {/* SESSION EXPIRED */}
+
+              {sessionExpired && (
+                <p
+                  role="status"
+                  className="login-session-expired"
+                >
+                  Your session has expired. Please log in again.
+                </p>
+              )}
 
               {/* EMAIL */}
 

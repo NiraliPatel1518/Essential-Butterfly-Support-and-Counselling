@@ -84,7 +84,7 @@ function Contact() {
           </p>
 
           <div className="contact-information">
-            <div className="contact-information-item">
+            <a className="contact-information-item" href="mailto:casey@essentialbutterfly.com">
               <div className="contact-icon">
                 <svg
                   viewBox="0 0 24 24"
@@ -100,13 +100,13 @@ function Contact() {
                 </svg>
               </div>
 
-              <div>
+              <span>
                 <h2>Email</h2>
-                <a href="mailto:casey@essentialbutterfly.com">casey@essentialbutterfly.com</a>
-              </div>
-            </div>
+                <span>casey@essentialbutterfly.com</span>
+              </span>
+            </a>
 
-            <div className="contact-information-item">
+            <a className="contact-information-item" href="tel:+12092582002">
               <div className="contact-icon">
                 <svg
                   viewBox="0 0 24 24"
@@ -121,13 +121,18 @@ function Contact() {
                 </svg>
               </div>
 
-              <div>
+              <span>
                 <h2>Phone</h2>
-                <a href="tel:+12092582002">(209) 258-0202</a>
-              </div>
-            </div>
+                <span>(209) 258-0202</span>
+              </span>
+            </a>
 
-            <div className="contact-information-item">
+            <a
+              className="contact-information-item"
+              href="https://www.google.com/maps/search/?api=1&query=Oakville%2C%20Ontario"
+              target="_blank"
+              rel="noreferrer"
+            >
               <div className="contact-icon">
                 <svg
                   viewBox="0 0 24 24"
@@ -143,11 +148,11 @@ function Contact() {
                 </svg>
               </div>
 
-              <div>
+              <span>
                 <h2>Location</h2>
-                <p>Oakville, Ontario</p>
-              </div>
-            </div>
+                <span>Oakville, Ontario <span className="sr-only">(opens in a new tab)</span></span>
+              </span>
+            </a>
           </div>
         </div>
 

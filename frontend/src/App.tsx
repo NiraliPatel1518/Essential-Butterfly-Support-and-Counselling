@@ -4,11 +4,14 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import SessionTimeout from "./components/SessionTimeout";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -22,71 +25,199 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminForgotPassword from "./pages/AdminForgotPassword";
 import AdminResetPassword from "./pages/AdminResetPassword";
-import { Accessibility, Privacy, Sitemap } from "./pages/InformationPages";
+import {
+  Accessibility,
+  Privacy,
+  Sitemap,
+} from "./pages/InformationPages";
+
 import "./AccessibilityOverrides.css";
 
 function RouteFocus() {
-  const { pathname } = useLocation();
+  const { pathname, search, hash, key } = useLocation();
   const announcement = useRef<HTMLParagraphElement>(null);
 
+  /*
+   * Prevent the browser from restoring the previous page's
+   * scroll position automatically.
+   */
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-    document.getElementById("main-content")?.focus();
-    if (announcement.current) {
-      announcement.current.textContent = `Page changed to ${document.title}`;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
     }
-  }, [pathname]);
 
-  return <p ref={announcement} className="sr-only" aria-live="polite" />;
+    return () => {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "auto";
+      }
+    };
+  }, []);
+
+  /*
+   * Run whenever the user visits a different route,
+   * including browser Back and Forward navigation.
+   */
+  useLayoutEffect(() => {
+    const mainContent =
+      document.getElementById("main-content");
+
+    // Move screen-reader focus without changing scroll position.
+    mainContent?.focus({
+      preventScroll: true,
+    });
+
+    // Reset all possible page-scrolling elements.
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    /*
+     * Run again after React finishes painting.
+     * This prevents browsers from restoring the old position.
+     */
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [pathname, search, hash, key]);
+
+  /*
+   * Announce the page change to screen-reader users.
+   */
+  useEffect(() => {
+    if (announcement.current) {
+      announcement.current.textContent =
+        `Page changed to ${document.title}`;
+    }
+  }, [pathname, search, hash, key]);
+
+  return (
+    <p
+      ref={announcement}
+      className="sr-only"
+      aria-live="polite"
+      aria-atomic="true"
+    />
+  );
 }
 
 function AppLayout() {
   const location = useLocation();
 
-  const isAdminLogin = location.pathname === "/admin-login";
+  const isAdminLogin =
+    location.pathname === "/admin-login";
 
   return (
     <>
-      <SessionTimeout />
+      <a
+        className="skip-link"
+        href="#main-content"
+      >
+        Skip to main content
+      </a>
 
-      <a className="skip-link" href="#main-content">Skip to main content</a>
       <RouteFocus />
+
       {!isAdminLogin && <Navbar />}
 
-      <div id="main-content" tabIndex={-1}>
+      <div
+        id="main-content"
+        tabIndex={-1}
+      >
         <Routes>
-        {/* Main Website */}
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/intake" element={<Intake />} />
+          {/* Main website */}
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-        {/* Client Account */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route
-          path="/forgot-password"
-          element={<ForgotPassword />}
-        />
-        <Route
-          path="/reset-password"
-          element={<ResetPassword />}
-        />
+          <Route
+            path="/about"
+            element={<About />}
+          />
 
-        {/* Admin Account */}
-        <Route path="/admin-login" element={<AdminLogin />} />
-        <Route
-          path="/admin/forgot-password"
-          element={<AdminForgotPassword />}
-        />
-        <Route
-          path="/admin/reset-password"
-          element={<AdminResetPassword />}
-        />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/accessibility" element={<Accessibility />} />
-          <Route path="/sitemap" element={<Sitemap />} />
+          <Route
+            path="/services"
+            element={<Services />}
+          />
+
+          <Route
+            path="/contact"
+            element={<Contact />}
+          />
+
+          <Route
+            path="/intake"
+            element={<Intake />}
+          />
+
+          {/* Client account */}
+          <Route
+            path="/login"
+            element={<Login />}
+          />
+
+          <Route
+            path="/signup"
+            element={<Signup />}
+          />
+
+          <Route
+            path="/forgot-password"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/reset-password"
+            element={<ResetPassword />}
+          />
+
+          {/* Administrator account */}
+          <Route
+            path="/admin-login"
+            element={<AdminLogin />}
+          />
+
+          <Route
+            path="/admin/forgot-password"
+            element={<AdminForgotPassword />}
+          />
+
+          <Route
+            path="/admin/reset-password"
+            element={<AdminResetPassword />}
+          />
+
+          {/* Information pages */}
+          <Route
+            path="/privacy"
+            element={<Privacy />}
+          />
+
+          <Route
+            path="/accessibility"
+            element={<Accessibility />}
+          />
+
+          <Route
+            path="/sitemap"
+            element={<Sitemap />}
+          />
         </Routes>
       </div>
 

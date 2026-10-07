@@ -24,6 +24,16 @@ function Signup() {
     setError("");
     setSuccess("");
 
+    const emailPattern =
+      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+    if (!emailPattern.test(email.trim())) {
+      setError(
+        "Please enter a valid email address such as name@example.com."
+      );
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -223,6 +233,8 @@ function Signup() {
                   autoComplete="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+                  title="Please enter an email address such as name@example.com"
                   required
                 />
 
@@ -449,7 +461,7 @@ function Signup() {
                 />
 
                 <path
-                  d="M20.5 20.5C26 32 35 33 35 26.5c0-5.5-5.5-8-11.5-8"
+                  d="M20.5 20.5C26 32 35 33 35 26.5c0-5.5-5-8-11.5-8"
                   stroke="currentColor"
                   strokeWidth="1.7"
                   strokeLinecap="round"

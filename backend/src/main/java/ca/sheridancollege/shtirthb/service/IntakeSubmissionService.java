@@ -31,6 +31,16 @@ public class IntakeSubmissionService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("User account not found"));
 
+        boolean alreadySubmitted =
+                intakeSubmissionRepository
+                        .existsByClientUserAndStatus(clientUser, "NEW");
+
+        if (alreadySubmitted) {
+            throw new IllegalArgumentException(
+                    "You already have an intake request under review. Please wait for it to be reviewed before submitting another request."
+            );
+        }
+
         IntakeSubmission submission = new IntakeSubmission(
                 clientUser,
                 request.getClientFullName(),

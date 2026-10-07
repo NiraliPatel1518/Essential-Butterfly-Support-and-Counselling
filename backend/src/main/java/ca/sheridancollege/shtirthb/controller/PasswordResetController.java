@@ -1,5 +1,7 @@
 package ca.sheridancollege.shtirthb.controller;
 
+import java.util.regex.Pattern;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,6 +12,11 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/password")
 public class PasswordResetController {
+
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile(
+                    "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+            );
 
     private final PasswordResetService passwordResetService;
 
@@ -24,13 +31,25 @@ public class PasswordResetController {
             @RequestParam String type,
             @RequestParam String email) {
 
+        String normalizedEmail = email.trim().toLowerCase();
+
+        if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
+
+            return ResponseEntity.badRequest()
+                    .body("Please enter a valid email address");
+        }
+
         if ("CLIENT".equalsIgnoreCase(type)) {
 
-            passwordResetService.requestClientPasswordReset(email);
+            passwordResetService.requestClientPasswordReset(
+                    normalizedEmail
+            );
 
         } else if ("ADMIN".equalsIgnoreCase(type)) {
 
-            passwordResetService.requestAdminPasswordReset(email);
+            passwordResetService.requestAdminPasswordReset(
+                    normalizedEmail
+            );
 
         } else {
 

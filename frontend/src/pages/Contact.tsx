@@ -24,6 +24,17 @@ function Contact() {
       message: String(formData.get("message") || ""),
     };
 
+    const emailPattern =
+      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+    if (!emailPattern.test(requestData.email.trim())) {
+      setError(
+        "Please enter a valid email address such as name@example.com."
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:8080/api/contact", {
         method: "POST",

@@ -23,6 +23,20 @@ function Intake() {
     setError("");
     setIsSubmitting(true);
 
+    const emailPattern =
+      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+    if (
+      preferredContact === "email" &&
+      !emailPattern.test(contactInfo.trim())
+    ) {
+      setError(
+        "Please enter a valid email address such as name@example.com."
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
     const token = localStorage.getItem("authToken");
 
     if (!token) {
@@ -60,7 +74,6 @@ function Intake() {
 
       setMessage("Your intake information has been submitted successfully.");
 
-      // Clear the form after successful submission
       setFullName("");
       setGuardianName("");
       setContactInfo("");
@@ -71,7 +84,7 @@ function Intake() {
       setSubjectFocus("");
       setAdditionalNotes("");
 
-    } catch {
+    } catch (err) {
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
@@ -115,7 +128,6 @@ function Intake() {
               <input
                 id="fullName"
                 type="text"
-                autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -130,7 +142,6 @@ function Intake() {
               <input
                 id="guardianName"
                 type="text"
-                autoComplete="name"
                 value={guardianName}
                 onChange={(e) => setGuardianName(e.target.value)}
               />
@@ -143,10 +154,46 @@ function Intake() {
 
               <input
                 id="contactInfo"
-                type="text"
-                autoComplete="email"
+                type={
+                  preferredContact === "email"
+                    ? "email"
+                    : "tel"
+                }
+                inputMode={
+                  preferredContact === "email"
+                    ? "email"
+                    : "numeric"
+                }
                 value={contactInfo}
-                onChange={(e) => setContactInfo(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  setContactInfo(
+                    preferredContact === "email"
+                      ? value
+                      : value.replace(/\D/g, "").slice(0, 10)
+                  );
+                }}
+                placeholder={
+                  preferredContact === "email"
+                    ? "you@example.com"
+                    : "10-digit phone number"
+                }
+                pattern={
+                  preferredContact === "email"
+                    ? "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+                    : "[0-9]{10}"
+                }
+                maxLength={
+                  preferredContact === "email"
+                    ? undefined
+                    : 10
+                }
+                title={
+                  preferredContact === "email"
+                    ? "Please enter an email address such as name@example.com"
+                    : "Please enter a 10-digit phone number"
+                }
                 required
               />
             </div>
@@ -233,18 +280,18 @@ function Intake() {
             </div>
 
             {error && (
-              <p className="error-message" role="alert">
+              <p className="error-message">
                 {error}
               </p>
             )}
 
             {message && (
-              <p className="success-message" role="status" aria-live="polite">
+              <p className="success-message">
                 {message}
               </p>
             )}
 
-            <button type="submit" disabled={isSubmitting} aria-disabled={isSubmitting}>
+            <button type="submit" disabled={isSubmitting}>
               {isSubmitting
                 ? "Submitting..."
                 : "Continue to Secure Intake"}

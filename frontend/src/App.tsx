@@ -7,6 +7,7 @@ import {
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import SessionTimeout from "./components/SessionTimeout";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -28,6 +29,8 @@ function AppLayout() {
 
   return (
     <>
+      <SessionTimeout />
+
       {!isAdminLogin && <Navbar />}
 
       <Routes>

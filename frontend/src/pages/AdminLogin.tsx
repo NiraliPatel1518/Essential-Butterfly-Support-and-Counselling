@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import "./Login.css";
 
 function AdminLogin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,6 +16,9 @@ function AdminLogin() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const sessionExpired =
+    searchParams.get("sessionExpired") === "true";
 
   const handleLogin = async () => {
     setError("");
@@ -34,7 +42,9 @@ function AdminLogin() {
       const data = await response.text();
 
       if (!response.ok) {
-        setError(data || "Invalid administrator email or password.");
+        setError(
+          data || "Invalid administrator email or password."
+        );
         return;
       }
 
@@ -146,6 +156,17 @@ function AdminLogin() {
 
 
             <div className="login-form">
+
+              {/* SESSION EXPIRED */}
+
+              {sessionExpired && (
+                <p
+                  role="status"
+                  className="login-session-expired"
+                >
+                  Your session has expired. Please log in again.
+                </p>
+              )}
 
               {/* EMAIL */}
 

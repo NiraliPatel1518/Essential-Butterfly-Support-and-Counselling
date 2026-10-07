@@ -8,6 +8,7 @@ import ca.sheridancollege.shtirthb.dto.LoginRequest;
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.service.AdminAuthService;
 import ca.sheridancollege.shtirthb.service.JwtService;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -40,7 +41,11 @@ public class AdminAuthController {
                     .body("Invalid admin email or password");
         }
 
-        String token = jwtService.generateToken(admin.getEmail());
+        String token =
+                jwtService.generateToken(
+                        admin.getEmail(),
+                        "ADMIN"
+                );
 
         return ResponseEntity.ok(token);
     }

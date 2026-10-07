@@ -8,6 +8,7 @@ import ca.sheridancollege.shtirthb.dto.LoginRequest;
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.service.AdminAuthService;
 import ca.sheridancollege.shtirthb.service.JwtService;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -29,19 +30,32 @@ public class AdminAuthController {
     public ResponseEntity<String> login(
             @Valid @RequestBody LoginRequest request) {
 
-        AdminUser admin = adminAuthService.authenticate(
-                request.getEmail(),
-                request.getPassword()
-        );
+        try {
 
-        if (admin == null) {
+            AdminUser admin = adminAuthService.authenticate(
+                    request.getEmail(),
+                    request.getPassword()
+            );
+
+            if (admin == null) {
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body("Invalid admin email or password");
+            }
+
+            String token =
+                    jwtService.generateToken(
+                            admin.getEmail(),
+                            "ADMIN"
+                    );
+
+            return ResponseEntity.ok(token);
+
+        } catch (IllegalStateException e) {
+
             return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid admin email or password");
+                    .status(HttpStatus.LOCKED)
+                    .body("Admin account is temporarily locked. Please use the password reset option.");
         }
-
-        String token = jwtService.generateToken(admin.getEmail());
-
-        return ResponseEntity.ok(token);
     }
 }

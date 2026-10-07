@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import ca.sheridancollege.shtirthb.dto.*;
 import ca.sheridancollege.shtirthb.service.AuthService;
 import ca.sheridancollege.shtirthb.service.JwtService;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -55,7 +56,11 @@ public class AuthController {
                     .body("Invalid email or password");
         }
 
-        String token = jwtService.generateToken(request.getEmail());
+        String token =
+                jwtService.generateToken(
+                        request.getEmail(),
+                        "CLIENT"
+                );
 
         return ResponseEntity.ok(token);
     }

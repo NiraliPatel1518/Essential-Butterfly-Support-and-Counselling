@@ -20,8 +20,19 @@ function AdminLogin() {
   const sessionExpired =
     searchParams.get("sessionExpired") === "true";
 
+  const emailPattern =
+    /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
   const handleLogin = async () => {
     setError("");
+
+    if (!emailPattern.test(email.trim())) {
+      setError(
+        "Please enter a valid email address such as name@example.com."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -90,8 +101,6 @@ function AdminLogin() {
 
         <div className="login-container">
 
-          {/* LEFT SIDE */}
-
           <div className="login-introduction">
 
             <div className="login-eyebrow">
@@ -136,9 +145,6 @@ function AdminLogin() {
 
           </div>
 
-
-          {/* ADMIN LOGIN CARD */}
-
           <div className="login-card">
 
             <div className="login-card-header">
@@ -154,10 +160,7 @@ function AdminLogin() {
 
             </div>
 
-
             <div className="login-form">
-
-              {/* SESSION EXPIRED */}
 
               {sessionExpired && (
                 <p
@@ -167,8 +170,6 @@ function AdminLogin() {
                   Your session has expired. Please log in again.
                 </p>
               )}
-
-              {/* EMAIL */}
 
               <div className="login-field">
 
@@ -191,6 +192,8 @@ function AdminLogin() {
                     type="email"
                     placeholder="admin@example.com"
                     autoComplete="email"
+                    pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+                    title="Please enter an email address such as name@example.com"
                     value={email}
                     onChange={(event) =>
                       setEmail(event.target.value)
@@ -200,9 +203,6 @@ function AdminLogin() {
                 </div>
 
               </div>
-
-
-              {/* PASSWORD */}
 
               <div className="login-field">
 
@@ -259,9 +259,6 @@ function AdminLogin() {
 
               </div>
 
-
-              {/* FORGOT PASSWORD */}
-
               <div className="forgot-password-row">
 
                 <Link to="/admin/forgot-password">
@@ -269,9 +266,6 @@ function AdminLogin() {
                 </Link>
 
               </div>
-
-
-              {/* ERROR */}
 
               {error && (
                 <p
@@ -281,9 +275,6 @@ function AdminLogin() {
                   {error}
                 </p>
               )}
-
-
-              {/* LOGIN BUTTON */}
 
               <button
                 type="button"
@@ -296,9 +287,6 @@ function AdminLogin() {
                   : "Log In"}
               </button>
 
-
-              {/* OR */}
-
               <div className="login-divider">
 
                 <span />
@@ -306,9 +294,6 @@ function AdminLogin() {
                 <span />
 
               </div>
-
-
-              {/* RETURN TO WEBSITE */}
 
               <Link
                 to="/"
@@ -328,9 +313,6 @@ function AdminLogin() {
 
               </Link>
 
-
-              {/* BUTTERFLY DIVIDER */}
-
               <div className="login-butterfly-divider">
 
                 <span />
@@ -342,9 +324,6 @@ function AdminLogin() {
                 <span />
 
               </div>
-
-
-              {/* CLIENT LOGIN */}
 
               <p className="login-signup">
 

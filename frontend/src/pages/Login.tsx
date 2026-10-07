@@ -15,8 +15,19 @@ function Login() {
 
   const sessionExpired = searchParams.get("sessionExpired") === "true";
 
+  const emailPattern =
+    /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
   const handleLogin = async () => {
     setError("");
+
+    if (!emailPattern.test(email.trim())) {
+      setError(
+        "Please enter a valid email address such as name@example.com."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -83,8 +94,6 @@ function Login() {
 
         <div className="login-container">
 
-          {/* LEFT SIDE */}
-
           <div className="login-introduction">
 
             <div className="login-eyebrow">
@@ -128,9 +137,6 @@ function Login() {
 
           </div>
 
-
-          {/* LOGIN CARD */}
-
           <div className="login-card">
 
             <div className="login-card-header">
@@ -145,12 +151,7 @@ function Login() {
 
             </div>
 
-
-            {/* NO FORM ELEMENT — LOGIN IS HANDLED BY BUTTON */}
-
             <div className="login-form">
-
-              {/* SESSION EXPIRED */}
 
               {sessionExpired && (
                 <p
@@ -160,8 +161,6 @@ function Login() {
                   Your session has expired. Please log in again.
                 </p>
               )}
-
-              {/* EMAIL */}
 
               <div className="login-field">
 
@@ -184,6 +183,8 @@ function Login() {
                     type="email"
                     placeholder="you@example.com"
                     autoComplete="email"
+                    pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+                    title="Please enter an email address such as name@example.com"
                     value={email}
                     onChange={(event) =>
                       setEmail(event.target.value)
@@ -193,9 +194,6 @@ function Login() {
                 </div>
 
               </div>
-
-
-              {/* PASSWORD */}
 
               <div className="login-field">
 
@@ -252,9 +250,6 @@ function Login() {
 
               </div>
 
-
-              {/* FORGOT PASSWORD */}
-
               <div className="forgot-password-row">
 
                 <Link to="/forgot-password">
@@ -262,9 +257,6 @@ function Login() {
                 </Link>
 
               </div>
-
-
-              {/* ERROR */}
 
               {error && (
                 <p
@@ -274,9 +266,6 @@ function Login() {
                   {error}
                 </p>
               )}
-
-
-              {/* LOGIN BUTTON */}
 
               <button
                 type="button"
@@ -289,9 +278,6 @@ function Login() {
                   : "Log In"}
               </button>
 
-
-              {/* OR */}
-
               <div className="login-divider">
 
                 <span />
@@ -299,9 +285,6 @@ function Login() {
                 <span />
 
               </div>
-
-
-              {/* VISITOR */}
 
               <Link
                 to="/"
@@ -321,9 +304,6 @@ function Login() {
 
               </Link>
 
-
-              {/* BUTTERFLY DIVIDER */}
-
               <div className="login-butterfly-divider">
 
                 <span />
@@ -335,9 +315,6 @@ function Login() {
                 <span />
 
               </div>
-
-
-              {/* SIGN UP */}
 
               <p className="login-signup">
 

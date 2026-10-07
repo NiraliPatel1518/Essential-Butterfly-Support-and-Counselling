@@ -23,6 +23,12 @@ public class AdminUser {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int failedLoginAttempts = 0;
+
+    @Column
+    private LocalDateTime lockedUntil;
+
     public AdminUser() {
     }
 
@@ -35,6 +41,8 @@ public class AdminUser {
         this.email = email;
         this.password = password;
         this.createdAt = LocalDateTime.now();
+        this.failedLoginAttempts = 0;
+        this.lockedUntil = null;
     }
 
     public Long getId() {
@@ -71,5 +79,21 @@ public class AdminUser {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public LocalDateTime getLockedUntil() {
+        return lockedUntil;
+    }
+
+    public void setLockedUntil(LocalDateTime lockedUntil) {
+        this.lockedUntil = lockedUntil;
     }
 }

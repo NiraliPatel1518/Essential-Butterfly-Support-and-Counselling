@@ -159,6 +159,10 @@ public class PasswordResetService {
             }
 
             admin.setPassword(encodedPassword);
+
+            admin.setFailedLoginAttempts(0);
+            admin.setLockedUntil(null);
+
             adminUserRepository.save(admin);
 
         } else {

@@ -30,7 +30,7 @@ import ca.sheridancollege.shtirthb.service.JwtService;
  *     Test 5 - Full name is empty -> 400
  *
  *   Login (4 tests)
- *     Test 6 - Correct details -> 200 with token
+ *     Test 6 - Correct details -> 200 with token (token has role CLIENT)
  *     Test 7 - Wrong details -> 401 Unauthorized
  *     Test 8 - Password is empty -> 400
  *     Test 9 - Token uses lowercase email (DISABLED: known bug)
@@ -169,12 +169,13 @@ class AuthControllerTest {
      * Checks that:
      *   - The response is 200 OK
      *   - The login token is sent back in the response
+     *   - The token is made with the role "CLIENT"
      */
     @Test
     void login_returns200_withToken_whenCredentialsCorrect() throws Exception {
-        // Arrange: login is correct, token service returns a fake token
+        // Arrange: login is correct, token service returns a fake CLIENT token
         when(authService.login(any())).thenReturn(true);
-        when(jwtService.generateToken("jane@mail.com")).thenReturn("FAKE.JWT.TOKEN");
+        when(jwtService.generateToken("jane@mail.com", "CLIENT")).thenReturn("FAKE.JWT.TOKEN");
 
         // Act: send a login request
         mvc.perform(post("/api/auth/login")
@@ -204,7 +205,7 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("Invalid email or password"));
 
-        verify(jwtService, never()).generateToken(anyString());
+        verify(jwtService, never()).generateToken(anyString(), anyString());
     }
 
     /*
@@ -229,7 +230,7 @@ class AuthControllerTest {
      * If a user logs in as "Jane@Mail.com", the token subject is "Jane@Mail.com",
      * but the database stores "jane@mail.com". The intake form then fails with
      * "User account not found".
-     * Fix in AuthController.login: generateToken(request.getEmail().trim().toLowerCase())
+     * Fix in AuthController.login: generateToken(request.getEmail().trim().toLowerCase(), "CLIENT")
      * Remove @Disabled after the fix.
      */
     @Disabled("Known bug - remove after fixing AuthController.login")
@@ -237,7 +238,7 @@ class AuthControllerTest {
     void login_tokenUsesNormalizedEmail() throws Exception {
         // Arrange: login is correct
         when(authService.login(any())).thenReturn(true);
-        when(jwtService.generateToken(anyString())).thenReturn("T");
+        when(jwtService.generateToken(anyString(), anyString())).thenReturn("T");
 
         // Act: log in with capital letters in the email
         mvc.perform(post("/api/auth/login")
@@ -246,6 +247,6 @@ class AuthControllerTest {
                 .andExpect(status().isOk());
 
         // Assert: the token should be made with the lowercase email
-        verify(jwtService).generateToken("jane@mail.com");
+        verify(jwtService).generateToken("jane@mail.com", "CLIENT");
     }
 }

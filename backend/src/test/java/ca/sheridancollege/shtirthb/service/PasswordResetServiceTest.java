@@ -38,7 +38,7 @@ import ca.sheridancollege.shtirthb.repository.PasswordResetTokenRepository;
  *
  *   Reset the password (6 tests)
  *     Test 6  - Valid client token -> password changed, token marked as used
- *     Test 7  - Valid admin token -> admin password changed
+ *     Test 7  - Valid admin token -> admin password changed and account unlocked
  *     Test 8  - Token does not exist -> reset fails
  *     Test 9  - Token already used -> reset fails
  *     Test 10 - Token expired -> reset fails
@@ -217,6 +217,7 @@ class PasswordResetServiceTest {
      * TEST 7: Successful admin password reset
      * Checks that:
      *   - The admin password is changed
+     *   - A locked admin account is unlocked (failed count back to 0)
      *   - The client table is not touched
      */
     @Test
@@ -226,6 +227,10 @@ class PasswordResetServiceTest {
                 "adm", "ADMIN", 1L, LocalDateTime.now().plusMinutes(10));
         AdminUser admin = new AdminUser("Administrator", "admin@test.com", "OLD");
 
+        // The admin was locked after 5 failed logins
+        admin.setFailedLoginAttempts(5);
+        admin.setLockedUntil(LocalDateTime.now().plusMinutes(10));
+
         when(tokenRepository.findByToken("adm")).thenReturn(Optional.of(token));
         when(adminUserRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(passwordEncoder.encode("NewPassword1")).thenReturn("NEW_ENCODED");
@@ -234,6 +239,10 @@ class PasswordResetServiceTest {
         assertTrue(passwordResetService.resetPassword("adm", "NewPassword1"));
         assertEquals("NEW_ENCODED", admin.getPassword());
         verify(clientUserRepository, never()).findById(any());
+
+        // Assert: the lock is removed
+        assertEquals(0, admin.getFailedLoginAttempts());
+        assertNull(admin.getLockedUntil());
     }
 
     /*

@@ -19,10 +19,11 @@ import ca.sheridancollege.shtirthb.service.JwtService;
  * UC-03: HTTP-level tests for /api/admin/login
  * Uses a standalone MockMvc (no database, no Spring context) so it runs fast.
  *
- * This file has 3 tests:
- *   Test 1 - Correct admin details -> 200 with token
+ * This file has 4 tests:
+ *   Test 1 - Correct admin details -> 200 with token (token has role ADMIN)
  *   Test 2 - Wrong admin details -> 401 Unauthorized
  *   Test 3 - Wrong email format -> 400
+ *   Test 4 - Account is locked after 5 failed attempts -> 423 Locked
  */
 class AdminAuthControllerTest {
 
@@ -48,13 +49,14 @@ class AdminAuthControllerTest {
      * Checks that:
      *   - The response is 200 OK
      *   - The admin token is sent back in the response
+     *   - The token is made with the role "ADMIN"
      */
     @Test
     void adminLogin_returns200_withToken_whenCredentialsCorrect() throws Exception {
         // Arrange: admin details are correct, token service returns a fake token
         AdminUser admin = new AdminUser("Administrator", "admin@test.com", "ENCODED");
         when(adminAuthService.authenticate("admin@test.com", "Admin@12345")).thenReturn(admin);
-        when(jwtService.generateToken("admin@test.com")).thenReturn("ADMIN.JWT");
+        when(jwtService.generateToken("admin@test.com", "ADMIN")).thenReturn("ADMIN.JWT");
 
         // Act: send an admin login request
         mvc.perform(post("/api/admin/login")
@@ -84,7 +86,7 @@ class AdminAuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("Invalid admin email or password"));
 
-        verify(jwtService, never()).generateToken(anyString());
+        verify(jwtService, never()).generateToken(anyString(), anyString());
     }
 
     /*
@@ -103,5 +105,30 @@ class AdminAuthControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(adminAuthService);
+    }
+
+    /*
+     * TEST 4: Admin account is locked
+     * Checks that:
+     *   - The response is 423 Locked
+     *   - The message tells the admin to use the password reset option
+     *   - No token is created
+     */
+    @Test
+    void adminLogin_returns423_whenAccountLocked() throws Exception {
+        // Arrange: service says the account is locked
+        when(adminAuthService.authenticate(anyString(), anyString()))
+                .thenThrow(new IllegalStateException("Admin account is temporarily locked"));
+
+        // Act: send an admin login request
+        mvc.perform(post("/api/admin/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"admin@test.com\",\"password\":\"Admin@12345\"}"))
+                // Assert: 423 and lock message
+                .andExpect(status().isLocked())
+                .andExpect(content().string(
+                        "Admin account is temporarily locked. Please use the password reset option."));
+
+        verify(jwtService, never()).generateToken(anyString(), anyString());
     }
 }

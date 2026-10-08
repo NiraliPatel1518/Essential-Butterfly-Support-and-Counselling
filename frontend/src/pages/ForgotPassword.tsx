@@ -20,8 +20,10 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       const response = await fetch(
-        `http://localhost:8080/api/password/forgot?type=CLIENT&email=${encodeURIComponent(email)}`,
+        `http://localhost:8080/api/password/forgot?type=CLIENT&email=${encodeURIComponent(normalizedEmail)}`,
         {
           method: "POST",
         }

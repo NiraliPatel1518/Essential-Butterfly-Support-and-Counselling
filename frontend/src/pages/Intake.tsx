@@ -55,7 +55,10 @@ function Intake() {
         body: JSON.stringify({
           clientFullName: fullName,
           parentGuardianName: guardianName,
-          contactInfo: contactInfo,
+          contactInfo:
+            preferredContact === "email"
+              ? contactInfo.trim().toLowerCase()
+              : contactInfo.trim(),
           preferredContactMethod: preferredContact,
           overview: overview,
           supportNeeds: supportNeeds,

@@ -51,7 +51,7 @@ function Signup() {
           },
           body: JSON.stringify({
             fullName,
-            email,
+            email: email.trim().toLowerCase(),
             password,
             confirmPassword,
           }),

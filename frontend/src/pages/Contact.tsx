@@ -19,7 +19,7 @@ function Contact() {
 
     const requestData = {
       fullName: String(formData.get("fullName") || ""),
-      email: String(formData.get("email") || ""),
+      email: String(formData.get("email") || "").trim().toLowerCase(),
       subject: String(formData.get("subject") || ""),
       message: String(formData.get("message") || ""),
     };

@@ -20,8 +20,10 @@ function AdminForgotPassword() {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       const response = await fetch(
-        `http://localhost:8080/api/password/forgot?type=ADMIN&email=${encodeURIComponent(email)}`,
+        `http://localhost:8080/api/password/forgot?type=ADMIN&email=${encodeURIComponent(normalizedEmail)}`,
         {
           method: "POST",
         }

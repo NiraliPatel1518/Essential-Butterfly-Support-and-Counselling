@@ -9,10 +9,10 @@ It lists our testing tools, our test cases, and where to see live test runs.
 
 | Area | Tool | Number of tests | Result |
 |---|---|---|---|
-| Frontend (React pages and components) | Vitest + React Testing Library | 46 | 46 pass |
-| Backend unit tests (services, JWT) | JUnit 5 + Mockito | 39 | 39 pass |
-| Backend API tests (controllers) | JUnit 5 + MockMvc | 29 | 28 pass, 1 skipped (known bug) |
-| **Total automated tests** | | **114** | **113 pass, 1 skipped** |
+| Frontend (React pages and components) | Vitest + React Testing Library | 55 | 55 pass |
+| Backend unit tests (services, JWT) | JUnit 5 + Mockito | 41 | 41 pass |
+| Backend API tests (controllers) | JUnit 5 + MockMvc | 36 | 35 pass, 1 skipped (known bug) |
+| **Total automated tests** | | **132** | **131 pass, 1 skipped** |
 | Mobile layout (manual) | Chrome DevTools + Playwright screenshots | 12 pages x 3 screen sizes | See "Manual testing" |
 
 ## Testing tools
@@ -119,7 +119,7 @@ Each test file has a comment above every test that explains what it checks.
 | API-AUTH-08 | Backend API | Password is empty | The response is 400 Bad Request | ✅ Pass |
 | API-AUTH-09 | Backend API | Token should use lowercase email | The login token is created with the lowercase email | ⏸️ Skipped (known bug) |
 
-### UC-02: Submit Intake Request or Contact Message (21 tests)
+### UC-02: Submit Intake Request or Contact Message (23 tests)
 
 | ID | Level | Test case | Expected result | Status |
 |---|---|---|---|---|
@@ -134,6 +134,8 @@ Each test file has a comment above every test that explains what it checks.
 | FE-CONTACT-05 | Frontend | Required fields are empty | Nothing is sent when the user clicks "Send Message" with an empty form | ✅ Pass |
 | BE-INTAKE-01 | Backend unit | Successful intake submission | The submission is linked to the logged-in user; All form fields are saved correctly; The status is "NEW" and the created date is set | ✅ Pass |
 | BE-INTAKE-02 | Backend unit | User account not found | The error "User account not found" is thrown; No submission is saved | ✅ Pass |
+| BE-INTAKE-03 | Backend unit | Intake already under review | If the user already has an intake with status "NEW",; No new submission is saved | ✅ Pass |
+| BE-INTAKE-04 | Backend unit | Duplicate check uses the correct user and status | Before saving, the service checks for this user's intakes with status "NEW"; When none exist, the new intake is saved | ✅ Pass |
 | BE-CONTACT-01 | Backend unit | Message is saved correctly | Extra spaces are removed from all fields; The email is saved in lowercase; The status is "NEW" and the created date is set | ✅ Pass |
 | BE-CONTACT-02 | Backend unit | Public visitor (not logged in) | The message is saved without a linked user account | ✅ Pass |
 | API-INTAKE-01 | Backend API | Successful intake submission | The response is 200 with "Intake submission received successfully"; The user's email is taken from the login token, not from the form | ✅ Pass |
@@ -219,6 +221,27 @@ Each test file has a comment above every test that explains what it checks.
 | API-PWD-06 | Backend API | Passwords do not match | The response is 400 with "Passwords do not match"; The service is never called | ✅ Pass |
 | API-PWD-07 | Backend API | Invalid or expired token | The response is 400 with the token error message | ✅ Pass |
 | API-PWD-08 | Backend API | New password too short | The response is 400 Bad Request; The service is never called (blocked by validation) | ✅ Pass |
+
+### All use cases: email and phone format checks (16 tests)
+
+| ID | Level | Test case | Expected result | Status |
+|---|---|---|---|---|
+| FE-VALID-01 | Frontend | Client Login with an incomplete email | The message "Please enter a valid email address such as name@example.com." is shown; No request is sent to the backend | ✅ Pass |
+| FE-VALID-02 | Frontend | Admin Login with an incomplete email | The same clear error is shown on the admin page; No request is sent to the backend | ✅ Pass |
+| FE-VALID-03 | Frontend | Signup with an incomplete email | The account is not created (no request is sent) | ✅ Pass |
+| FE-VALID-04 | Frontend | Contact message with an incomplete email | The message is not sent | ✅ Pass |
+| FE-VALID-05 | Frontend | Intake with an incomplete email | When "Email" is the contact method, "alex@mail" is not accepted; The intake form is not sent | ✅ Pass |
+| FE-VALID-06 | Frontend | Client Login with a correct email | A normal email is accepted and the login request is sent | ✅ Pass |
+| FE-VALID-07 | Frontend | Only numbers are kept | Typing "(416) 555-1234" keeps only "4165551234" | ✅ Pass |
+| FE-VALID-08 | Frontend | Maximum 10 digits | Extra digits after the 10th are not added | ✅ Pass |
+| FE-VALID-09 | Frontend | Second intake while the first is under review | The message from the backend is shown to the user | ✅ Pass |
+| API-EMAIL-01 | Backend API | Signup with an incomplete email | "jane@mail" (no .com) is rejected with 400; The account is not created | ✅ Pass |
+| API-EMAIL-02 | Backend API | Login with an incomplete email | "jane@mail" is rejected with 400; No login check and no token | ✅ Pass |
+| API-EMAIL-03 | Backend API | Contact message with an incomplete email | "jane@mail" is rejected with 400; The message is not saved | ✅ Pass |
+| API-EMAIL-04 | Backend API | Contact message with a correct email | A normal email like jane.doe+test@mail.co is accepted | ✅ Pass |
+| API-EMAIL-05 | Backend API | Forgot password with a wrong email | The response is 400 with "Please enter a valid email address"; No reset link is created | ✅ Pass |
+| API-EMAIL-06 | Backend API | Forgot password cleans the client email | "  Jane@Mail.COM " is changed to "jane@mail.com" before it is used | ✅ Pass |
+| API-EMAIL-07 | Backend API | Forgot password cleans the admin email | "ADMIN@Test.com" is changed to "admin@test.com" before it is used; Only the admin reset is called | ✅ Pass |
 
 ## Manual testing: mobile layout
 

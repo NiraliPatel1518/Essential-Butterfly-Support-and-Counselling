@@ -68,7 +68,7 @@ jobs:
 
       # contextLoads needs a real database, so only unit and controller tests run here
       - name: Run backend tests
-        run: ./mvnw -B test "-Dtest=*ServiceTest,*ControllerTest"
+        run: ./mvnw -B test "-Dtest=*ServiceTest,*ControllerTest,*ValidationTest"
 
       - name: Show backend test results
         if: always()

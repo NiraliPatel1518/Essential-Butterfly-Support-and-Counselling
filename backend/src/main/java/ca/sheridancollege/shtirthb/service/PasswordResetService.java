@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.service;
 
 import java.time.LocalDateTime;
@@ -5,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.model.ClientUser;
@@ -33,112 +35,87 @@ public class PasswordResetService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void requestClientPasswordReset(String email) {
-
+    @Transactional
+    public void requestPasswordReset(String email) {
         String normalizedEmail = email.trim().toLowerCase();
 
-        ClientUser user = clientUserRepository
+        ClientUser client = clientUserRepository
                 .findByEmail(normalizedEmail)
                 .orElse(null);
-
-        if (user == null) {
-            return;
-        }
-
-        createResetToken(
-                "CLIENT",
-                user.getId()
-        );
-    }
-
-    public void requestAdminPasswordReset(String email) {
-
-        String normalizedEmail = email.trim().toLowerCase();
 
         AdminUser admin = adminUserRepository
                 .findByEmail(normalizedEmail)
                 .orElse(null);
 
-        if (admin == null) {
+        // A single email must not identify two different account types.
+        // This also matches the ambiguity protection in authentication.
+        if (client != null && admin != null) {
             return;
         }
 
-        createResetToken(
-                "ADMIN",
-                admin.getId()
-        );
+        if (client != null) {
+            createResetToken("CLIENT", client.getId());
+        } else if (admin != null) {
+            createResetToken("ADMIN", admin.getId());
+        }
     }
 
-    private void createResetToken(
-            String userType,
-            Long userId) {
-
+    private void createResetToken(String userType, Long userId) {
         String token = UUID.randomUUID().toString();
 
         LocalDateTime expiresAt =
                 LocalDateTime.now().plusMinutes(30);
 
-        PasswordResetToken resetToken =
-                new PasswordResetToken(
-                        token,
-                        userType,
-                        userId,
-                        expiresAt
-                );
+        PasswordResetToken resetToken = new PasswordResetToken(
+                token,
+                userType,
+                userId,
+                expiresAt
+        );
 
         passwordResetTokenRepository.save(resetToken);
 
-        String resetPath =
-                "ADMIN".equals(userType)
-                        ? "/admin/reset-password?token="
-                        : "/reset-password?token=";
+        String resetLink =
+                "http://localhost:5173/reset-password?token=" + token;
 
+        // Development only: replace console output with email delivery
+        // before deploying the application.
         System.out.println();
         System.out.println("======================================");
         System.out.println("PASSWORD RESET REQUEST");
         System.out.println("User type: " + userType);
         System.out.println("Reset token: " + token);
-        System.out.println(
-                "Reset link: http://localhost:5173"
-                        + resetPath
-                        + token
-        );
+        System.out.println("Reset link: " + resetLink);
         System.out.println("Expires in: 30 minutes");
         System.out.println("======================================");
         System.out.println();
     }
 
-    public boolean resetPassword(
-            String token,
-            String newPassword) {
-
-        PasswordResetToken resetToken =
-                passwordResetTokenRepository
-                        .findByToken(token)
-                        .orElse(null);
-
-        if (resetToken == null) {
+    @Transactional
+    public boolean resetPassword(String token, String newPassword) {
+        if (token == null || token.isBlank()
+                || newPassword == null || newPassword.length() < 8) {
             return false;
         }
 
-        if (resetToken.isUsed()) {
+        PasswordResetToken resetToken = passwordResetTokenRepository
+                .findByToken(token)
+                .orElse(null);
+
+        if (resetToken == null || resetToken.isUsed()) {
             return false;
         }
 
-        if (resetToken.getExpiresAt()
-                .isBefore(LocalDateTime.now())) {
+        if (!resetToken.getExpiresAt().isAfter(LocalDateTime.now())) {
             return false;
         }
 
-        String encodedPassword =
-                passwordEncoder.encode(newPassword);
+        String encodedPassword = passwordEncoder.encode(newPassword);
 
         if ("CLIENT".equals(resetToken.getUserType())) {
-
-            ClientUser user =
-                    clientUserRepository
-                            .findById(resetToken.getUserId())
-                            .orElse(null);
+            ClientUser user = clientUserRepository
+                    .findById(resetToken.getUserId())
+                    .orElse(null);
 
             if (user == null) {
                 return false;
@@ -148,18 +125,15 @@ public class PasswordResetService {
             clientUserRepository.save(user);
 
         } else if ("ADMIN".equals(resetToken.getUserType())) {
-
-            AdminUser admin =
-                    adminUserRepository
-                            .findById(resetToken.getUserId())
-                            .orElse(null);
+            AdminUser admin = adminUserRepository
+                    .findById(resetToken.getUserId())
+                    .orElse(null);
 
             if (admin == null) {
                 return false;
             }
 
             admin.setPassword(encodedPassword);
-
             admin.setFailedLoginAttempts(0);
             admin.setLockedUntil(null);
 

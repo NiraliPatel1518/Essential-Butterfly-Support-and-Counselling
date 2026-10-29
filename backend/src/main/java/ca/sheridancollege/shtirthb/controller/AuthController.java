@@ -1,10 +1,15 @@
+
 package ca.sheridancollege.shtirthb.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import ca.sheridancollege.shtirthb.dto.*;
+import ca.sheridancollege.shtirthb.dto.LoginRequest;
+import ca.sheridancollege.shtirthb.dto.SignupRequest;
 import ca.sheridancollege.shtirthb.service.AuthService;
 import ca.sheridancollege.shtirthb.service.JwtService;
 
@@ -29,38 +34,28 @@ public class AuthController {
     public ResponseEntity<String> signup(
             @Valid @RequestBody SignupRequest request) {
 
-        try {
-            authService.signup(request);
+        authService.signup(request);
 
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body("Account created successfully");
-
-        } catch (IllegalArgumentException e) {
-
-            return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
-        }
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body("Account created successfully");
     }
 
     @PostMapping("/login")
     public ResponseEntity<String> login(
             @Valid @RequestBody LoginRequest request) {
 
-        boolean authenticated = authService.login(request);
+        AuthService.AuthenticatedAccount account =
+                authService.authenticate(request);
 
-        if (!authenticated) {
+        if (account == null) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid email or password");
         }
 
-        String token =
-                jwtService.generateToken(
-                        request.getEmail(),
-                        "CLIENT"
-                );
+        String token = jwtService.generateToken(
+                account.email(), account.role());
 
         return ResponseEntity.ok(token);
     }

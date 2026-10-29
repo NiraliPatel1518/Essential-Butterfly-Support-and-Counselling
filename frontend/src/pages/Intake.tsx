@@ -1,4 +1,6 @@
+
 import { useState } from "react";
+import { apiUrl } from "../api/api";
 import "./intake.css";
 
 function Intake() {
@@ -46,7 +48,7 @@ function Intake() {
     }
 
     try {
-      const response = await fetch("http://localhost:8080/api/intake", {
+      const response = await fetch(apiUrl("/api/intake"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,11 +62,11 @@ function Intake() {
               ? contactInfo.trim().toLowerCase()
               : contactInfo.trim(),
           preferredContactMethod: preferredContact,
-          overview: overview,
-          supportNeeds: supportNeeds,
-          respiteGoals: respiteGoals,
-          subjectFocus: subjectFocus,
-          additionalNotes: additionalNotes,
+          overview,
+          supportNeeds,
+          respiteGoals,
+          subjectFocus,
+          additionalNotes,
         }),
       });
 
@@ -86,8 +88,7 @@ function Intake() {
       setRespiteGoals("");
       setSubjectFocus("");
       setAdditionalNotes("");
-
-    } catch (err) {
+    } catch {
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
@@ -99,7 +100,6 @@ function Intake() {
   return (
     <main className="intake-page">
       <section className="intake-container">
-
         <div className="intake-intro">
           <p className="intake-eyebrow">Secure Intake Handoff</p>
 
@@ -122,7 +122,6 @@ function Intake() {
 
         <div className="intake-form-card">
           <form onSubmit={handleSubmit}>
-
             <div className="form-group">
               <label htmlFor="fullName">
                 Client's Full Name <span>*</span>
@@ -138,9 +137,7 @@ function Intake() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="guardianName">
-                Parent/Guardian Name
-              </label>
+              <label htmlFor="guardianName">Parent/Guardian Name</label>
 
               <input
                 id="guardianName"
@@ -157,16 +154,8 @@ function Intake() {
 
               <input
                 id="contactInfo"
-                type={
-                  preferredContact === "email"
-                    ? "email"
-                    : "tel"
-                }
-                inputMode={
-                  preferredContact === "email"
-                    ? "email"
-                    : "numeric"
-                }
+                type={preferredContact === "email" ? "email" : "tel"}
+                inputMode={preferredContact === "email" ? "email" : "numeric"}
                 value={contactInfo}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -187,11 +176,7 @@ function Intake() {
                     ? "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
                     : "[0-9]{10}"
                 }
-                maxLength={
-                  preferredContact === "email"
-                    ? undefined
-                    : 10
-                }
+                maxLength={preferredContact === "email" ? undefined : 10}
                 title={
                   preferredContact === "email"
                     ? "Please enter an email address such as name@example.com"
@@ -246,9 +231,7 @@ function Intake() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="respiteGoals">
-                Goals for Respite
-              </label>
+              <label htmlFor="respiteGoals">Goals for Respite</label>
 
               <textarea
                 id="respiteGoals"
@@ -258,9 +241,7 @@ function Intake() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="subjectFocus">
-                Subject Focus
-              </label>
+              <label htmlFor="subjectFocus">Subject Focus</label>
 
               <input
                 id="subjectFocus"
@@ -271,9 +252,7 @@ function Intake() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="additionalNotes">
-                Additional Notes
-              </label>
+              <label htmlFor="additionalNotes">Additional Notes</label>
 
               <textarea
                 id="additionalNotes"
@@ -282,17 +261,9 @@ function Intake() {
               />
             </div>
 
-            {error && (
-              <p className="error-message">
-                {error}
-              </p>
-            )}
+            {error && <p className="error-message">{error}</p>}
 
-            {message && (
-              <p className="success-message">
-                {message}
-              </p>
-            )}
+            {message && <p className="success-message">{message}</p>}
 
             <button type="submit" disabled={isSubmitting}>
               {isSubmitting
@@ -301,13 +272,11 @@ function Intake() {
             </button>
 
             <p className="privacy-note">
-              Your information is handled securely and is only used
-              to understand your support needs.
+              Your information is handled securely and is only used to
+              understand your support needs.
             </p>
-
           </form>
         </div>
-
       </section>
     </main>
   );

@@ -1,5 +1,7 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { apiUrl } from "../api/api";
 import "./ForgotPassword.css";
 
 function ForgotPassword() {
@@ -23,10 +25,12 @@ function ForgotPassword() {
       const normalizedEmail = email.trim().toLowerCase();
 
       const response = await fetch(
-        `http://localhost:8080/api/password/forgot?type=CLIENT&email=${encodeURIComponent(normalizedEmail)}`,
-        {
-          method: "POST",
-        }
+        apiUrl(
+          `/api/password/forgot?email=${encodeURIComponent(
+            normalizedEmail
+          )}`
+        ),
+        { method: "POST" }
       );
 
       const data = await response.text();
@@ -37,12 +41,10 @@ function ForgotPassword() {
       }
 
       setMessage(
-        "If an account exists with this email, a password reset link has been generated."
+        "If an account exists with this email, a password reset link has been generated. Please check the instructions provided by the application."
       );
-
     } catch (error) {
       console.error(error);
-
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
@@ -55,7 +57,6 @@ function ForgotPassword() {
     <main className="forgot-password-page">
       <section className="forgot-password-card">
         <div className="forgot-password-content">
-
           <span className="forgot-password-eyebrow">
             ACCOUNT RECOVERY
           </span>
@@ -63,20 +64,18 @@ function ForgotPassword() {
           <h1>Forgot your password?</h1>
 
           <p className="forgot-password-description">
-            Enter the email address associated with your account and
-            we'll help you reset your password.
+            Enter the email address associated with your account
+            and we'll help you reset your password.
           </p>
 
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              handleSubmit();
+              void handleSubmit();
             }}
           >
             <div className="forgot-password-field">
-              <label htmlFor="email">
-                Email Address
-              </label>
+              <label htmlFor="email">Email Address</label>
 
               <input
                 id="email"
@@ -85,18 +84,25 @@ function ForgotPassword() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your email"
                 autoComplete="email"
+                required
                 disabled={loading}
               />
             </div>
 
             {error && (
-              <p className="forgot-password-error">
+              <p
+                className="forgot-password-error"
+                role="alert"
+              >
                 {error}
               </p>
             )}
 
             {message && (
-              <p className="forgot-password-success">
+              <p
+                className="forgot-password-success"
+                role="status"
+              >
                 {message}
               </p>
             )}
@@ -106,9 +112,7 @@ function ForgotPassword() {
               className="forgot-password-button"
               disabled={loading}
             >
-              {loading
-                ? "Sending..."
-                : "Send Reset Link"}
+              {loading ? "Processing..." : "Send Reset Link"}
             </button>
           </form>
 
@@ -116,9 +120,8 @@ function ForgotPassword() {
             to="/login"
             className="forgot-password-back"
           >
-            ← Back to Client Login
+            ← Back to Login
           </Link>
-
         </div>
       </section>
     </main>

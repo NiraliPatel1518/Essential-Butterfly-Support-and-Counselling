@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiUrl } from "../api/api";
 import "./Signup.css";
 
 function Signup() {
@@ -43,7 +45,7 @@ function Signup() {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/auth/signup",
+        apiUrl("/api/auth/signup"),
         {
           method: "POST",
           headers: {
@@ -72,6 +74,7 @@ function Signup() {
       }, 1000);
     } catch (error) {
       console.error(error);
+
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
@@ -82,7 +85,6 @@ function Signup() {
 
   return (
     <main className="signup-page">
-
       <div className="signup-bg-shape signup-bg-shape-left" />
       <div className="signup-bg-shape signup-bg-shape-right" />
       <div className="signup-bg-wave" />
@@ -102,9 +104,7 @@ function Signup() {
       />
 
       <div className="signup-container">
-
         <section className="signup-intro">
-
           <div className="signup-eyebrow">
             GET STARTED
           </div>
@@ -121,7 +121,6 @@ function Signup() {
           </p>
 
           <div className="signup-support-box">
-
             <div className="signup-support-icon">
               <span />
             </div>
@@ -132,38 +131,28 @@ function Signup() {
               tools and resources, and a space
               to continue your journey.
             </p>
-
           </div>
-
         </section>
 
         <section className="signup-card">
-
           <div className="signup-card-header">
-
-            <h2>
-              Create an Account
-            </h2>
+            <h2>Create an Account</h2>
 
             <p>
               Join to access your personalized support space.
             </p>
-
           </div>
 
           <form
             className="signup-form"
             onSubmit={handleSubmit}
           >
-
             <div className="signup-field">
-
               <label htmlFor="signup-full-name">
                 Full name
               </label>
 
               <div className="signup-input-wrapper">
-
                 <span
                   className="signup-input-icon"
                   aria-hidden="true"
@@ -190,19 +179,15 @@ function Signup() {
                   onChange={(event) => setFullName(event.target.value)}
                   required
                 />
-
               </div>
-
             </div>
 
             <div className="signup-field">
-
               <label htmlFor="signup-email">
                 Email address
               </label>
 
               <div className="signup-input-wrapper">
-
                 <span
                   className="signup-input-icon"
                   aria-hidden="true"
@@ -237,19 +222,15 @@ function Signup() {
                   title="Please enter an email address such as name@example.com"
                   required
                 />
-
               </div>
-
             </div>
 
             <div className="signup-field">
-
               <label htmlFor="signup-password">
                 Create a password
               </label>
 
               <div className="signup-input-wrapper">
-
                 <span
                   className="signup-input-icon"
                   aria-hidden="true"
@@ -291,27 +272,21 @@ function Signup() {
                     setShowPassword((current) => !current)
                   }
                   aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
+                    showPassword ? "Hide password" : "Show password"
                   }
                   aria-pressed={showPassword}
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
-
               </div>
-
             </div>
 
             <div className="signup-field">
-
               <label htmlFor="signup-confirm-password">
                 Confirm password
               </label>
 
               <div className="signup-input-wrapper">
-
                 <span
                   className="signup-input-icon"
                   aria-hidden="true"
@@ -338,11 +313,7 @@ function Signup() {
                 <input
                   id="signup-confirm-password"
                   name="confirmPassword"
-                  type={
-                    showConfirmPassword
-                      ? "text"
-                      : "password"
-                  }
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
                   autoComplete="new-password"
                   value={confirmPassword}
@@ -359,21 +330,16 @@ function Signup() {
                     setShowConfirmPassword((current) => !current)
                   }
                   aria-label={
-                    showConfirmPassword
-                      ? "Hide password"
-                      : "Show password"
+                    showConfirmPassword ? "Hide password" : "Show password"
                   }
                   aria-pressed={showConfirmPassword}
                 >
                   {showConfirmPassword ? "Hide" : "Show"}
                 </button>
-
               </div>
-
             </div>
 
             <label className="signup-terms">
-
               <input
                 type="checkbox"
                 name="terms"
@@ -392,7 +358,6 @@ function Signup() {
                   Terms of Use
                 </a>
               </span>
-
             </label>
 
             {error && (
@@ -426,11 +391,9 @@ function Signup() {
             >
               {loading ? "Creating Account..." : "Create Account"}
             </button>
-
           </form>
 
           <div className="signup-divider">
-
             <span />
 
             <div className="signup-divider-butterfly">
@@ -477,20 +440,17 @@ function Signup() {
             </div>
 
             <span />
-
           </div>
 
           <p className="signup-login-prompt">
             Already have an account?{" "}
+
             <Link to="/login">
               Log in
             </Link>
           </p>
-
         </section>
-
       </div>
-
     </main>
   );
 }

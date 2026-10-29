@@ -1,5 +1,7 @@
+
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { apiUrl } from "../api/api";
 import "./Contact.css";
 
 function Contact() {
@@ -36,7 +38,7 @@ function Contact() {
     }
 
     try {
-      const response = await fetch("http://localhost:8080/api/contact", {
+      const response = await fetch(apiUrl("/api/contact"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +97,10 @@ function Contact() {
           </p>
 
           <div className="contact-information">
-            <a className="contact-information-item" href="mailto:casey@essentialbutterfly.com">
+            <a
+              className="contact-information-item"
+              href="mailto:casey@essentialbutterfly.com"
+            >
               <div className="contact-icon">
                 <svg
                   viewBox="0 0 24 24"
@@ -161,7 +166,10 @@ function Contact() {
 
               <span>
                 <h2>Location</h2>
-                <span>Oakville, Ontario <span className="sr-only">(opens in a new tab)</span></span>
+                <span>
+                  Oakville, Ontario{" "}
+                  <span className="sr-only">(opens in a new tab)</span>
+                </span>
               </span>
             </a>
           </div>
@@ -226,36 +234,15 @@ function Contact() {
                   <option value="" disabled>
                     Select a subject
                   </option>
-
-                  <option value="general-inquiry">
-                    General Inquiry
-                  </option>
-
-                  <option value="services">
-                    Questions About Services
-                  </option>
-
-                  <option value="respite">
-                    Respite Support
-                  </option>
-
-                  <option value="counselling">
-                    Counselling
-                  </option>
-
-                  <option value="coaching">
-                    Coaching
-                  </option>
-
-                  <option value="other">
-                    Other
-                  </option>
+                  <option value="general-inquiry">General Inquiry</option>
+                  <option value="services">Questions About Services</option>
+                  <option value="respite">Respite Support</option>
+                  <option value="counselling">Counselling</option>
+                  <option value="coaching">Coaching</option>
+                  <option value="other">Other</option>
                 </select>
 
-                <span
-                  className="contact-select-arrow"
-                  aria-hidden="true"
-                >
+                <span className="contact-select-arrow" aria-hidden="true">
                   <svg
                     viewBox="0 0 24 24"
                     fill="none"

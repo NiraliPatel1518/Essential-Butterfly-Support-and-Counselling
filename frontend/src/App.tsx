@@ -1,7 +1,9 @@
+
 import {
   BrowserRouter,
   Routes,
   Route,
+  Navigate,
   useLocation,
 } from "react-router-dom";
 import {
@@ -12,6 +14,7 @@ import {
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -20,11 +23,9 @@ import Contact from "./pages/Contact";
 import Intake from "./pages/Intake";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import AdminLogin from "./pages/AdminLogin";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import AdminForgotPassword from "./pages/AdminForgotPassword";
-import AdminResetPassword from "./pages/AdminResetPassword";
+
 import {
   Accessibility,
   Privacy,
@@ -37,10 +38,6 @@ function RouteFocus() {
   const { pathname, search, hash, key } = useLocation();
   const announcement = useRef<HTMLParagraphElement>(null);
 
-  /*
-   * Prevent the browser from restoring the previous page's
-   * scroll position automatically.
-   */
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
@@ -53,20 +50,11 @@ function RouteFocus() {
     };
   }, []);
 
-  /*
-   * Run whenever the user visits a different route,
-   * including browser Back and Forward navigation.
-   */
   useLayoutEffect(() => {
-    const mainContent =
-      document.getElementById("main-content");
+    const mainContent = document.getElementById("main-content");
 
-    // Move screen-reader focus without changing scroll position.
-    mainContent?.focus({
-      preventScroll: true,
-    });
+    mainContent?.focus({ preventScroll: true });
 
-    // Reset all possible page-scrolling elements.
     window.scrollTo({
       top: 0,
       left: 0,
@@ -76,10 +64,6 @@ function RouteFocus() {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
 
-    /*
-     * Run again after React finishes painting.
-     * This prevents browsers from restoring the old position.
-     */
     const frame = window.requestAnimationFrame(() => {
       window.scrollTo({
         top: 0,
@@ -96,9 +80,6 @@ function RouteFocus() {
     };
   }, [pathname, search, hash, key]);
 
-  /*
-   * Announce the page change to screen-reader users.
-   */
   useEffect(() => {
     if (announcement.current) {
       announcement.current.textContent =
@@ -119,109 +100,101 @@ function RouteFocus() {
 function AppLayout() {
   const location = useLocation();
 
-  const isAdminLogin =
-    location.pathname === "/admin-login";
-
   return (
     <>
-      <a
-        className="skip-link"
-        href="#main-content"
-      >
+      <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
 
       <RouteFocus />
 
-      {!isAdminLogin && <Navbar />}
+      <Navbar />
 
-      <div
-        id="main-content"
-        tabIndex={-1}
-      >
+      <div id="main-content" tabIndex={-1}>
         <Routes>
           {/* Main website */}
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/intake" element={<Intake />} />
+
+          {/* Unified login */}
+          <Route path="/login" element={<Login />} />
           <Route
-            path="/"
-            element={<Home />}
+            path="/admin-login"
+            element={<Navigate to="/login" replace />}
           />
 
-          <Route
-            path="/about"
-            element={<About />}
-          />
-
-          <Route
-            path="/services"
-            element={<Services />}
-          />
-
-          <Route
-            path="/contact"
-            element={<Contact />}
-          />
-
-          <Route
-            path="/intake"
-            element={<Intake />}
-          />
-
-          {/* Client account */}
-          <Route
-            path="/login"
-            element={<Login />}
-          />
-
-          <Route
-            path="/signup"
-            element={<Signup />}
-          />
-
+          {/* Client account pages */}
+          <Route path="/signup" element={<Signup />} />
           <Route
             path="/forgot-password"
             element={<ForgotPassword />}
           />
-
           <Route
             path="/reset-password"
             element={<ResetPassword />}
           />
 
-          {/* Administrator account */}
-          <Route
-            path="/admin-login"
-            element={<AdminLogin />}
-          />
-
+          {/* Legacy admin URLs redirect to shared recovery pages */}
           <Route
             path="/admin/forgot-password"
-            element={<AdminForgotPassword />}
+            element={<Navigate to="/forgot-password" replace />}
           />
-
           <Route
             path="/admin/reset-password"
-            element={<AdminResetPassword />}
+            element={
+              <Navigate
+                to={`/reset-password${location.search}`}
+                replace
+              />
+            }
+          />
+
+          {/* Protected admin dashboard */}
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <main>
+                  <h1>Admin Dashboard</h1>
+                  <p>
+                    Administrator access verified. Dashboard
+                    features will be added in the next step.
+                  </p>
+                </main>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected client dashboard */}
+          <Route
+            path="/client-dashboard"
+            element={
+              <ProtectedRoute allowedRole="CLIENT">
+                <main>
+                  <h1>Client Dashboard</h1>
+                  <p>
+                    Your client dashboard will be added in
+                    the next step.
+                  </p>
+                </main>
+              </ProtectedRoute>
+            }
           />
 
           {/* Information pages */}
-          <Route
-            path="/privacy"
-            element={<Privacy />}
-          />
-
+          <Route path="/privacy" element={<Privacy />} />
           <Route
             path="/accessibility"
             element={<Accessibility />}
           />
-
-          <Route
-            path="/sitemap"
-            element={<Sitemap />}
-          />
+          <Route path="/sitemap" element={<Sitemap />} />
         </Routes>
       </div>
 
-      {!isAdminLogin && <Footer />}
+      <Footer />
     </>
   );
 }

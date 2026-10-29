@@ -1,31 +1,42 @@
-# Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.vite/
-
-# Backend
+# Dependencies and build output
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+build/
+**/build/
 backend/target/
 
-# Backend local secrets
-backend/src/main/resources/application.properties
+# Environment files and secrets
 .env
-
-# IDE files
-.idea/
-.vscode/
-*.iml
-
-# Eclipse
-.classpath
-.project
-.settings/
-
-# OS files
-.DS_Store
-Thumbs.db
+.env.*
+!.env.example
 
 # Logs
+logs/
 *.log
-# Test reports
-frontend/test-results/
+npm-debug.log*
+npm-debug.log*
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Local files
+*.local
+
+# IDE and editor files
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.iml
+
+# Operating system files
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

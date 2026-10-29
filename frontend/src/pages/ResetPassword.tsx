@@ -1,15 +1,15 @@
+
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { apiUrl } from "../api/api";
 import "./ResetPassword.css";
 
 function ResetPassword() {
   const [searchParams] = useSearchParams();
-
   const token = searchParams.get("token") || "";
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,20 +41,17 @@ function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:8080/api/password/reset",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token,
-            newPassword,
-            confirmPassword,
-          }),
-        }
-      );
+      const response = await fetch(apiUrl("/api/password/reset"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          newPassword,
+          confirmPassword,
+        }),
+      });
 
       const data = await response.text();
 
@@ -71,7 +68,6 @@ function ResetPassword() {
       setConfirmPassword("");
     } catch (error) {
       console.error(error);
-
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
@@ -84,7 +80,6 @@ function ResetPassword() {
     <main className="reset-password-page">
       <section className="reset-password-card">
         <div className="reset-password-content">
-
           <span className="reset-password-eyebrow">
             ACCOUNT RECOVERY
           </span>
@@ -98,13 +93,11 @@ function ResetPassword() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              handleSubmit();
+              void handleSubmit();
             }}
           >
             <div className="reset-password-field">
-              <label htmlFor="newPassword">
-                New Password
-              </label>
+              <label htmlFor="newPassword">New Password</label>
 
               <input
                 id="newPassword"
@@ -115,6 +108,8 @@ function ResetPassword() {
                 }
                 placeholder="Enter your new password"
                 autoComplete="new-password"
+                required
+                minLength={8}
                 disabled={loading}
               />
             </div>
@@ -133,18 +128,20 @@ function ResetPassword() {
                 }
                 placeholder="Confirm your new password"
                 autoComplete="new-password"
+                required
+                minLength={8}
                 disabled={loading}
               />
             </div>
 
             {error && (
-              <p className="reset-password-error">
+              <p className="reset-password-error" role="alert">
                 {error}
               </p>
             )}
 
             {message && (
-              <p className="reset-password-success">
+              <p className="reset-password-success" role="status">
                 {message}
               </p>
             )}
@@ -154,9 +151,7 @@ function ResetPassword() {
               className="reset-password-button"
               disabled={loading}
             >
-              {loading
-                ? "Resetting..."
-                : "Reset Password"}
+              {loading ? "Resetting..." : "Reset Password"}
             </button>
           </form>
 
@@ -164,9 +159,8 @@ function ResetPassword() {
             to="/login"
             className="reset-password-back"
           >
-            ← Back to Client Login
+            ← Back to Login
           </Link>
-
         </div>
       </section>
     </main>

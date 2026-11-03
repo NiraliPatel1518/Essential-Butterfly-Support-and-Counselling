@@ -1,53 +1,26 @@
 services:
+
   db:
     image: postgres:17
-    container_name: essential-butterfly-db
-    restart: unless-stopped
+
+    restart: always
+
     environment:
       POSTGRES_DB: essential_butterfly
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres-data:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d essential_butterfly"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  backend:
-    image: ${DOCKER_USERNAME:-local}/essential-butterfly-backend:${IMAGE_TAG:-latest}
-    container_name: essential-butterfly-backend
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/essential_butterfly
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
-    ports:
-      - "8080:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-
-  frontend:
-    image: ${DOCKER_USERNAME:-local}/essential-butterfly-frontend:${IMAGE_TAG:-latest}
-    container_name: essential-butterfly-frontend
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
-    restart: unless-stopped
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-
 volumes:
-  postgres-data:

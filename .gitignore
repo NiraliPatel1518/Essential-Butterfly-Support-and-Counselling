@@ -40,3 +40,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+#Local password isn't committed
+.env

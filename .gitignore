@@ -41,5 +41,3 @@ Thumbs.db
 *.sln
 *.sw?
 
-#Local password isn't committed
-.env

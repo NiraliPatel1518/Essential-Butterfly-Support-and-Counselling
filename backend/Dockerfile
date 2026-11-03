@@ -1,18 +1,18 @@
-# Build the backend using Java 17 and the project's Maven wrapper
+# Build the Spring Boot application
 FROM eclipse-temurin:17-jdk AS build
 
 WORKDIR /app
 
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
+
 RUN chmod +x mvnw
 
 COPY src/ src/
 
-# Tests already ran in the GitHub Actions build-test job
 RUN ./mvnw --batch-mode -DskipTests clean package
 
-# Run the packaged application
+# Run the application
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app

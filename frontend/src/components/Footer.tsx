@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import "./Footer.css";
+import { usePublicFeatures } from "../context/PublicFeatureContext";
 
 type IconName = "email" | "phone" | "location" | "instagram" | "facebook" | "linkedin";
 
@@ -23,6 +24,7 @@ const linkedinUrl = import.meta.env.VITE_LINKEDIN_URL || "https://www.linkedin.c
 const locationUrl = import.meta.env.VITE_LOCATION_URL || "https://www.google.com/maps/search/?api=1&query=Oakville%2C%20Ontario";
 
 function Footer() {
+  const { isEnabled } = usePublicFeatures();
   return (
     <footer className="site-footer">
       <div className="footer-main">
@@ -37,7 +39,7 @@ function Footer() {
         <div className="footer-column">
           <h2>Explore</h2>
           <nav aria-label="Footer navigation">
-            <Link to="/">Home</Link><Link to="/about">About Casey</Link><Link to="/services">Services &amp; Supports</Link><Link to="/contact">Contact</Link><Link to="/intake">Secure Intake</Link>
+            <Link to="/">Home</Link>{isEnabled("ABOUT") && <Link to="/about">About Casey</Link>}{isEnabled("SERVICES") && <Link to="/services">Services &amp; Supports</Link>}{isEnabled("CONTACT") && <Link to="/contact">Contact</Link>}{isEnabled("INTAKE") && <Link to="/intake">Secure Intake</Link>}
           </nav>
         </div>
 

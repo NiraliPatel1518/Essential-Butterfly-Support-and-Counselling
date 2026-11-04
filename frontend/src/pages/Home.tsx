@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { usePublicFeatures } from "../context/PublicFeatureContext";
 import "./Home.css";
 
 function Home() {
+  const { isEnabled } = usePublicFeatures();
   return (
     <main className="home-page">
 
@@ -36,16 +38,17 @@ function Home() {
             </p>
 
             <div className="hero-buttons">
-
-              <Link to="/services" className="purple-button">
-                Explore Services
-                <span>→</span>
-              </Link>
-
-              <Link to="/contact" className="outline-button">
-                Get in Touch
-              </Link>
-
+              {isEnabled("SERVICES") && (
+                <Link to="/services" className="purple-button">
+                  Explore Services
+                  <span>→</span>
+                </Link>
+              )}
+              {isEnabled("CONTACT") && (
+                <Link to="/contact" className="outline-button">
+                  Get in Touch
+                </Link>
+              )}
             </div>
 
             <div className="hero-features">

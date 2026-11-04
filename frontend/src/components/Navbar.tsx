@@ -1,5 +1,11 @@
-import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import {
+  Link,
+  NavLink,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import "./Navbar.css";
 
 const navigation = [
@@ -11,13 +17,37 @@ const navigation = [
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authVersion, setAuthVersion] = useState(0);
+
+  // Recheck authentication when the route changes.
+  // This handles login flows that save a token and then navigate.
+  useEffect(() => {
+    setAuthVersion((version) => version + 1);
+  }, [location.pathname]);
+
+  // Also support authentication changes elsewhere in the same tab.
+  useEffect(() => {
+    const refreshAuth = () => {
+      setAuthVersion((version) => version + 1);
+    };
+
+    window.addEventListener("storage", refreshAuth);
+    window.addEventListener("auth-changed", refreshAuth);
+
+    return () => {
+      window.removeEventListener("storage", refreshAuth);
+      window.removeEventListener("auth-changed", refreshAuth);
+    };
+  }, []);
 
   const clientLoggedIn = !!localStorage.getItem("authToken");
   const adminLoggedIn = !!localStorage.getItem("adminToken");
   const isLoggedIn = clientLoggedIn || adminLoggedIn;
 
-  // Admin token takes precedence if both tokens are present.
+  // Admin takes precedence if both tokens exist.
   const dashboardPath = adminLoggedIn
     ? "/admin-dashboard"
     : "/client-dashboard";
@@ -29,6 +59,9 @@ function Navbar() {
   const handleSignOut = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("adminToken");
+
+    window.dispatchEvent(new Event("auth-changed"));
+
     setMenuOpen(false);
     navigate("/");
   };

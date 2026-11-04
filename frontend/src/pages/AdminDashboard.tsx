@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "../api/api";
+import FeatureVisibility from "./FeatureVisibility";
 import "./Dashboard.css";
 
 type ContactMessage = {
@@ -29,7 +30,7 @@ type IntakeSubmission = {
   createdAt: string;
 };
 
-type Section = "contacts" | "intakes";
+type Section = "contacts" | "intakes" | "features";
 
 async function readError(response: Response): Promise<string> {
   const body = await response.text();
@@ -133,6 +134,10 @@ function AdminDashboard() {
   }, [token]);
 
   const refreshCurrentSection = useCallback(async () => {
+    if (section === "features") {
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -353,18 +358,21 @@ function AdminDashboard() {
             <p className="dashboard-eyebrow">ESSENTIAL BUTTERFLY</p>
             <h1>Admin Dashboard</h1>
             <p className="dashboard-description">
-              Manage contact messages and client intake requests.
+              Manage contact messages, client intake requests and
+              public website features.
             </p>
           </div>
 
-          <button
-            type="button"
-            className="dashboard-refresh"
-            onClick={() => void refreshCurrentSection()}
-            disabled={loading}
-          >
-            {loading ? "Refreshing..." : "Refresh"}
-          </button>
+          {section !== "features" && (
+            <button
+              type="button"
+              className="dashboard-refresh"
+              onClick={() => void refreshCurrentSection()}
+              disabled={loading}
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          )}
         </header>
 
         <section
@@ -403,16 +411,31 @@ function AdminDashboard() {
           >
             Intake Requests
           </button>
+
+          <button
+            type="button"
+            className={section === "features" ? "active" : ""}
+            aria-current={section === "features" ? "page" : undefined}
+            onClick={() => changeSection("features")}
+          >
+            Feature Controls
+          </button>
         </nav>
 
         {error && (
-          <div className="dashboard-alert dashboard-alert-error" role="alert">
+          <div
+            className="dashboard-alert dashboard-alert-error"
+            role="alert"
+          >
             {error}
           </div>
         )}
 
         {notice && (
-          <div className="dashboard-alert dashboard-alert-success" role="status">
+          <div
+            className="dashboard-alert dashboard-alert-success"
+            role="status"
+          >
             {notice}
           </div>
         )}
@@ -433,6 +456,7 @@ function AdminDashboard() {
                   Opening a message marks it as viewed.
                 </p>
               </div>
+
               <span className="dashboard-count">
                 {contacts.length} total
               </span>
@@ -454,6 +478,7 @@ function AdminDashboard() {
                       <th scope="col">Action</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {contacts.map((message) => (
                       <tr key={message.id}>
@@ -490,7 +515,9 @@ function AdminDashboard() {
               >
                 <div className="dashboard-detail-header">
                   <div>
-                    <p className="dashboard-eyebrow">CONTACT MESSAGE</p>
+                    <p className="dashboard-eyebrow">
+                      CONTACT MESSAGE
+                    </p>
                     <h3 id="contact-detail-title">
                       {selectedContact.subject}
                     </h3>
@@ -510,6 +537,7 @@ function AdminDashboard() {
                     <dt>Name</dt>
                     <dd>{selectedContact.fullName}</dd>
                   </div>
+
                   <div>
                     <dt>Email</dt>
                     <dd>
@@ -518,10 +546,12 @@ function AdminDashboard() {
                       </a>
                     </dd>
                   </div>
+
                   <div>
                     <dt>Submitted</dt>
                     <dd>{formatDate(selectedContact.createdAt)}</dd>
                   </div>
+
                   <div>
                     <dt>Admin status</dt>
                     <dd>{statusLabel(selectedContact.status)}</dd>
@@ -547,6 +577,7 @@ function AdminDashboard() {
                   decision.
                 </p>
               </div>
+
               <span className="dashboard-count">
                 {intakes.length} total
               </span>
@@ -568,6 +599,7 @@ function AdminDashboard() {
                       <th scope="col">Action</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {intakes.map((submission) => (
                       <tr key={submission.id}>
@@ -630,16 +662,21 @@ function AdminDashboard() {
                 <dl className="dashboard-detail-grid">
                   <div>
                     <dt>Parent / Guardian</dt>
-                    <dd>{selectedIntake.parentGuardianName || "Not provided"}</dd>
+                    <dd>
+                      {selectedIntake.parentGuardianName || "Not provided"}
+                    </dd>
                   </div>
+
                   <div>
                     <dt>Contact information</dt>
                     <dd>{selectedIntake.contactInfo}</dd>
                   </div>
+
                   <div>
                     <dt>Preferred contact method</dt>
                     <dd>{selectedIntake.preferredContactMethod}</dd>
                   </div>
+
                   <div>
                     <dt>Submitted</dt>
                     <dd>{formatDate(selectedIntake.createdAt)}</dd>
@@ -717,9 +754,13 @@ function AdminDashboard() {
                       <button
                         type="submit"
                         className="dashboard-danger-button"
-                        disabled={actionLoading || !rejectionReason.trim()}
+                        disabled={
+                          actionLoading || !rejectionReason.trim()
+                        }
                       >
-                        {actionLoading ? "Processing..." : "Confirm Rejection"}
+                        {actionLoading
+                          ? "Processing..."
+                          : "Confirm Rejection"}
                       </button>
 
                       <button
@@ -745,6 +786,12 @@ function AdminDashboard() {
                   )}
               </section>
             )}
+          </section>
+        )}
+
+        {!loading && section === "features" && (
+          <section className="dashboard-section">
+            <FeatureVisibility />
           </section>
         )}
       </div>

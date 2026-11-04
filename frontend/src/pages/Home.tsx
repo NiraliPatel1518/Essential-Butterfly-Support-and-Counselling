@@ -1,23 +1,23 @@
+
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { apiUrl } from "../api/api";
 import { usePublicFeatures } from "../context/PublicFeatureContext";
 import "./Home.css";
+import "./TestimonialCards.css";
 
 function Home() {
   const { isEnabled } = usePublicFeatures();
+
   return (
     <main className="home-page">
-
       {/* HERO */}
-
       <section className="hero-section">
-
         <div className="hero-decoration hero-decoration-one" />
         <div className="hero-decoration hero-decoration-two" />
 
         <div className="hero-container">
-
           <div className="hero-content">
-
             <div className="section-label">
               <span>ESSENTIAL BUTTERFLY SUPPORT &amp; COUNSELLING</span>
               <i />
@@ -44,6 +44,7 @@ function Home() {
                   <span>→</span>
                 </Link>
               )}
+
               {isEnabled("CONTACT") && (
                 <Link to="/contact" className="outline-button">
                   Get in Touch
@@ -52,7 +53,6 @@ function Home() {
             </div>
 
             <div className="hero-features">
-
               <HeroFeature
                 icon="♧"
                 title="Individualized"
@@ -70,40 +70,26 @@ function Home() {
                 title="Inclusive"
                 subtitle="& Affirming Space"
               />
-
             </div>
-
           </div>
 
-
           <div className="hero-image-wrapper">
-
             <div className="hero-image-shape">
-
               <img
                 src="/images/hero-flower.jpg"
                 alt="White flowers growing in a warm natural landscape"
               />
-
             </div>
 
             <div className="hero-gold-line" />
-
           </div>
-
         </div>
-
       </section>
 
-
       {/* INTRODUCTION */}
-
       <section className="intro-section">
-
         <div className="section-container intro-container">
-
           <div className="intro-content">
-
             <div className="section-label">
               <span>A DIFFERENT PATH CAN STILL LEAD FORWARD</span>
               <i />
@@ -126,41 +112,28 @@ function Home() {
             </p>
 
             <div className="info-box">
-
-              <div className="info-box-icon">
-                ♧
-              </div>
+              <div className="info-box-icon">♧</div>
 
               <p>
                 You're not alone. Support is available for individuals,
                 families and caregivers at every stage. Let's find a path
                 that feels right for you.
               </p>
-
             </div>
-
           </div>
-
 
           <div className="intro-image-wrapper">
-          <img
-          src="/images/support-mountain.jpg"
-          alt="Peaceful mountain landscape representing support, growth and hope"
-          />
-
+            <img
+              src="/images/support-mountain.jpg"
+              alt="Peaceful mountain landscape representing support, growth and hope"
+            />
           </div>
-
         </div>
-
       </section>
 
-
       {/* EXPERIENCE */}
-
       <section className="experience-section">
-
         <div className="section-container">
-
           <div className="section-label">
             <span>EXPERIENCE &amp; PERSPECTIVE</span>
             <i />
@@ -172,9 +145,7 @@ function Home() {
             curiosity and practical tools.
           </h2>
 
-
           <div className="experience-grid">
-
             <InfoCard
               icon="♧"
               title={
@@ -213,30 +184,19 @@ function Home() {
 
             <InfoCard
               icon="☆"
-              title={
-                <>
-                  A meaningful impact
-                </>
-              }
+              title={<>A meaningful impact</>}
               text="A long-standing passion for creating supportive environments where individuals can build on their strengths, develop practical skills and move forward with confidence."
             />
-
           </div>
-
         </div>
-
       </section>
 
-
-      {/* SERVICEs */}
-
+      {/* SERVICES */}
       <section className="services-section">
-
         <div className="services-decoration services-decoration-left" />
         <div className="services-decoration services-decoration-right" />
 
         <div className="section-container">
-
           <div className="section-label">
             <span>SERVICES &amp; COUNSELLING SUPPORTS</span>
             <i />
@@ -253,13 +213,8 @@ function Home() {
             innovations to find the right fit for you.
           </p>
 
-
           <div className="services-grid">
-
-            <ServiceItem
-              title="Respite"
-              icon="♧"
-            />
+            <ServiceItem title="Respite" icon="♧" />
 
             <ServiceItem
               title="Animal-Based DBT Skills Coaching"
@@ -271,48 +226,31 @@ function Home() {
               icon="▣"
             />
 
-            <ServiceItem
-              title="Counselling"
-              icon="○"
-            />
+            <ServiceItem title="Counselling" icon="○" />
 
             <ServiceItem
               title="ADHD Education & Executive Coaching"
               icon="✥"
             />
 
-            <ServiceItem
-              title="Social Skills Support"
-              icon="♧"
-            />
-
+            <ServiceItem title="Social Skills Support" icon="♧" />
           </div>
-
         </div>
-
       </section>
 
-
       {/* CASEY */}
-
       <section className="casey-section">
-
         <div className="casey-background-shape" />
 
         <div className="section-container casey-container">
-
           <div className="casey-image-wrapper">
-
             <img
               src="/images/casey-back-view.jpg"
               alt="Person looking toward a mountain landscape"
             />
-
           </div>
 
-
           <div className="casey-content">
-
             <div className="section-label">
               <span>ABOUT CASEY</span>
               <i />
@@ -344,20 +282,16 @@ function Home() {
               More about Casey
               <span>→</span>
             </Link>
-
           </div>
-
         </div>
-
       </section>
 
+      {/* TESTIMONIALS — directly after Meet Casey */}
+      {isEnabled("TESTIMONIALS") && <HomeTestimonials />}
 
       {/* WHY ESSENTIAL BUTTERFLY */}
-
       <section className="why-section">
-
         <div className="section-container">
-
           <div className="section-label">
             <span>WHY ESSENTIAL BUTTERFLY</span>
             <i />
@@ -374,9 +308,7 @@ function Home() {
             tools needed to navigate life's challenges and opportunities.
           </p>
 
-
           <div className="why-grid">
-
             <InfoCard
               icon="♧"
               title="Individualized support"
@@ -394,33 +326,23 @@ function Home() {
               title="Progress with meaning"
               text="Ongoing encouragement and flexible support that evolves with your needs, helping you build confidence and independence over time."
             />
-
           </div>
-
         </div>
-
       </section>
 
-
       {/* BOOKING */}
-
       <section className="booking-section">
-
         <div className="booking-glow booking-glow-left" />
         <div className="booking-glow booking-glow-right" />
 
         <div className="section-container booking-container">
-
           <div className="booking-intro">
-
             <div className="section-label light">
               <span>READY TO TAKE THE NEXT STEP?</span>
               <i />
             </div>
 
-            <h2>
-              Let's check on how I'm available.
-            </h2>
+            <h2>Let's check on how I'm available.</h2>
 
             <p>
               Appointments are designed to be flexible and supportive,
@@ -429,12 +351,9 @@ function Home() {
               specific goals, you can easily check current availability and
               request a time that works for you.
             </p>
-
           </div>
 
-
           <div className="booking-options">
-
             <BookingItem
               icon="▣"
               title="Book a time"
@@ -458,18 +377,12 @@ function Home() {
               title="Clear communication"
               text="You'll receive confirmation and next steps."
             />
-
           </div>
-
         </div>
-
       </section>
 
-
       {/* FINAL CTA */}
-
       <section className="final-cta">
-
         <img
           src="/images/cta-mountains.jpg"
           alt=""
@@ -479,32 +392,109 @@ function Home() {
         <div className="final-cta-overlay" />
 
         <div className="final-cta-content">
-
           <div className="section-label centered">
             <span>SUPPORT TO PLAN FOR A BRIGHTER TOMORROW</span>
             <i />
           </div>
 
-          <h2>
-            Explore what support could look like for you.
-          </h2>
+          <h2>Explore what support could look like for you.</h2>
 
           <Link to="/intake" className="purple-button">
             Book a Time
             <span>→</span>
           </Link>
-
         </div>
-
       </section>
-
     </main>
   );
 }
 
+function HomeTestimonials() {
+  const [items, setItems] = useState<
+    {
+      id: number;
+      displayName: string;
+      content: string;
+      photos?: string[];
+    }[]
+  >([]);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch(apiUrl("/api/testimonials/featured"))
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        if (active) {
+          setItems(Array.isArray(data) ? data.slice(0, 2) : []);
+        }
+      })
+      .catch(() => {
+        if (active) setItems([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="testimonial-section home-testimonials">
+      <div className="testimonial-wrap">
+        <header className="testimonial-heading home-testimonials-heading">
+          <div className="section-label">
+            <span>WORDS FROM OUR COMMUNITY</span>
+            <i />
+          </div>
+
+          <h2>Stories from our community</h2>
+
+          <p>
+            Real experiences shared by people who have connected with
+            Essential Butterfly.
+          </p>
+        </header>
+
+        <div className="testimonial-grid">
+          {items.map((item) => (
+            <article className="testimonial-card" key={item.id}>
+              {item.photos?.[0] && (
+                <img
+                  className="testimonial-card-photo"
+                  src={item.photos[0]}
+                  alt=""
+                />
+              )}
+
+              <div className="testimonial-card-body">
+                <h3>{item.displayName}</h3>
+
+                <p className="testimonial-preview">{item.content}</p>
+
+                <Link
+                  className="testimonial-open"
+                  to={`/testimonials?id=${item.id}`}
+                >
+                  Read full testimonial →
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="home-testimonials-action">
+          <Link className="purple-button" to="/testimonials">
+            Explore Testimonials <span>→</span>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /* HERO FEATURE */
-
 function HeroFeature({
   icon,
   title,
@@ -516,24 +506,18 @@ function HeroFeature({
 }) {
   return (
     <div className="hero-feature">
-
-      <span className="hero-feature-icon">
-        {icon}
-      </span>
+      <span className="hero-feature-icon">{icon}</span>
 
       <span>
         {title}
         <br />
         {subtitle}
       </span>
-
     </div>
   );
 }
 
-
 /* INFO CARD */
-
 function InfoCard({
   icon,
   title,
@@ -545,22 +529,14 @@ function InfoCard({
 }) {
   return (
     <article className="info-card">
-
-      <div className="card-icon">
-        {icon}
-      </div>
-
+      <div className="card-icon">{icon}</div>
       <h3>{title}</h3>
-
       <p>{text}</p>
-
     </article>
   );
 }
 
-
 /* SERVICE ITEM */
-
 function ServiceItem({
   title,
   icon,
@@ -570,26 +546,14 @@ function ServiceItem({
 }) {
   return (
     <Link to="/services" className="service-item">
-
-      <span className="service-icon">
-        {icon}
-      </span>
-
-      <span className="service-title">
-        {title}
-      </span>
-
-      <span className="service-arrow">
-        →
-      </span>
-
+      <span className="service-icon">{icon}</span>
+      <span className="service-title">{title}</span>
+      <span className="service-arrow">→</span>
     </Link>
   );
 }
 
-
 /* BOOKING ITEM */
-
 function BookingItem({
   title,
   text,
@@ -601,19 +565,14 @@ function BookingItem({
 }) {
   return (
     <div className="booking-item">
-
-      <span className="booking-icon">
-        {icon}
-      </span>
+      <span className="booking-icon">{icon}</span>
 
       <div>
         <h3>{title}</h3>
         <p>{text}</p>
       </div>
-
     </div>
   );
 }
-
 
 export default Home;

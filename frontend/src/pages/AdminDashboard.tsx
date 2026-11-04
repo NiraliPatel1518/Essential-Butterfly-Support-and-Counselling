@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "../api/api";
 import FeatureVisibility from "./FeatureVisibility";
 import AdminUpdates from "./AdminUpdates";
+import AdminTestimonials from "./AdminTestimonials";
 import "./Dashboard.css";
 
 type ContactMessage = {
@@ -30,7 +31,7 @@ type IntakeSubmission = {
   createdAt: string;
 };
 
-type Section = "contacts" | "intakes" | "features" | "updates";
+type Section = "contacts" | "intakes" | "features" | "updates" | "testimonials";
 
 async function readError(response: Response): Promise<string> {
   const body = await response.text();
@@ -134,7 +135,7 @@ function AdminDashboard() {
   }, [token]);
 
   const refreshCurrentSection = useCallback(async () => {
-    if (section === "features" || section === "updates") {
+    if (section === "features" || section === "updates" || section === "testimonials") {
       return;
     }
 
@@ -428,6 +429,14 @@ function AdminDashboard() {
             onClick={() => changeSection("updates")}
           >
             Updates
+          </button>
+          <button
+            type="button"
+            className={section === "testimonials" ? "active" : ""}
+            aria-current={section === "testimonials" ? "page" : undefined}
+            onClick={() => changeSection("testimonials")}
+          >
+            Testimonials
           </button>
         </nav>
 
@@ -807,6 +816,12 @@ function AdminDashboard() {
         {!loading && section === "updates" && (
           <section className="dashboard-section">
             <AdminUpdates />
+          </section>
+        )}
+
+        {!loading && section === "testimonials" && (
+          <section className="dashboard-section">
+            <AdminTestimonials />
           </section>
         )}
       </div>

@@ -27,6 +27,7 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Updates from "./pages/Updates";
+import Testimonials from "./pages/Testimonials";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -127,6 +128,15 @@ function AppLayout() {
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/contact" element={<Contact />} />
+
+          <Route
+            path="/testimonials"
+            element={
+              <PublicFeatureRoute feature="TESTIMONIALS">
+                <Testimonials />
+              </PublicFeatureRoute>
+            }
+          />
 
           <Route
             path="/updates"

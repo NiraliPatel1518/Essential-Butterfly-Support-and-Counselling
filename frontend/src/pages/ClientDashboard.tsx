@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import "./ClientDashboard.css";
+import ClientTestimonials from "./ClientTestimonials";
 
 type IntakeStatus = {
   status: string;
@@ -551,17 +552,7 @@ function ClientDashboard() {
                 </div>
               </div>
 
-              <div className="client-coming-soon">
-                <span aria-hidden="true">❝</span>
-
-                <div>
-                  <strong>Your story matters.</strong>
-                  <p>
-                    Testimonial submission and tracking will be available here
-                    when this feature is connected.
-                  </p>
-                </div>
-              </div>
+              <ClientTestimonials />
             </section>
 
             <section

@@ -8,7 +8,6 @@ services:
     environment:
       POSTGRES_DB: essential_butterfly
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1234
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
     ports:
@@ -24,3 +23,5 @@ services:
       retries: 5
 
 volumes:
+
+  postgres-data:

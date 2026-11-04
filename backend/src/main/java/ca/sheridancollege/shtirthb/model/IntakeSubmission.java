@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.model;
 
 import jakarta.persistence.*;
@@ -43,7 +44,11 @@ public class IntakeSubmission {
     private String additionalNotes;
 
     @Column(nullable = false)
-    private String status = "NEW";
+    private String status = "SUBMITTED";
+
+    // Private administrative note; never include this in client responses.
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -73,7 +78,8 @@ public class IntakeSubmission {
         this.respiteGoals = respiteGoals;
         this.subjectFocus = subjectFocus;
         this.additionalNotes = additionalNotes;
-        this.status = "NEW";
+        this.status = "SUBMITTED";
+        this.rejectionReason = null;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -167,6 +173,14 @@ public class IntakeSubmission {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 
     public LocalDateTime getCreatedAt() {

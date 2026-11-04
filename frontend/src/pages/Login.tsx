@@ -176,6 +176,7 @@ function Login() {
           <div className="login-card">
             <div className="login-card-header">
               <h2>Client Login</h2>
+
               <p>Enter your details to access your account.</p>
             </div>
 
@@ -274,6 +275,7 @@ function Login() {
                 <span className="visitor-icon" aria-hidden="true">
                   ♙
                 </span>
+
                 <span>Continue as a visitor</span>
               </Link>
 

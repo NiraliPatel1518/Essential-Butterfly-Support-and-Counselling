@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import "./Signup.css";
 
@@ -19,6 +18,20 @@ function Signup() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const requestedReturnTo = searchParams.get("returnTo");
+
+  const returnTo =
+    requestedReturnTo &&
+    requestedReturnTo.startsWith("/") &&
+    !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : null;
+
+  const loginPath = returnTo
+    ? `/login?returnTo=${encodeURIComponent(returnTo)}`
+    : "/login";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,8 +82,8 @@ function Signup() {
 
       setSuccess("Account created successfully. Redirecting to login...");
 
-      setTimeout(() => {
-        navigate("/login");
+      window.setTimeout(() => {
+        navigate(loginPath, { replace: true });
       }, 1000);
     } catch (error) {
       console.error(error);
@@ -445,7 +458,7 @@ function Signup() {
           <p className="signup-login-prompt">
             Already have an account?{" "}
 
-            <Link to="/login">
+            <Link to={loginPath}>
               Log in
             </Link>
           </p>

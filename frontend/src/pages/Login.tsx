@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiUrl } from "../api/api";
@@ -15,6 +14,15 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   const sessionExpired = searchParams.get("sessionExpired") === "true";
+
+  const requestedReturnTo = searchParams.get("returnTo");
+
+  const returnTo =
+    requestedReturnTo &&
+    requestedReturnTo.startsWith("/") &&
+    !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : null;
 
   const emailPattern =
     /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -110,11 +118,17 @@ function Login() {
 
       if (role === "ADMIN") {
         localStorage.setItem("adminToken", token);
-        navigate("/admin-dashboard", { replace: true });
       } else {
         localStorage.setItem("authToken", token);
-        navigate("/client-dashboard", { replace: true });
       }
+
+      window.dispatchEvent(new Event("auth-changed"));
+
+      navigate(
+        returnTo ||
+          (role === "ADMIN" ? "/admin-dashboard" : "/client-dashboard"),
+        { replace: true }
+      );
     } catch (requestError) {
       console.error("Login request failed:", requestError);
 
@@ -125,6 +139,10 @@ function Login() {
       setLoading(false);
     }
   };
+
+  const signupPath = returnTo
+    ? `/signup?returnTo=${encodeURIComponent(returnTo)}`
+    : "/signup";
 
   return (
     <main className="login-page">
@@ -190,6 +208,12 @@ function Login() {
               {sessionExpired && (
                 <p role="status" className="login-session-expired">
                   Your session has expired. Please log in again.
+                </p>
+              )}
+
+              {returnTo && (
+                <p role="status" className="login-session-expired">
+                  Please log in to read the full update.
                 </p>
               )}
 
@@ -286,7 +310,7 @@ function Login() {
               </div>
 
               <p className="login-signup">
-                New here? <Link to="/signup">Create an account</Link>
+                New here? <Link to={signupPath}>Create an account</Link>
               </p>
             </form>
           </div>

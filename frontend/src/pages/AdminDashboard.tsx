@@ -1,7 +1,7 @@
-
 import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "../api/api";
 import FeatureVisibility from "./FeatureVisibility";
+import AdminUpdates from "./AdminUpdates";
 import "./Dashboard.css";
 
 type ContactMessage = {
@@ -30,7 +30,7 @@ type IntakeSubmission = {
   createdAt: string;
 };
 
-type Section = "contacts" | "intakes" | "features";
+type Section = "contacts" | "intakes" | "features" | "updates";
 
 async function readError(response: Response): Promise<string> {
   const body = await response.text();
@@ -134,7 +134,7 @@ function AdminDashboard() {
   }, [token]);
 
   const refreshCurrentSection = useCallback(async () => {
-    if (section === "features") {
+    if (section === "features" || section === "updates") {
       return;
     }
 
@@ -363,7 +363,7 @@ function AdminDashboard() {
             </p>
           </div>
 
-          {section !== "features" && (
+          {section !== "features" && section !== "updates" && (
             <button
               type="button"
               className="dashboard-refresh"
@@ -419,6 +419,15 @@ function AdminDashboard() {
             onClick={() => changeSection("features")}
           >
             Feature Controls
+          </button>
+
+          <button
+            type="button"
+            className={section === "updates" ? "active" : ""}
+            aria-current={section === "updates" ? "page" : undefined}
+            onClick={() => changeSection("updates")}
+          >
+            Updates
           </button>
         </nav>
 
@@ -792,6 +801,12 @@ function AdminDashboard() {
         {!loading && section === "features" && (
           <section className="dashboard-section">
             <FeatureVisibility />
+          </section>
+        )}
+
+        {!loading && section === "updates" && (
+          <section className="dashboard-section">
+            <AdminUpdates />
           </section>
         )}
       </div>

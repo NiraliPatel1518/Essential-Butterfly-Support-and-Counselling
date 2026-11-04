@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Routes,
@@ -16,6 +15,7 @@ import {
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicFeatureRoute from "./components/PublicFeatureRoute";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -26,6 +26,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Updates from "./pages/Updates";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -106,7 +107,6 @@ function RouteFocus() {
 function AppLayout() {
   const location = useLocation();
 
-  // Client portal pages use their own visual shell.
   const isClientArea =
     location.pathname === "/client-dashboard" ||
     location.pathname === "/intake";
@@ -123,13 +123,29 @@ function AppLayout() {
 
       <div id="main-content" tabIndex={-1}>
         <Routes>
-          {/* Main website */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/contact" element={<Contact />} />
 
-          {/* Client-only intake page */}
+          <Route
+            path="/updates"
+            element={
+              <PublicFeatureRoute feature="UPDATES">
+                <Updates />
+              </PublicFeatureRoute>
+            }
+          />
+
+          <Route
+            path="/updates/:id"
+            element={
+              <PublicFeatureRoute feature="UPDATES">
+                <Updates />
+              </PublicFeatureRoute>
+            }
+          />
+
           <Route
             path="/intake"
             element={
@@ -139,7 +155,6 @@ function AppLayout() {
             }
           />
 
-          {/* Unified login */}
           <Route path="/login" element={<Login />} />
 
           <Route
@@ -147,7 +162,6 @@ function AppLayout() {
             element={<Navigate to="/login" replace />}
           />
 
-          {/* Client account pages */}
           <Route path="/signup" element={<Signup />} />
 
           <Route
@@ -160,7 +174,6 @@ function AppLayout() {
             element={<ResetPassword />}
           />
 
-          {/* Legacy admin recovery URLs */}
           <Route
             path="/admin/forgot-password"
             element={<Navigate to="/forgot-password" replace />}
@@ -176,7 +189,6 @@ function AppLayout() {
             }
           />
 
-          {/* Protected admin dashboard */}
           <Route
             path="/admin-dashboard"
             element={
@@ -186,7 +198,6 @@ function AppLayout() {
             }
           />
 
-          {/* Protected client dashboard */}
           <Route
             path="/client-dashboard"
             element={
@@ -196,14 +207,8 @@ function AppLayout() {
             }
           />
 
-          {/* Information pages */}
           <Route path="/privacy" element={<Privacy />} />
-
-          <Route
-            path="/accessibility"
-            element={<Accessibility />}
-          />
-
+          <Route path="/accessibility" element={<Accessibility />} />
           <Route path="/sitemap" element={<Sitemap />} />
         </Routes>
       </div>

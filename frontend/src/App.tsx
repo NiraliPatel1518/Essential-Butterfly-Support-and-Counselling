@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Routes,
@@ -6,6 +5,7 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
+
 import {
   useEffect,
   useLayoutEffect,
@@ -25,6 +25,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
+import AdminDashboard from "./pages/AdminDashboard";
+import ClientDashboard from "./pages/ClientDashboard";
 
 import {
   Accessibility,
@@ -100,6 +103,11 @@ function RouteFocus() {
 function AppLayout() {
   const location = useLocation();
 
+  // Client portal pages use their own visual shell, not the public site header/footer.
+  const isClientArea =
+    location.pathname === "/client-dashboard" ||
+    location.pathname === "/intake";
+
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -108,7 +116,7 @@ function AppLayout() {
 
       <RouteFocus />
 
-      <Navbar />
+      {!isClientArea && <Navbar />}
 
       <div id="main-content" tabIndex={-1}>
         <Routes>
@@ -117,10 +125,20 @@ function AppLayout() {
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/intake" element={<Intake />} />
+
+          {/* Client-only intake page */}
+          <Route
+            path="/intake"
+            element={
+              <ProtectedRoute allowedRole="CLIENT">
+                <Intake />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Unified login */}
           <Route path="/login" element={<Login />} />
+
           <Route
             path="/admin-login"
             element={<Navigate to="/login" replace />}
@@ -128,20 +146,23 @@ function AppLayout() {
 
           {/* Client account pages */}
           <Route path="/signup" element={<Signup />} />
+
           <Route
             path="/forgot-password"
             element={<ForgotPassword />}
           />
+
           <Route
             path="/reset-password"
             element={<ResetPassword />}
           />
 
-          {/* Legacy admin URLs redirect to shared recovery pages */}
+          {/* Legacy admin recovery URLs */}
           <Route
             path="/admin/forgot-password"
             element={<Navigate to="/forgot-password" replace />}
           />
+
           <Route
             path="/admin/reset-password"
             element={
@@ -157,13 +178,7 @@ function AppLayout() {
             path="/admin-dashboard"
             element={
               <ProtectedRoute allowedRole="ADMIN">
-                <main>
-                  <h1>Admin Dashboard</h1>
-                  <p>
-                    Administrator access verified. Dashboard
-                    features will be added in the next step.
-                  </p>
-                </main>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />
@@ -173,28 +188,24 @@ function AppLayout() {
             path="/client-dashboard"
             element={
               <ProtectedRoute allowedRole="CLIENT">
-                <main>
-                  <h1>Client Dashboard</h1>
-                  <p>
-                    Your client dashboard will be added in
-                    the next step.
-                  </p>
-                </main>
+                <ClientDashboard />
               </ProtectedRoute>
             }
           />
 
           {/* Information pages */}
           <Route path="/privacy" element={<Privacy />} />
+
           <Route
             path="/accessibility"
             element={<Accessibility />}
           />
+
           <Route path="/sitemap" element={<Sitemap />} />
         </Routes>
       </div>
 
-      <Footer />
+      {!isClientArea && <Footer />}
     </>
   );
 }

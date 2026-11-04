@@ -1,4 +1,3 @@
-
 package ca.sheridancollege.shtirthb.config;
 
 import java.nio.charset.StandardCharsets;
@@ -8,8 +7,8 @@ import javax.crypto.SecretKey;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,8 +57,7 @@ public class SecurityConfig {
         JwtAuthenticationConverter converter =
                 new JwtAuthenticationConverter();
 
-        converter.setJwtGrantedAuthoritiesConverter(
-                authoritiesConverter);
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
 
         return converter;
     }
@@ -91,16 +89,17 @@ public class SecurityConfig {
 
         http
             .csrf(csrf -> csrf.disable())
-
             .cors(cors ->
                 cors.configurationSource(corsConfigurationSource()))
-
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS))
-
+                    SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+
                 .requestMatchers(HttpMethod.GET, "/api/features").permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/api/updates").permitAll()
+
                 .requestMatchers(
                     "/api/auth/signup",
                     "/api/auth/login",
@@ -109,18 +108,18 @@ public class SecurityConfig {
                     "/api/contact"
                 ).permitAll()
 
-                .requestMatchers("/api/admin/**")
-                .hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                .anyRequest()
-                .authenticated()
+                // Full update content requires a valid client or admin JWT.
+                .requestMatchers(HttpMethod.GET, "/api/updates/**")
+                    .authenticated()
+
+                .anyRequest().authenticated()
             )
-
             .oauth2ResourceServer(oauth2 ->
                 oauth2.jwt(jwt ->
                     jwt.jwtAuthenticationConverter(
-                            jwtAuthenticationConverter())))
-
+                        jwtAuthenticationConverter())))
             .httpBasic(httpBasic -> httpBasic.disable())
             .formLogin(formLogin -> formLogin.disable());
 

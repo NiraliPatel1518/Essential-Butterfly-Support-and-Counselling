@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Link,
@@ -6,6 +5,9 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
+
+import { usePublicFeatures } from "../context/PublicFeatureContext";
+
 import "./Navbar.css";
 
 const navigation = [
@@ -18,17 +20,15 @@ const navigation = [
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isEnabled } = usePublicFeatures();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [authVersion, setAuthVersion] = useState(0);
 
-  // Recheck authentication when the route changes.
-  // This handles login flows that save a token and then navigate.
   useEffect(() => {
     setAuthVersion((version) => version + 1);
   }, [location.pathname]);
 
-  // Also support authentication changes elsewhere in the same tab.
   useEffect(() => {
     const refreshAuth = () => {
       setAuthVersion((version) => version + 1);
@@ -47,7 +47,6 @@ function Navbar() {
   const adminLoggedIn = !!localStorage.getItem("adminToken");
   const isLoggedIn = clientLoggedIn || adminLoggedIn;
 
-  // Admin takes precedence if both tokens exist.
   const dashboardPath = adminLoggedIn
     ? "/admin-dashboard"
     : "/client-dashboard";
@@ -101,13 +100,8 @@ function Navbar() {
           <span>{menuOpen ? "Close" : "Menu"}</span>
         </button>
 
-        <div
-          className={`navigation-panel ${menuOpen ? "open" : ""}`}
-        >
-          <nav
-            id="primary-navigation"
-            aria-label="Main navigation"
-          >
+        <div className={`navigation-panel ${menuOpen ? "open" : ""}`}>
+          <nav id="primary-navigation" aria-label="Main navigation">
             {navigation.map((item) => (
               <NavLink
                 key={item.to}
@@ -121,6 +115,18 @@ function Navbar() {
                 {item.label}
               </NavLink>
             ))}
+
+            {isEnabled("UPDATES") && (
+              <NavLink
+                to="/updates"
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  `nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Updates
+              </NavLink>
+            )}
           </nav>
 
           <div className="navbar-account-actions">

@@ -28,6 +28,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Updates from "./pages/Updates";
 import Testimonials from "./pages/Testimonials";
+import NewsletterUnsubscribe from "./pages/NewsletterUnsubscribe";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -124,11 +125,13 @@ function AppLayout() {
 
       <div id="main-content" tabIndex={-1}>
         <Routes>
+          {/* Main website */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/contact" element={<Contact />} />
 
+          {/* Public testimonials */}
           <Route
             path="/testimonials"
             element={
@@ -138,6 +141,7 @@ function AppLayout() {
             }
           />
 
+          {/* Public website updates */}
           <Route
             path="/updates"
             element={
@@ -156,6 +160,13 @@ function AppLayout() {
             }
           />
 
+          {/* Public newsletter unsubscribe */}
+          <Route
+            path="/newsletter/unsubscribe"
+            element={<NewsletterUnsubscribe />}
+          />
+
+          {/* Client-only intake page */}
           <Route
             path="/intake"
             element={
@@ -165,6 +176,7 @@ function AppLayout() {
             }
           />
 
+          {/* Unified login */}
           <Route path="/login" element={<Login />} />
 
           <Route
@@ -172,6 +184,7 @@ function AppLayout() {
             element={<Navigate to="/login" replace />}
           />
 
+          {/* Client account pages */}
           <Route path="/signup" element={<Signup />} />
 
           <Route
@@ -184,6 +197,7 @@ function AppLayout() {
             element={<ResetPassword />}
           />
 
+          {/* Legacy admin recovery URLs */}
           <Route
             path="/admin/forgot-password"
             element={<Navigate to="/forgot-password" replace />}
@@ -199,6 +213,7 @@ function AppLayout() {
             }
           />
 
+          {/* Protected admin dashboard */}
           <Route
             path="/admin-dashboard"
             element={
@@ -208,6 +223,7 @@ function AppLayout() {
             }
           />
 
+          {/* Protected client dashboard */}
           <Route
             path="/client-dashboard"
             element={
@@ -217,6 +233,7 @@ function AppLayout() {
             }
           />
 
+          {/* Information pages */}
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/accessibility" element={<Accessibility />} />
           <Route path="/sitemap" element={<Sitemap />} />

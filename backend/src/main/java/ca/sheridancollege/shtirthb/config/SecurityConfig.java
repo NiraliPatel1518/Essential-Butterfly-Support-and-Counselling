@@ -96,12 +96,33 @@ public class SecurityConfig {
                     SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
 
-                .requestMatchers(HttpMethod.GET, "/api/features").permitAll()
+                // Public feature visibility
+                .requestMatchers(HttpMethod.GET, "/api/features")
+                    .permitAll()
 
-                .requestMatchers(HttpMethod.GET, "/api/updates").permitAll()
+                // Public website updates
+                .requestMatchers(HttpMethod.GET, "/api/updates")
+                    .permitAll()
 
-                .requestMatchers(HttpMethod.GET, "/api/testimonials/public", "/api/testimonials/featured").permitAll()
+                // Public testimonials
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/testimonials/public",
+                    "/api/testimonials/featured"
+                ).permitAll()
 
+                // Public newsletter subscription and unsubscribe
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/newsletter/subscribe"
+                ).permitAll()
+
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/newsletter/unsubscribe"
+                ).permitAll()
+
+                // Public authentication, password reset and contact
                 .requestMatchers(
                     "/api/auth/signup",
                     "/api/auth/login",
@@ -110,12 +131,14 @@ public class SecurityConfig {
                     "/api/contact"
                 ).permitAll()
 
+                // All admin endpoints require ADMIN role
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                // Full update content requires a valid client or admin JWT.
+                // Full update content requires a valid client or admin JWT
                 .requestMatchers(HttpMethod.GET, "/api/updates/**")
                     .authenticated()
 
+                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 ->

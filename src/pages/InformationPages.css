@@ -1,0 +1,6 @@
+.information-page { width: min(820px, calc(100% - 40px)); min-height: 55vh; margin: 0 auto; padding: clamp(60px,8vw,100px) 0; }
+.information-page h1 { font-size: clamp(2.5rem,6vw,4.5rem); }
+.information-page h2 { margin-top: 42px; font-size: 1.75rem; }
+.information-page p, .information-page li { font-size: 1.05rem; line-height: 1.8; }
+.information-page a { color: #4b0082; font-weight: 700; }
+.information-page li { margin-bottom: 8px; }

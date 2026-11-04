@@ -1,0 +1,14 @@
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.counter,
+.hero,
+#center,
+#next-steps,
+#docs,
+#spacer,
+.ticks {
+  all: unset;
+}

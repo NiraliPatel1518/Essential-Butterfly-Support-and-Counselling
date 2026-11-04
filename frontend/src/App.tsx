@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter,
   Routes,
@@ -34,6 +35,8 @@ import {
   Privacy,
   Sitemap,
 } from "./pages/InformationPages";
+
+import { PublicFeatureProvider } from "./context/PublicFeatureContext";
 
 import "./AccessibilityOverrides.css";
 
@@ -103,7 +106,7 @@ function RouteFocus() {
 function AppLayout() {
   const location = useLocation();
 
-  // Client portal pages use their own visual shell, not the public site header/footer.
+  // Client portal pages use their own visual shell.
   const isClientArea =
     location.pathname === "/client-dashboard" ||
     location.pathname === "/intake";
@@ -213,7 +216,9 @@ function AppLayout() {
 function App() {
   return (
     <BrowserRouter>
-      <AppLayout />
+      <PublicFeatureProvider>
+        <AppLayout />
+      </PublicFeatureProvider>
     </BrowserRouter>
   );
 }

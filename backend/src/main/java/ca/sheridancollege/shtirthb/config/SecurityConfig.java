@@ -100,6 +100,8 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/api/updates").permitAll()
 
+                .requestMatchers(HttpMethod.GET, "/api/testimonials/public", "/api/testimonials/featured").permitAll()
+
                 .requestMatchers(
                     "/api/auth/signup",
                     "/api/auth/login",

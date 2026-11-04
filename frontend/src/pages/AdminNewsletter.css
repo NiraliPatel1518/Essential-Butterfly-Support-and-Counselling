@@ -1,0 +1,125 @@
+.admin-newsletter {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.admin-newsletter h2,
+.admin-newsletter h3 {
+  color: #382b43;
+}
+
+.newsletter-admin-count,
+.newsletter-editor,
+.newsletter-preview,
+.newsletter-campaign {
+  padding: 1.25rem;
+  border: 1px solid #e1d8e8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.newsletter-admin-count {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.newsletter-admin-count strong {
+  font-size: 1.8rem;
+}
+
+.newsletter-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.newsletter-editor label {
+  font-weight: 600;
+}
+
+.newsletter-editor input,
+.newsletter-editor textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #95859f;
+  border-radius: 7px;
+  font: inherit;
+}
+
+.newsletter-editor textarea {
+  resize: vertical;
+}
+
+.newsletter-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.newsletter-admin-actions button,
+.newsletter-preview button {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 7px;
+  background: #68458a;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.newsletter-admin-actions button.secondary {
+  background: #eee8f2;
+  color: #382b43;
+}
+
+.newsletter-admin-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.newsletter-campaigns {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.newsletter-campaign {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.newsletter-campaign h4 {
+  margin: 0 0 0.4rem;
+}
+
+.newsletter-campaign p {
+  margin: 0.2rem 0;
+}
+
+.newsletter-preview pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+
+.newsletter-admin-error {
+  color: #9e2020;
+}
+
+.newsletter-admin-message {
+  color: #23633b;
+}
+
+.admin-newsletter :focus-visible {
+  outline: 3px solid #d69d26;
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .newsletter-campaign {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

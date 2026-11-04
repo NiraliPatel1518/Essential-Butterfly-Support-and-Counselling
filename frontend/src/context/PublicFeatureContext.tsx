@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useCallback,
@@ -56,6 +57,11 @@ export function PublicFeatureProvider({
       }
 
       const data = await response.json() as PublicFeature[];
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid website features response.");
+      }
+
       setFeatures(data);
     } catch (e) {
       setError(
@@ -93,9 +99,25 @@ export function PublicFeatureProvider({
     loading,
     error,
     refresh,
-    isEnabled: (key) =>
-      features.find((item) => item.featureKey === key)
-        ?.enabled ?? false,
+
+    isEnabled: (key: FeatureKey) => {
+      const feature = features.find(
+        (item) => item.featureKey === key
+      );
+
+      // If a feature record exists, respect the admin setting.
+      if (feature) {
+        return feature.enabled;
+      }
+
+      // Newsletter is visible by default if no record exists.
+      if (key === "NEWSLETTER") {
+        return true;
+      }
+
+      // Other features remain disabled if no record exists.
+      return false;
+    },
   }), [features, loading, error, refresh]);
 
   return (

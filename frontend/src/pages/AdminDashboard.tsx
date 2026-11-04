@@ -3,6 +3,7 @@ import { apiUrl } from "../api/api";
 import FeatureVisibility from "./FeatureVisibility";
 import AdminUpdates from "./AdminUpdates";
 import AdminTestimonials from "./AdminTestimonials";
+import AdminNewsletter from "./AdminNewsletter";
 import "./Dashboard.css";
 
 type ContactMessage = {
@@ -31,7 +32,13 @@ type IntakeSubmission = {
   createdAt: string;
 };
 
-type Section = "contacts" | "intakes" | "features" | "updates" | "testimonials";
+type Section =
+  | "contacts"
+  | "intakes"
+  | "features"
+  | "updates"
+  | "testimonials"
+  | "newsletter";
 
 async function readError(response: Response): Promise<string> {
   const body = await response.text();
@@ -135,7 +142,12 @@ function AdminDashboard() {
   }, [token]);
 
   const refreshCurrentSection = useCallback(async () => {
-    if (section === "features" || section === "updates" || section === "testimonials") {
+    if (
+      section === "features" ||
+      section === "updates" ||
+      section === "testimonials" ||
+      section === "newsletter"
+    ) {
       return;
     }
 
@@ -364,16 +376,18 @@ function AdminDashboard() {
             </p>
           </div>
 
-          {section !== "features" && section !== "updates" && (
-            <button
-              type="button"
-              className="dashboard-refresh"
-              onClick={() => void refreshCurrentSection()}
-              disabled={loading}
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
-          )}
+          {section !== "features" &&
+            section !== "updates" &&
+            section !== "newsletter" && (
+              <button
+                type="button"
+                className="dashboard-refresh"
+                onClick={() => void refreshCurrentSection()}
+                disabled={loading}
+              >
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
+            )}
         </header>
 
         <section
@@ -419,7 +433,7 @@ function AdminDashboard() {
             aria-current={section === "features" ? "page" : undefined}
             onClick={() => changeSection("features")}
           >
-            Feature Controls
+            Feature Visibility
           </button>
 
           <button
@@ -428,8 +442,9 @@ function AdminDashboard() {
             aria-current={section === "updates" ? "page" : undefined}
             onClick={() => changeSection("updates")}
           >
-            Updates
+            Website Updates
           </button>
+
           <button
             type="button"
             className={section === "testimonials" ? "active" : ""}
@@ -438,22 +453,25 @@ function AdminDashboard() {
           >
             Testimonials
           </button>
+
+          <button
+            type="button"
+            className={section === "newsletter" ? "active" : ""}
+            aria-current={section === "newsletter" ? "page" : undefined}
+            onClick={() => changeSection("newsletter")}
+          >
+            Newsletter
+          </button>
         </nav>
 
         {error && (
-          <div
-            className="dashboard-alert dashboard-alert-error"
-            role="alert"
-          >
+          <div className="dashboard-alert dashboard-alert-error" role="alert">
             {error}
           </div>
         )}
 
         {notice && (
-          <div
-            className="dashboard-alert dashboard-alert-success"
-            role="status"
-          >
+          <div className="dashboard-alert dashboard-alert-success" role="status">
             {notice}
           </div>
         )}
@@ -474,7 +492,6 @@ function AdminDashboard() {
                   Opening a message marks it as viewed.
                 </p>
               </div>
-
               <span className="dashboard-count">
                 {contacts.length} total
               </span>
@@ -496,7 +513,6 @@ function AdminDashboard() {
                       <th scope="col">Action</th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {contacts.map((message) => (
                       <tr key={message.id}>
@@ -533,9 +549,7 @@ function AdminDashboard() {
               >
                 <div className="dashboard-detail-header">
                   <div>
-                    <p className="dashboard-eyebrow">
-                      CONTACT MESSAGE
-                    </p>
+                    <p className="dashboard-eyebrow">CONTACT MESSAGE</p>
                     <h3 id="contact-detail-title">
                       {selectedContact.subject}
                     </h3>
@@ -822,6 +836,12 @@ function AdminDashboard() {
         {!loading && section === "testimonials" && (
           <section className="dashboard-section">
             <AdminTestimonials />
+          </section>
+        )}
+
+        {!loading && section === "newsletter" && (
+          <section className="dashboard-section">
+            <AdminNewsletter />
           </section>
         )}
       </div>

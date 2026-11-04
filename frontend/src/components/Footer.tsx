@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import "./Footer.css";
 import { usePublicFeatures } from "../context/PublicFeatureContext";
+import NewsletterSignup from "./NewsletterSignup";
 
 type IconName = "email" | "phone" | "location" | "instagram" | "facebook" | "linkedin";
 
@@ -55,6 +56,8 @@ function Footer() {
           </div>
         </div>
       </div>
+
+      <NewsletterSignup />
 
       <div className="footer-bottom">
         <p>© 2026 Essential Butterfly Support &amp; Counselling. All rights reserved.</p>

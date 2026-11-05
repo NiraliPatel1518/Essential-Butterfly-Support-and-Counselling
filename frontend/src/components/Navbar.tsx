@@ -23,7 +23,7 @@ function Navbar() {
   const { isEnabled } = usePublicFeatures();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [authVersion, setAuthVersion] = useState(0);
+  const [, setAuthVersion] = useState(0);
 
   useEffect(() => {
     setAuthVersion((version) => version + 1);

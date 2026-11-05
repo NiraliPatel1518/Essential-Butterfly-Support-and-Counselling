@@ -32,8 +32,8 @@ class WebsiteUpdateServiceTest {
         WebsiteUpdate saved = new WebsiteUpdate("Launch", "We have launched", true);
         when(updates.save(any(WebsiteUpdate.class))).thenReturn(saved);
         var response = service.createUpdate(request(" Launch ", " We have launched ", true));
-        assertEquals("Launch", response.title());
-        assertEquals("We have launched", response.content());
+        assertEquals("Launch", response.getTitle());
+        assertEquals("We have launched", response.getContent());
         verify(updates).save(argThat(u -> u.getTitle().equals("Launch") && u.getContent().equals("We have launched")));
     }
 

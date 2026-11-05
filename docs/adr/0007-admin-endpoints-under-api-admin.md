@@ -7,7 +7,7 @@ Date: 2026-11-03
 The admin area must be protected so a normal client account can never change data that only Casey should manage.
 
 ## Decision
-One Spring Security rule protects every URL that starts with `/api/admin/` and requires the `ADMIN` role. Every new admin feature must use this prefix. Admin accounts are stored in their own table, separate from client accounts.
+One Spring Security rule protects every URL that starts with `/api/admin/` and requires the `ADMIN` role. Every new admin feature must use this prefix (for example `/api/admin/intake-submissions`, `/api/admin/updates`, `/api/admin/testimonials`, `/api/admin/newsletter`, `/api/admin/features`). Admin accounts are stored in their own table, separate from client accounts.
 
 ## Options considered
 - Add a role check inside every controller method: easy to forget one.
@@ -23,4 +23,4 @@ Risks and limits:
 - The rule only protects the backend. The frontend also needs route guards for a good user experience.
 
 ## Related
-Code: `SecurityConfig`. Sprint 2: API contract.
+Code: `SecurityConfig`.

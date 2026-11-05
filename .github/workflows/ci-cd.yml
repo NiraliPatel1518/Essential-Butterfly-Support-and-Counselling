@@ -1,3 +1,4 @@
+
 name: CI/CD Pipeline
 
 on:
@@ -14,8 +15,12 @@ env:
   IMAGE_NAME: essential-butterfly
 
 jobs:
+
+  # ==========================================
+  # 1. BUILD AND TEST BACKEND
+  # ==========================================
   build-test:
-    name: Build and Test
+    name: Build and Test Backend
     runs-on: ubuntu-latest
 
     services:
@@ -52,11 +57,132 @@ jobs:
           SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
         run: mvn --batch-mode clean verify
 
-  docker:
-    name: Build and Push Docker Image
+
+  # ==========================================
+  # 2. BUILD AND TEST FRONTEND
+  # ==========================================
+  frontend-test:
+    name: Build and Test Frontend
     runs-on: ubuntu-latest
-    needs: build-test
-    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Run frontend unit tests
+        working-directory: ./frontend
+        run: npm run test:ci
+
+
+  # ==========================================
+  # 3-6. BUILD DOCKER IMAGES, DEPLOY CONTAINERS
+  #      AND RUN INTEGRATION TESTS
+  # ==========================================
+  docker-integration:
+    name: Docker Build and Integration Tests
+    runs-on: ubuntu-latest
+
+    needs:
+      - build-test
+      - frontend-test
+
+    # Allow this job to run even if the test jobs fail.
+    if: ${{ !cancelled() }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Validate Docker Compose configuration
+        run: docker compose -f backend/docker-compose.yml config
+
+      - name: Build Docker images
+        run: docker compose -f backend/docker-compose.yml build
+
+      - name: Deploy containers using Docker Compose
+        run: docker compose -f backend/docker-compose.yml up -d
+
+      - name: Check PostgreSQL readiness
+        run: |
+          docker compose -f backend/docker-compose.yml exec -T db \
+            pg_isready -U postgres -d essential_butterfly
+
+      - name: Check backend availability
+        run: |
+          for i in {1..30}; do
+            if curl -sS -o /dev/null http://localhost:8080/; then
+              echo "Backend is responding."
+              exit 0
+            fi
+
+            echo "Waiting for backend..."
+            sleep 5
+          done
+
+          echo "Backend did not become available."
+          exit 1
+
+      - name: Check frontend availability
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:5173/ -o /dev/null; then
+              echo "Frontend is responding."
+              exit 0
+            fi
+
+            echo "Waiting for frontend..."
+            sleep 5
+          done
+
+          echo "Frontend did not become available."
+          exit 1
+
+      - name: Display container status
+        if: always()
+        run: docker compose -f backend/docker-compose.yml ps
+
+      - name: Display container logs on failure
+        if: failure()
+        run: docker compose -f backend/docker-compose.yml logs
+
+      - name: Stop containers
+        if: always()
+        run: docker compose -f backend/docker-compose.yml down -v
+
+
+  # ==========================================
+  # 7. PUBLISH DOCKER IMAGES
+  # ==========================================
+  publish:
+    name: Publish Docker Images
+    runs-on: ubuntu-latest
+
+    needs:
+      - build-test
+      - frontend-test
+      - docker-integration
+
+    # Publish only when all checks pass and the event isn't a PR.
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.build-test.result == 'success' &&
+      needs.frontend-test.result == 'success' &&
+      needs.docker-integration.result == 'success'
 
     steps:
       - name: Checkout repository
@@ -68,7 +194,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and publish backend image
         uses: docker/build-push-action@v7
         with:
           context: ./backend
@@ -77,3 +203,15 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Build and publish frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=http://localhost:8080
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}

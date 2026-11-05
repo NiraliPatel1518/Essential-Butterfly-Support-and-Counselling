@@ -10,7 +10,7 @@ RUN chmod +x mvnw
 COPY src/ src/
 
 # Tests already ran in the GitHub Actions build-test job
-RUN ./mvnw --batch-mode -DskipTests clean package
+RUN ./mvnw --batch-mode -Dmaven.test.skip=true clean package
 
 # Run the packaged application
 FROM eclipse-temurin:17-jre

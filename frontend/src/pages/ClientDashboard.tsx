@@ -317,21 +317,21 @@ function ClientDashboard() {
 
           <section className="client-quick-actions" aria-label="Quick actions">
             <Link to="/intake" className="client-quick-card">
-              <span className="client-quick-icon">▤</span>
+              <span className="client-quick-icon" aria-hidden="true">▤</span>
               <span className="client-quick-text">
                 <strong>Submit an Intake Request</strong>
                 <small>Get started with our support services.</small>
               </span>
-              <span className="client-quick-arrow">→</span>
+              <span className="client-quick-arrow" aria-hidden="true">→</span>
             </Link>
 
             <Link to="/contact" className="client-quick-card">
-              <span className="client-quick-icon">✉</span>
+              <span className="client-quick-icon" aria-hidden="true">✉</span>
               <span className="client-quick-text">
                 <strong>Send a Contact Message</strong>
                 <small>Have a question or need to connect?</small>
               </span>
-              <span className="client-quick-arrow">→</span>
+              <span className="client-quick-arrow" aria-hidden="true">→</span>
             </Link>
 
             <button
@@ -339,12 +339,12 @@ function ClientDashboard() {
               className="client-quick-card client-quick-disabled"
               onClick={() => selectSection("testimonials")}
             >
-              <span className="client-quick-icon">❝</span>
+              <span className="client-quick-icon" aria-hidden="true">❝</span>
               <span className="client-quick-text">
                 <strong>Share a Testimonial</strong>
                 <small>Tell us about your experience.</small>
               </span>
-              <span className="client-quick-arrow">→</span>
+              <span className="client-quick-arrow" aria-hidden="true">→</span>
             </button>
 
             <button
@@ -352,12 +352,12 @@ function ClientDashboard() {
               className="client-quick-card client-quick-disabled"
               onClick={() => selectSection("resources")}
             >
-              <span className="client-quick-icon">▱</span>
+              <span className="client-quick-icon" aria-hidden="true">▱</span>
               <span className="client-quick-text">
                 <strong>Explore Resources</strong>
                 <small>Helpful tools and guidance for you.</small>
               </span>
-              <span className="client-quick-arrow">→</span>
+              <span className="client-quick-arrow" aria-hidden="true">→</span>
             </button>
 
             <button
@@ -365,12 +365,12 @@ function ClientDashboard() {
               className="client-quick-card client-quick-disabled"
               onClick={() => selectSection("updates")}
             >
-              <span className="client-quick-icon">♧</span>
+              <span className="client-quick-icon" aria-hidden="true">♧</span>
               <span className="client-quick-text">
                 <strong>View Updates</strong>
                 <small>Latest news and announcements.</small>
               </span>
-              <span className="client-quick-arrow">→</span>
+              <span className="client-quick-arrow" aria-hidden="true">→</span>
             </button>
           </section>
 
@@ -389,7 +389,7 @@ function ClientDashboard() {
           >
             <div className="client-panel-heading">
               <div className="client-panel-title">
-                <span className="client-panel-icon">▤</span>
+                <span className="client-panel-icon" aria-hidden="true">▤</span>
 
                 <div>
                   <h2>My Requests</h2>
@@ -541,7 +541,7 @@ function ClientDashboard() {
             >
               <div className="client-panel-heading">
                 <div className="client-panel-title">
-                  <span className="client-panel-icon">❝</span>
+                  <span className="client-panel-icon" aria-hidden="true">❝</span>
 
                   <div>
                     <h2>My Testimonials</h2>
@@ -561,7 +561,7 @@ function ClientDashboard() {
             >
               <div className="client-panel-heading">
                 <div className="client-panel-title">
-                  <span className="client-panel-icon">✉</span>
+                  <span className="client-panel-icon" aria-hidden="true">✉</span>
 
                   <div>
                     <h2>Newsletter</h2>
@@ -591,7 +591,7 @@ function ClientDashboard() {
               id="client-resources"
               className="client-panel client-small-panel"
             >
-              <span className="client-panel-icon">▱</span>
+              <span className="client-panel-icon" aria-hidden="true">▱</span>
 
               <div>
                 <h2>Saved Resources</h2>
@@ -605,7 +605,7 @@ function ClientDashboard() {
               id="client-updates"
               className="client-panel client-small-panel"
             >
-              <span className="client-panel-icon">♧</span>
+              <span className="client-panel-icon" aria-hidden="true">♧</span>
 
               <div>
                 <h2>Latest Updates</h2>
@@ -620,7 +620,7 @@ function ClientDashboard() {
               id="client-account"
               className="client-panel client-small-panel"
             >
-              <span className="client-panel-icon">⚙</span>
+              <span className="client-panel-icon" aria-hidden="true">⚙</span>
 
               <div>
                 <h2>Account Settings</h2>

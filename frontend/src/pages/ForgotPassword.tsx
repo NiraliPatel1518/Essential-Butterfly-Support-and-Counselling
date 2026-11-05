@@ -14,16 +14,22 @@ function ForgotPassword() {
     setMessage("");
     setError("");
 
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailPattern = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+    if (!normalizedEmail) {
       setError("Please enter your email address.");
+      return;
+    }
+
+    if (!emailPattern.test(normalizedEmail)) {
+      setError("Please enter a valid email address such as name@example.com.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
-
       const response = await fetch(
         apiUrl(
           `/api/password/forgot?email=${encodeURIComponent(
@@ -69,6 +75,7 @@ function ForgotPassword() {
           </p>
 
           <form
+            noValidate
             onSubmit={(event) => {
               event.preventDefault();
               void handleSubmit();

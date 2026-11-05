@@ -3,7 +3,6 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
-import AdminForgotPassword from "./AdminForgotPassword";
 import { mockFetch, renderPage } from "../test/helpers";
 
 /*
@@ -64,7 +63,7 @@ describe("Forgot Password page", () => {
 
     // Assert: correct URL and message
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "http://localhost:8080/api/password/forgot?type=CLIENT&email=jane%2B1%40mail.com"
+      "http://localhost:8080/api/password/forgot?email=jane%2B1%40mail.com"
     );
     expect(
       await screen.findByText(/if an account exists with this email/i)
@@ -76,18 +75,6 @@ describe("Forgot Password page", () => {
    * Checks that:
    *   - The admin page sends type=ADMIN (not CLIENT)
    */
-  test("admin page calls backend with type=ADMIN", async () => {
-    // Arrange: open the Admin Forgot Password page
-    const fetchMock = mockFetch(true);
-    renderPage("/admin/forgot-password", <AdminForgotPassword />);
-
-    // Act: type the admin email and click the button
-    await userEvent.type(screen.getByLabelText(/email/i), "admin@test.com");
-    await userEvent.click(screen.getByRole("button", { name: /send/i }));
-
-    // Assert: request is marked as ADMIN
-    expect(fetchMock.mock.calls[0][0]).toContain("type=ADMIN");
-  });
 });
 
 describe("Reset Password page", () => {

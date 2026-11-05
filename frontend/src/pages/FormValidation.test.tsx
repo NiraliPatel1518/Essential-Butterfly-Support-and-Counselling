@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Login from "./Login";
-import AdminLogin from "./AdminLogin";
 import Signup from "./Signup";
 import Contact from "./Contact";
 import Intake from "./Intake";
@@ -63,21 +62,6 @@ describe("Email format", () => {
    *   - The same clear error is shown on the admin page
    *   - No request is sent to the backend
    */
-  test("admin login rejects an email without an ending", async () => {
-    // Arrange: open the Admin Login page
-    const fetchMock = mockFetch(true, "token");
-    renderPage("/admin-login", <AdminLogin />);
-
-    // Act: type "admin@test" and click Log In
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/email/i), "admin@test");
-    await user.type(screen.getByLabelText(/^password$/i), "Admin@12345");
-    await user.click(screen.getByRole("button", { name: "Log In" }));
-
-    // Assert: error is shown and backend is not called
-    expect(await screen.findByText(EMAIL_ERROR)).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
 
   /*
    * TEST 3: Signup with an incomplete email
@@ -138,12 +122,12 @@ describe("Email format", () => {
 
     // Act: choose Email and type "alex@mail", fill the rest, submit
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/client's full name/i), "Sam Lee");
+    await user.type(screen.getByLabelText(/client.s full name/i), "Sam Lee");
     await user.selectOptions(screen.getByLabelText(/preferred contact method/i), "email");
-    await user.type(screen.getByLabelText(/contact information/i), "alex@mail");
-    await user.type(screen.getByLabelText(/^overview/i), "Some overview");
-    await user.type(screen.getByLabelText(/support needs/i), "Some needs");
-    await user.click(screen.getByRole("button", { name: "Continue to Secure Intake" }));
+    await user.type(screen.getByLabelText(/^email address/i), "alex@mail");
+    await user.type(screen.getByLabelText(/a little about your situation/i), "Some overview");
+    await user.type(screen.getByLabelText(/what kind of support/i), "Some needs");
+    await user.click(screen.getByRole("button", { name: /submit intake request/i }));
 
     // Assert: backend is not called
     expect(fetchMock).not.toHaveBeenCalled();
@@ -190,10 +174,10 @@ describe("Intake phone number", () => {
     const user = await openWithPhone();
 
     // Act: type a phone number with brackets, spaces and a dash
-    await user.type(screen.getByLabelText(/contact information/i), "(416) 555-1234");
+    await user.type(screen.getByLabelText(/^phone number/i), "(416) 555-1234");
 
     // Assert: only the digits are kept
-    expect(screen.getByLabelText(/contact information/i)).toHaveValue("4165551234");
+    expect(screen.getByLabelText(/^phone number/i)).toHaveValue("4165551234");
   });
 
   /*
@@ -206,10 +190,10 @@ describe("Intake phone number", () => {
     const user = await openWithPhone();
 
     // Act: type 13 digits
-    await user.type(screen.getByLabelText(/contact information/i), "4165551234999");
+    await user.type(screen.getByLabelText(/^phone number/i), "4165551234999");
 
     // Assert: only the first 10 digits are kept
-    expect(screen.getByLabelText(/contact information/i)).toHaveValue("4165551234");
+    expect(screen.getByLabelText(/^phone number/i)).toHaveValue("4165551234");
   });
 });
 
@@ -230,12 +214,12 @@ describe("Intake under review", () => {
 
     // Act: fill the required fields and submit
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/client's full name/i), "Sam Lee");
+    await user.type(screen.getByLabelText(/client.s full name/i), "Sam Lee");
     await user.selectOptions(screen.getByLabelText(/preferred contact method/i), "email");
-    await user.type(screen.getByLabelText(/contact information/i), "alex@mail.com");
-    await user.type(screen.getByLabelText(/^overview/i), "Some overview");
-    await user.type(screen.getByLabelText(/support needs/i), "Some needs");
-    await user.click(screen.getByRole("button", { name: "Continue to Secure Intake" }));
+    await user.type(screen.getByLabelText(/^email address/i), "alex@mail.com");
+    await user.type(screen.getByLabelText(/a little about your situation/i), "Some overview");
+    await user.type(screen.getByLabelText(/what kind of support/i), "Some needs");
+    await user.click(screen.getByRole("button", { name: /submit intake request/i }));
 
     // Assert: the message is shown
     expect(await screen.findByText(message)).toBeInTheDocument();

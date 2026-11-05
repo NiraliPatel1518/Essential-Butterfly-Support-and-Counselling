@@ -170,8 +170,8 @@ function Login() {
             </h1>
 
             <p className="login-intro-text">
-              Sign in to access your client dashboard, saved resources and
-              support requests.
+              Sign in to securely access the dashboard connected to your
+              account.
             </p>
 
             <div className="login-support-card">
@@ -193,9 +193,9 @@ function Login() {
 
           <div className="login-card">
             <div className="login-card-header">
-              <h2>Client Login</h2>
+              <h2>Account Login</h2>
 
-              <p>Enter your details to access your account.</p>
+              <p>Clients and authorized administrators can sign in here.</p>
             </div>
 
             <form

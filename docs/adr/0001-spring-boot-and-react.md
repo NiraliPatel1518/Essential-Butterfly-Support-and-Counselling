@@ -23,9 +23,9 @@ Good:
 - Spring Data JPA protects database queries from SQL injection (see SECURITY_REVIEW.md).
 
 Risks and limits:
-- Two projects must be started and deployed together.
-- The frontend must know the backend address. This is currently hard-coded in some files and should move to an environment variable.
-- CORS must be configured so the browser can call the backend.
+- Two projects must be started and deployed together. Docker Compose does this (ADR-0013).
+- The frontend must know the backend address. It is read from the `VITE_API_BASE_URL` setting at build time, with `http://localhost:8080` as the default.
+- CORS must be configured so the browser can call the backend. Today only `http://localhost:5173` is allowed, so a real domain must be added before going live.
 
 ## Related
-Code: `backend/pom.xml`, `frontend/package.json`.
+Code: `essential-butterfly-backend/pom.xml`, `frontend/package.json`.

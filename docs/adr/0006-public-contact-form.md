@@ -7,7 +7,7 @@ Date: 2026-11-03
 Casey wants anyone to be able to send a short question without creating an account. The intake form holds more detail, so it needs a login.
 
 ## Decision
-`POST /api/contact` is public. The intake form and everything else that is personal need a login. Contact messages are saved with status `NEW` and are not linked to an account.
+`POST /api/contact` is public. The intake form and everything else that is personal need a login. Contact messages are not linked to an account. The admin reads them at `/api/admin/contact-messages`, and a message changes to `VIEWED` when the admin opens it.
 
 ## Options considered
 - Require login for contact: fewer spam messages, but fewer families will write.
@@ -24,4 +24,4 @@ Risks and limits:
 - The `client_user_id` column exists but stays empty.
 
 ## Related
-Code: `ContactMessageController`, `SecurityConfig`.
+Code: `ContactMessageController`, `AdminContactMessageController`, `SecurityConfig`.

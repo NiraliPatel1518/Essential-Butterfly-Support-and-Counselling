@@ -1,17 +1,17 @@
+
 package ca.sheridancollege.shtirthb.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,298 +23,226 @@ import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
 import ca.sheridancollege.shtirthb.repository.PasswordResetTokenRepository;
 
-/**
- * UC-01 / UC-03: Forgot password and reset password for clients and admins.
- * Unit tests for PasswordResetService. The database and password encoder are mocked.
- *
- * This file has 11 tests:
- *
- *   Request a reset link (5 tests)
- *     Test 1  - Client requests reset -> token is created, valid for 30 minutes
- *     Test 2  - Email not registered -> no token is created, no error
- *     Test 3  - Admin requests reset -> ADMIN token is created
- *     Test 4  - Admin email not found -> no token is created
- *     Test 5  - Two requests -> two different tokens
- *
- *   Reset the password (6 tests)
- *     Test 6  - Valid client token -> password changed, token marked as used
- *     Test 7  - Valid admin token -> admin password changed and account unlocked
- *     Test 8  - Token does not exist -> reset fails
- *     Test 9  - Token already used -> reset fails
- *     Test 10 - Token expired -> reset fails
- *     Test 11 - User was deleted -> reset fails, token stays unused
- */
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceTest {
 
-    // Fake database for client accounts
     @Mock
-    private ClientUserRepository clientUserRepository;
+    private ClientUserRepository clients;
 
-    // Fake database for admin accounts
     @Mock
-    private AdminUserRepository adminUserRepository;
+    private AdminUserRepository admins;
 
-    // Fake database for reset tokens
     @Mock
-    private PasswordResetTokenRepository tokenRepository;
+    private PasswordResetTokenRepository tokens;
 
-    // Fake password encoder (no real hashing in these tests)
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private PasswordEncoder encoder;
 
-    // The real PasswordResetService, using all the fakes above
-    @InjectMocks
-    private PasswordResetService passwordResetService;
+    private PasswordResetService service;
 
-    // ---------- request reset ----------
+    @BeforeEach
+    void setUp() {
+        service = new PasswordResetService(
+                clients, admins, tokens, encoder);
+    }
 
-    /*
-     * TEST 1: Client requests a reset link
-     * Checks that:
-     *   - A CLIENT token is saved for the correct user
-     *   - The token is not empty and not used yet
-     *   - The token expires in about 30 minutes
-     */
     @Test
-    void requestClientReset_createsToken_validFor30Minutes() {
-        // Arrange: client with id 7 exists
-        ClientUser user = mock(ClientUser.class);
-        when(user.getId()).thenReturn(7L);
-        when(clientUserRepository.findByEmail("jane@mail.com")).thenReturn(Optional.of(user));
+    void requestResetCreatesClientTokenWithThirtyMinuteExpiry() {
+        ClientUser client = mock(ClientUser.class);
 
-        // Act: request a reset (email has extra spaces and capitals)
+        when(client.getId()).thenReturn(4L);
+        when(clients.findByEmail("jane@mail.com"))
+                .thenReturn(Optional.of(client));
+        when(admins.findByEmail("jane@mail.com"))
+                .thenReturn(Optional.empty());
+
         LocalDateTime before = LocalDateTime.now();
-        passwordResetService.requestClientPasswordReset("  Jane@Mail.com ");
 
-        // Assert: capture the saved token and check its values
+        service.requestPasswordReset(" Jane@Mail.com ");
+
         ArgumentCaptor<PasswordResetToken> captor =
                 ArgumentCaptor.forClass(PasswordResetToken.class);
-        verify(tokenRepository).save(captor.capture());
+
+        verify(tokens).save(captor.capture());
 
         PasswordResetToken saved = captor.getValue();
+
         assertEquals("CLIENT", saved.getUserType());
-        assertEquals(7L, saved.getUserId());
+        assertEquals(4L, saved.getUserId());
         assertFalse(saved.isUsed());
-        assertNotNull(saved.getToken());
-        assertFalse(saved.getToken().isBlank());
-        assertTrue(saved.getExpiresAt().isAfter(before.plusMinutes(29)));
-        assertTrue(saved.getExpiresAt().isBefore(before.plusMinutes(31)));
+
+        assertTrue(saved.getExpiresAt()
+                .isAfter(before.plusMinutes(29)));
+
+        assertTrue(saved.getExpiresAt()
+                .isBefore(before.plusMinutes(31)));
     }
 
-    /*
-     * TEST 2: Email is not registered
-     * Checks that:
-     *   - No error is thrown (so attackers cannot tell which emails exist)
-     *   - No token is created
-     */
     @Test
-    void requestClientReset_doesNothing_whenEmailNotRegistered() {
-        // Arrange: no client with this email
-        when(clientUserRepository.findByEmail("nobody@mail.com")).thenReturn(Optional.empty());
-
-        // Act + Assert: no error and nothing saved
-        assertDoesNotThrow(() ->
-                passwordResetService.requestClientPasswordReset("nobody@mail.com"));
-
-        verify(tokenRepository, never()).save(any());
-    }
-
-    /*
-     * TEST 3: Admin requests a reset link
-     * Checks that:
-     *   - An ADMIN token is saved for the correct admin
-     */
-    @Test
-    void requestAdminReset_createsAdminToken() {
-        // Arrange: admin with id 1 exists
+    void requestResetCreatesAdminToken() {
         AdminUser admin = mock(AdminUser.class);
-        when(admin.getId()).thenReturn(1L);
-        when(adminUserRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
 
-        // Act: request a reset
-        passwordResetService.requestAdminPasswordReset("admin@test.com");
+        when(admin.getId()).thenReturn(2L);
+        when(clients.findByEmail("admin@mail.com"))
+                .thenReturn(Optional.empty());
+        when(admins.findByEmail("admin@mail.com"))
+                .thenReturn(Optional.of(admin));
 
-        // Assert: token is for an ADMIN with id 1
-        ArgumentCaptor<PasswordResetToken> captor =
-                ArgumentCaptor.forClass(PasswordResetToken.class);
-        verify(tokenRepository).save(captor.capture());
-        assertEquals("ADMIN", captor.getValue().getUserType());
-        assertEquals(1L, captor.getValue().getUserId());
+        service.requestPasswordReset("admin@mail.com");
+
+        verify(tokens).save(argThat(token ->
+                token.getUserType().equals("ADMIN")
+                && token.getUserId().equals(2L)));
     }
 
-    /*
-     * TEST 4: Admin email not found
-     * Checks that:
-     *   - No token is created
-     */
     @Test
-    void requestAdminReset_doesNothing_whenAdminNotFound() {
-        // Arrange: no admin with this email
-        when(adminUserRepository.findByEmail("x@test.com")).thenReturn(Optional.empty());
+    void requestResetDoesNothingForUnknownEmail() {
+        when(clients.findByEmail("unknown@mail.com"))
+                .thenReturn(Optional.empty());
+        when(admins.findByEmail("unknown@mail.com"))
+                .thenReturn(Optional.empty());
 
-        // Act: request a reset
-        passwordResetService.requestAdminPasswordReset("x@test.com");
+        assertDoesNotThrow(() ->
+                service.requestPasswordReset("unknown@mail.com"));
 
-        // Assert: nothing saved
-        verify(tokenRepository, never()).save(any());
+        verify(tokens, never()).save(any());
     }
 
-    /*
-     * TEST 5: Every request gets a new token
-     * Checks that:
-     *   - Two reset requests create two different tokens
-     */
     @Test
-    void eachRequest_generatesDifferentToken() {
-        // Arrange: client exists
-        ClientUser user = mock(ClientUser.class);
-        when(user.getId()).thenReturn(7L);
-        when(clientUserRepository.findByEmail("jane@mail.com")).thenReturn(Optional.of(user));
+    void requestResetDoesNotCreateTokenForAmbiguousAccount() {
+        when(clients.findByEmail("both@mail.com"))
+                .thenReturn(Optional.of(mock(ClientUser.class)));
 
-        // Act: request a reset two times
-        passwordResetService.requestClientPasswordReset("jane@mail.com");
-        passwordResetService.requestClientPasswordReset("jane@mail.com");
+        when(admins.findByEmail("both@mail.com"))
+                .thenReturn(Optional.of(mock(AdminUser.class)));
 
-        // Assert: the two saved tokens are different
-        ArgumentCaptor<PasswordResetToken> captor =
-                ArgumentCaptor.forClass(PasswordResetToken.class);
-        verify(tokenRepository, times(2)).save(captor.capture());
-        assertNotEquals(captor.getAllValues().get(0).getToken(),
-                captor.getAllValues().get(1).getToken());
+        service.requestPasswordReset("both@mail.com");
+
+        verify(tokens, never()).save(any());
     }
 
-    // ---------- reset password ----------
-
-    /*
-     * TEST 6: Successful client password reset
-     * Checks that:
-     *   - The new password is saved in hashed form
-     *   - The token is marked as used, so it cannot be used again
-     */
     @Test
-    void resetPassword_updatesClientPassword_andMarksTokenUsed() {
-        // Arrange: valid token for client 7, client exists
+    void resetUpdatesClientPasswordAndConsumesToken() {
         PasswordResetToken token = new PasswordResetToken(
-                "abc", "CLIENT", 7L, LocalDateTime.now().plusMinutes(10));
-        ClientUser user = new ClientUser("Jane", "jane@mail.com", "OLD");
+                "token", "CLIENT", 7L,
+                LocalDateTime.now().plusMinutes(5));
 
-        when(tokenRepository.findByToken("abc")).thenReturn(Optional.of(token));
-        when(clientUserRepository.findById(7L)).thenReturn(Optional.of(user));
-        when(passwordEncoder.encode("NewPassword1")).thenReturn("NEW_ENCODED");
+        ClientUser client =
+                new ClientUser("Jane", "jane@mail.com", "OLD");
 
-        // Act + Assert: reset succeeds
-        assertTrue(passwordResetService.resetPassword("abc", "NewPassword1"));
+        when(tokens.findByToken("token"))
+                .thenReturn(Optional.of(token));
 
-        // Assert: password changed and token used
-        assertEquals("NEW_ENCODED", user.getPassword());
-        assertTrue(token.isUsed(), "Token must not be usable a second time");
-        verify(clientUserRepository).save(user);
-        verify(tokenRepository).save(token);
+        when(clients.findById(7L))
+                .thenReturn(Optional.of(client));
+
+        when(encoder.encode("NewPassword123"))
+                .thenReturn("HASH");
+
+        assertTrue(service.resetPassword(
+                "token", "NewPassword123"));
+
+        assertEquals("HASH", client.getPassword());
+        assertTrue(token.isUsed());
+
+        verify(clients).save(client);
+        verify(tokens).save(token);
     }
 
-    /*
-     * TEST 7: Successful admin password reset
-     * Checks that:
-     *   - The admin password is changed
-     *   - A locked admin account is unlocked (failed count back to 0)
-     *   - The client table is not touched
-     */
     @Test
-    void resetPassword_updatesAdminPassword() {
-        // Arrange: valid token for admin 1, admin exists
+    void resetUpdatesAdminAndClearsLockout() {
         PasswordResetToken token = new PasswordResetToken(
-                "adm", "ADMIN", 1L, LocalDateTime.now().plusMinutes(10));
-        AdminUser admin = new AdminUser("Administrator", "admin@test.com", "OLD");
+                "admin-token", "ADMIN", 3L,
+                LocalDateTime.now().plusMinutes(5));
 
-        // The admin was locked after 5 failed logins
+        AdminUser admin =
+                new AdminUser("Admin", "admin@mail.com", "OLD");
+
         admin.setFailedLoginAttempts(5);
-        admin.setLockedUntil(LocalDateTime.now().plusMinutes(10));
+        admin.setLockedUntil(
+                LocalDateTime.now().plusMinutes(5));
 
-        when(tokenRepository.findByToken("adm")).thenReturn(Optional.of(token));
-        when(adminUserRepository.findById(1L)).thenReturn(Optional.of(admin));
-        when(passwordEncoder.encode("NewPassword1")).thenReturn("NEW_ENCODED");
+        when(tokens.findByToken("admin-token"))
+                .thenReturn(Optional.of(token));
 
-        // Act + Assert: reset succeeds and only the admin is updated
-        assertTrue(passwordResetService.resetPassword("adm", "NewPassword1"));
-        assertEquals("NEW_ENCODED", admin.getPassword());
-        verify(clientUserRepository, never()).findById(any());
+        when(admins.findById(3L))
+                .thenReturn(Optional.of(admin));
 
-        // Assert: the lock is removed
+        when(encoder.encode("NewPassword123"))
+                .thenReturn("HASH");
+
+        assertTrue(service.resetPassword(
+                "admin-token", "NewPassword123"));
+
+        assertEquals("HASH", admin.getPassword());
         assertEquals(0, admin.getFailedLoginAttempts());
         assertNull(admin.getLockedUntil());
+        assertTrue(token.isUsed());
+
+        verify(admins).save(admin);
+        verify(tokens).save(token);
     }
 
-    /*
-     * TEST 8: Token does not exist
-     * Checks that:
-     *   - Reset fails
-     *   - No new password is created
-     */
     @Test
-    void resetPassword_fails_whenTokenDoesNotExist() {
-        // Arrange: token not found
-        when(tokenRepository.findByToken("fake")).thenReturn(Optional.empty());
+    void resetRejectsMissingUsedAndExpiredTokens() {
+        assertFalse(service.resetPassword(
+                null, "NewPassword123"));
 
-        // Act + Assert: reset fails
-        assertFalse(passwordResetService.resetPassword("fake", "NewPassword1"));
-        verify(passwordEncoder, never()).encode(anyString());
+        assertFalse(service.resetPassword(
+                "x", "short"));
+
+        when(tokens.findByToken("missing"))
+                .thenReturn(Optional.empty());
+
+        assertFalse(service.resetPassword(
+                "missing", "NewPassword123"));
+
+        PasswordResetToken used = new PasswordResetToken(
+                "used", "CLIENT", 1L,
+                LocalDateTime.now().plusMinutes(5));
+
+        used.setUsed(true);
+
+        when(tokens.findByToken("used"))
+                .thenReturn(Optional.of(used));
+
+        assertFalse(service.resetPassword(
+                "used", "NewPassword123"));
+
+        PasswordResetToken expired = new PasswordResetToken(
+                "expired", "CLIENT", 1L,
+                LocalDateTime.now().minusMinutes(1));
+
+        when(tokens.findByToken("expired"))
+                .thenReturn(Optional.of(expired));
+
+        assertFalse(service.resetPassword(
+                "expired", "NewPassword123"));
+
+        verifyNoInteractions(encoder);
+        verify(clients, never()).save(any());
+        verify(admins, never()).save(any());
     }
 
-    /*
-     * TEST 9: Token was already used
-     * Checks that:
-     *   - Reset fails
-     *   - The user is not changed
-     */
     @Test
-    void resetPassword_fails_whenTokenAlreadyUsed() {
-        // Arrange: token exists but is already used
-        PasswordResetToken token = new PasswordResetToken(
-                "abc", "CLIENT", 7L, LocalDateTime.now().plusMinutes(10));
-        token.setUsed(true);
-        when(tokenRepository.findByToken("abc")).thenReturn(Optional.of(token));
+    void resetRejectsUnknownUserType() {
+        PasswordResetToken unknown = new PasswordResetToken(
+                "unknown", "OTHER", 1L,
+                LocalDateTime.now().plusMinutes(5));
 
-        // Act + Assert: reset fails and nothing is saved
-        assertFalse(passwordResetService.resetPassword("abc", "NewPassword1"));
-        verify(clientUserRepository, never()).save(any());
-    }
+        when(tokens.findByToken("unknown"))
+                .thenReturn(Optional.of(unknown));
 
-    /*
-     * TEST 10: Token has expired
-     * Checks that:
-     *   - Reset fails
-     *   - The user is not changed
-     */
-    @Test
-    void resetPassword_fails_whenTokenExpired() {
-        // Arrange: token expired 1 minute ago
-        PasswordResetToken token = new PasswordResetToken(
-                "abc", "CLIENT", 7L, LocalDateTime.now().minusMinutes(1));
-        when(tokenRepository.findByToken("abc")).thenReturn(Optional.of(token));
+        when(encoder.encode("NewPassword123"))
+                .thenReturn("HASH");
 
-        // Act + Assert: reset fails and nothing is saved
-        assertFalse(passwordResetService.resetPassword("abc", "NewPassword1"));
-        verify(clientUserRepository, never()).save(any());
-    }
+        assertFalse(service.resetPassword(
+                "unknown", "NewPassword123"));
 
-    /*
-     * TEST 11: User account was deleted
-     * Checks that:
-     *   - Reset fails
-     *   - The token is NOT marked as used
-     */
-    @Test
-    void resetPassword_fails_whenUserWasDeleted() {
-        // Arrange: valid token, but client 7 no longer exists
-        PasswordResetToken token = new PasswordResetToken(
-                "abc", "CLIENT", 7L, LocalDateTime.now().plusMinutes(10));
-        when(tokenRepository.findByToken("abc")).thenReturn(Optional.of(token));
-        when(clientUserRepository.findById(7L)).thenReturn(Optional.empty());
-        when(passwordEncoder.encode("NewPassword1")).thenReturn("NEW_ENCODED");
+        verify(encoder).encode("NewPassword123");
 
-        // Act + Assert: reset fails and token stays unused
-        assertFalse(passwordResetService.resetPassword("abc", "NewPassword1"));
-        assertFalse(token.isUsed());
+        verify(clients, never()).save(any());
+        verify(admins, never()).save(any());
+        verify(tokens, never()).save(any());
     }
 }

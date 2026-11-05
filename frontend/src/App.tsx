@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter,
   Routes,
@@ -16,6 +17,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicFeatureRoute from "./components/PublicFeatureRoute";
+import SessionTimeout from "./components/SessionTimeout";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -39,7 +41,9 @@ import {
   Sitemap,
 } from "./pages/InformationPages";
 
-import { PublicFeatureProvider } from "./context/PublicFeatureContext";
+import {
+  PublicFeatureProvider,
+} from "./context/PublicFeatureContext";
 
 import "./AccessibilityOverrides.css";
 
@@ -115,6 +119,8 @@ function AppLayout() {
 
   return (
     <>
+      <SessionTimeout />
+
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -237,6 +243,9 @@ function AppLayout() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/accessibility" element={<Accessibility />} />
           <Route path="/sitemap" element={<Sitemap />} />
+
+          {/* Unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
 

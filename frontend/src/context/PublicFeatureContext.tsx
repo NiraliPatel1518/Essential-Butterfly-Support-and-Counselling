@@ -14,7 +14,11 @@ import { apiUrl } from "../api/api";
 export type FeatureKey =
   | "NEWSLETTER"
   | "TESTIMONIALS"
-  | "UPDATES";
+  | "UPDATES"
+  | "ABOUT"
+  | "SERVICES"
+  | "CONTACT"
+  | "INTAKE";
 
 export type PublicFeature = {
   featureKey: FeatureKey;
@@ -31,17 +35,14 @@ type FeatureContextType = {
   isEnabled: (key: FeatureKey) => boolean;
 };
 
-const FeatureContext =
-  createContext<FeatureContextType | null>(null);
+const FeatureContext = createContext<FeatureContextType | null>(null);
 
 export function PublicFeatureProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [features, setFeatures] =
-    useState<PublicFeature[]>([]);
-
+  const [features, setFeatures] = useState<PublicFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -56,13 +57,13 @@ export function PublicFeatureProvider({
         throw new Error("Unable to load website features.");
       }
 
-      const data = await response.json() as PublicFeature[];
+      const data: unknown = await response.json();
 
       if (!Array.isArray(data)) {
         throw new Error("Invalid website features response.");
       }
 
-      setFeatures(data);
+      setFeatures(data as PublicFeature[]);
     } catch (e) {
       setError(
         e instanceof Error
@@ -81,44 +82,31 @@ export function PublicFeatureProvider({
       void refresh();
     };
 
-    window.addEventListener(
-      "public-features-updated",
-      handleUpdate
-    );
+    window.addEventListener("public-features-updated", handleUpdate);
 
     return () => {
-      window.removeEventListener(
-        "public-features-updated",
-        handleUpdate
-      );
+      window.removeEventListener("public-features-updated", handleUpdate);
     };
   }, [refresh]);
 
-  const value = useMemo<FeatureContextType>(() => ({
-    features,
-    loading,
-    error,
-    refresh,
+  const value = useMemo<FeatureContextType>(
+    () => ({
+      features,
+      loading,
+      error,
+      refresh,
+      isEnabled: (key: FeatureKey) => {
+        const feature = features.find(
+          (item) => item.featureKey === key
+        );
 
-    isEnabled: (key: FeatureKey) => {
-      const feature = features.find(
-        (item) => item.featureKey === key
-      );
+        if (feature) return feature.enabled;
 
-      // If a feature record exists, respect the admin setting.
-      if (feature) {
-        return feature.enabled;
-      }
-
-      // Newsletter is visible by default if no record exists.
-      if (key === "NEWSLETTER") {
-        return true;
-      }
-
-      // Other features remain disabled if no record exists.
-      return false;
-    },
-  }), [features, loading, error, refresh]);
+        return key === "NEWSLETTER";
+      },
+    }),
+    [features, loading, error, refresh]
+  );
 
   return (
     <FeatureContext.Provider value={value}>

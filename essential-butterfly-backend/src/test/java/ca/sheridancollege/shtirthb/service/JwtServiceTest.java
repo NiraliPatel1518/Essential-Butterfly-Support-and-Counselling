@@ -33,14 +33,15 @@ import ca.sheridancollege.shtirthb.config.SecurityConfig;
  */
 class JwtServiceTest {
 
-    // The real service that creates tokens at login
-    private final JwtService jwtService = new JwtService();
+      // A fake secret used only in tests (never the real one)
+    private static final String TEST_SECRET =
+            "test-secret-for-unit-tests-only-test-secret-for-unit-tests-only-1234";
 
-    // The real security settings used by the app
+    private final JwtService jwtService = new JwtService(TEST_SECRET);
+
     private final SecurityConfig securityConfig = new SecurityConfig();
 
-    // The real decoder that checks tokens on every protected request
-    private final JwtDecoder decoder = securityConfig.jwtDecoder();
+    private final JwtDecoder decoder = securityConfig.jwtDecoder(TEST_SECRET);
 
     /*
      * TEST 1: Token is accepted

@@ -42,15 +42,27 @@ TESTING.md                     Test plan and results
 
 You need Docker.
 
-1. Create a folder named `secrets` in the project root. It is ignored by Git, so never commit it. Put these three files in it (one value per file, no extra spaces):
+1. Create a folder named `secrets` in the project root. It is ignored by Git, so never commit it. Put these four files in it (one value per file, no extra spaces):
    - `secrets/postgres_password.txt` : the database password
    - `secrets/gmail_username.txt` : the Gmail address used to send newsletters
    - `secrets/gmail_app_password.txt` : the Gmail app password
+   - `secrets/jwt_secret.txt` : a long random secret used to sign login tokens (see below)
 2. Start everything:
    ```
    docker compose up -d --build
    ```
 3. Open http://localhost:5173. The API runs on http://localhost:8080.
+
+To create `jwt_secret.txt` on Windows (PowerShell), run this from the project root:
+
+```powershell
+$bytes = New-Object byte[] 64
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+[Convert]::ToBase64String($bytes) | Set-Content -Path secrets\jwt_secret.txt -NoNewline -Encoding ascii
+```
+
+On Mac or Linux, run `openssl rand -base64 64 | tr -d '\n' > secrets/jwt_secret.txt`.
+Never commit this file, and never reuse a secret that was ever pushed to GitHub.
 
 Newsletter email needs real Gmail values. Without them the rest of the site still works.
 
@@ -63,9 +75,11 @@ You need Docker, Java 17 and Node.js.
    docker compose up -d db
    ```
    The database is on a private Docker network, so for local development you can also run your own PostgreSQL and set `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD`.
-2. Backend:
+2. Backend (the app needs the `JWT_SECRET` environment variable, or it will not start):
    ```
    cd essential-butterfly-backend
+   export JWT_SECRET="your-long-random-secret"      # Mac/Linux
+   $env:JWT_SECRET = "your-long-random-secret"      # Windows PowerShell
    ./mvnw spring-boot:run
    ```
 3. Frontend:

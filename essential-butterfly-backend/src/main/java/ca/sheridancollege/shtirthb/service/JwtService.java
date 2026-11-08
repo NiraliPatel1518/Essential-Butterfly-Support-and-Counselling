@@ -1,9 +1,10 @@
 package ca.sheridancollege.shtirthb.service;
 
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Jwts;
@@ -12,11 +13,11 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JwtService {
 
-    private static final String SECRET =
-            "EssentialButterflySecretKeyForJwtAuthentication2026VerySecure";
+        private final SecretKey key;
 
-    private final Key key =
-            Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    public JwtService(@Value("${app.jwt.secret}") String secret) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
 
     public String generateToken(String email, String role) {
 
@@ -30,7 +31,7 @@ public class JwtService {
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiration)
-                .signWith(key)
+                .signWith(key, Jwts.SIG.HS384)
                 .compact();
     }
 }

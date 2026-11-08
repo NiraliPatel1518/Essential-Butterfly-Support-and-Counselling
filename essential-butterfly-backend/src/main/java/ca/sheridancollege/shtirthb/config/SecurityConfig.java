@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import javax.crypto.SecretKey;
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,19 +27,17 @@ import io.jsonwebtoken.security.Keys;
 @Configuration
 public class SecurityConfig {
 
-    private static final String SECRET =
-            "EssentialButterflySecretKeyForJwtAuthentication2026VerySecure";
-
+    
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public JwtDecoder jwtDecoder() {
+      @Bean
+    public JwtDecoder jwtDecoder(@Value("${app.jwt.secret}") String secret) {
         SecretKey key = Keys.hmacShaKeyFor(
-                SECRET.getBytes(StandardCharsets.UTF_8));
-
+                secret.getBytes(StandardCharsets.UTF_8));
+                    
         return NimbusJwtDecoder
                 .withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS384)

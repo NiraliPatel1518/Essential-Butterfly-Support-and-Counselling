@@ -37,12 +37,14 @@ services:
       - postgres_password
       - gmail_username
       - gmail_app_password
+      - jwt_secret
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         export SPRING_DATASOURCE_PASSWORD="$$(cat /run/secrets/postgres_password)"
         export GMAIL_USERNAME="$$(cat /run/secrets/gmail_username)"
         export GMAIL_APP_PASSWORD="$$(cat /run/secrets/gmail_app_password)"
+        export JWT_SECRET="$$(cat /run/secrets/jwt_secret)"
         exec java -jar app.jar
     ports:
       - "8080:8080"
@@ -80,3 +82,5 @@ secrets:
     file: ./secrets/gmail_username.txt
   gmail_app_password:
     file: ./secrets/gmail_app_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt

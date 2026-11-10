@@ -21,7 +21,7 @@ GitHub Actions builds the images, tests them with Docker Compose and pushes them
 
 ## 2. Secrets
 
-The application needs four secret files in a folder named `secrets/` in the project root. This folder must never be committed to GitHub.
+The application needs six secret files in a folder named `secrets/` in the project root. This folder must never be committed to GitHub.
 
 | File | What it holds |
 |---|---|
@@ -29,8 +29,10 @@ The application needs four secret files in a folder named `secrets/` in the proj
 | `secrets/gmail_username.txt` | Gmail address that sends newsletters |
 | `secrets/gmail_app_password.txt` | Gmail app password for that address |
 | `secrets/jwt_secret.txt` | Long random secret that signs login tokens |
+| `secrets/admin_email.txt` | Email of the admin account created on first start |
+| `secrets/admin_password.txt` | Password of that admin account |
 
-Each file has only the value, with no extra spaces or quotes. Without the Gmail files the site still runs, but newsletters cannot be sent. Without `jwt_secret.txt` the backend will not start. If the secret is ever leaked, create a new one and restart the backend. Everyone will have to log in again.
+Each file has only the value, with no extra spaces or quotes. Without the Gmail files the site still runs, but newsletters cannot be sent. Without the admin files the backend still starts, but no admin account is created, so nobody can sign in to the admin area. Without `jwt_secret.txt` the backend will not start. If the secret is ever leaked, create a new one and restart the backend. Everyone will have to log in again.
 
 ## 3. Start and stop
 

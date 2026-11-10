@@ -42,11 +42,13 @@ TESTING.md                     Test plan and results
 
 You need Docker.
 
-1. Create a folder named `secrets` in the project root. It is ignored by Git, so never commit it. Put these four files in it (one value per file, no extra spaces):
+1. Create a folder named `secrets` in the project root. It is ignored by Git, so never commit it. Put these six files in it (one value per file, no extra spaces):
    - `secrets/postgres_password.txt` : the database password
    - `secrets/gmail_username.txt` : the Gmail address used to send newsletters
    - `secrets/gmail_app_password.txt` : the Gmail app password
    - `secrets/jwt_secret.txt` : a long random secret used to sign login tokens (see below)
+   - `secrets/admin_email.txt` : the email of the admin account (for local testing use any email you like)
+   - `secrets/admin_password.txt` : the password of the admin account (choose your own, at least 12 characters)
 2. Start everything:
    ```
    docker compose up -d --build
@@ -64,6 +66,8 @@ $bytes = New-Object byte[] 64
 On Mac or Linux, run `openssl rand -base64 64 | tr -d '\n' > secrets/jwt_secret.txt`.
 Never commit this file, and never reuse a secret that was ever pushed to GitHub.
 
+The admin account is created from `admin_email.txt` and `admin_password.txt` the first time the backend starts. If either file is empty, no admin account is created. Changing these files later does not change an admin that already exists in the database.
+
 Newsletter email needs real Gmail values. Without them the rest of the site still works.
 
 ## Run it for development
@@ -80,6 +84,10 @@ You need Docker, Java 17 and Node.js.
    cd essential-butterfly-backend
    export JWT_SECRET="your-long-random-secret"      # Mac/Linux
    $env:JWT_SECRET = "your-long-random-secret"      # Windows PowerShell
+   export ADMIN_EMAIL="admin@example.com"           # Mac/Linux
+   export ADMIN_PASSWORD="a-strong-password-here"   # Mac/Linux
+   $env:ADMIN_EMAIL = "admin@example.com"           # Windows PowerShell
+   $env:ADMIN_PASSWORD = "a-strong-password-here"   # Windows PowerShell
    ./mvnw spring-boot:run
    ```
 3. Frontend:

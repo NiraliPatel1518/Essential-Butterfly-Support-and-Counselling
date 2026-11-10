@@ -41,3 +41,6 @@ Thumbs.db
 *.sln
 *.sw?
 
+
+# Docker secret files (never commit)
+secrets/

@@ -61,3 +61,117 @@
   .hero-image-wrapper { min-height:260px; padding:0 18px 32px; }
   .hero-image-shape { height:68vw; min-height:260px; }
 }
+
+/* WCAG 2.1 AA / AODA-oriented baseline enhancements. */
+body { line-height: 1.6; overflow-wrap: anywhere; }
+
+main, section, article, aside, nav, header, footer { min-width: 0; }
+
+button,
+input,
+select,
+textarea,
+a.login-button,
+a.purple-button,
+a.outline-button,
+.dashboard-tabs button,
+.dashboard-text-button { min-height: 44px; }
+
+input, select, textarea { font-size: 1rem !important; }
+
+button:disabled,
+[aria-disabled="true"] { cursor: not-allowed; opacity: .7; }
+
+[role="alert"], [role="status"] { overflow-wrap: anywhere; }
+
+.dashboard-description,
+.dashboard-section p,
+.feature-description,
+.intake-guidance-card p,
+.intake-privacy-note,
+.contact-intro-text,
+.footer-brand p { color: #51445f; }
+
+.dashboard-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dashboard-table th,
+.dashboard-table td { font-size: 1rem; }
+
+/* Keep essential portal content readable without relying on browser zoom. */
+.client-eyebrow,
+.client-sidebar-role,
+.client-sidebar-nav small,
+.client-quick-text small,
+.client-panel-heading p,
+.client-request-details p,
+.updates-eyebrow,
+.updates-date,
+.updates-card-date,
+.feature-description,
+.feature-note,
+.intake-step-label,
+.intake-helper-text { font-size: .875rem !important; }
+
+.client-sidebar-nav a,
+.client-sidebar-nav button,
+.client-quick-card,
+.client-panel,
+.client-requests-table,
+.updates-card,
+.updates-modal,
+.feature-card { font-size: 1rem; }
+
+.client-table-wrap,
+.feature-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 700px) {
+  .dashboard-tabs { display: grid; grid-template-columns: 1fr; }
+
+  .dashboard-tabs button,
+  .dashboard-refresh,
+  .dashboard-text-button { width: 100%; }
+
+  .footer-main,
+  .footer-bottom,
+  .contact-layout,
+  .intake-content-grid { grid-template-columns: 1fr !important; }
+
+  .client-quick-actions,
+  .client-panel-heading,
+  .feature-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  .client-portal-content,
+  .updates-container,
+  .information-page { padding-left: 1rem; padding-right: 1rem; }
+
+  .updates-modal { max-height: 94vh; }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --purple: #4b087c;
+    --purple-dark: #21063e;
+    --text: #211a29;
+    --border: #756a7f;
+  }
+
+  button, input, select, textarea, a { border-color: currentColor; }
+}
+
+@media (forced-colors: active) {
+  .purple-button,
+  .outline-button,
+  .login-button,
+  .dashboard-tabs button,
+  .dashboard-status { border: 2px solid ButtonText; }
+}

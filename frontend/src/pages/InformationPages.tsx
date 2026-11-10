@@ -16,7 +16,7 @@ export function Accessibility() {
   return (
     <main className="information-page">
       <h1>Accessibility</h1>
-      <p>Essential Butterfly aims to provide an inclusive website that can be used with a keyboard, screen reader, text enlargement and reduced-motion preferences.</p>
+      <p>Essential Butterfly aims to meet the Accessibility for Ontarians with Disabilities Act (AODA) requirements and WCAG 2.1 Level AA. The website supports keyboard navigation, screen readers, text enlargement, visible focus indicators, sufficient colour contrast and reduced-motion preferences.</p>
       <h2>Request another format or report a barrier</h2>
       <p>If you have difficulty accessing content or completing a form, contact Casey. Describe the page and the assistance or format you need.</p>
       <a href="mailto:casey@essentialbutterfly.com?subject=Website%20accessibility%20request">Email an accessibility request</a>
@@ -25,7 +25,7 @@ export function Accessibility() {
 }
 
 export function Sitemap() {
-  const links = [["Home","/"],["About Casey","/about"],["Services","/services"],["Contact","/contact"],["Secure Intake","/intake"],["Client Login","/login"],["Privacy","/privacy"],["Accessibility","/accessibility"]];
+  const links = [["Home","/"],["About Casey","/about"],["Services","/services"],["Contact","/contact"],["Secure Intake","/intake"],["Sign In","/login"],["Privacy","/privacy"],["Accessibility","/accessibility"]];
   return (
     <main className="information-page">
       <h1>Site map</h1>

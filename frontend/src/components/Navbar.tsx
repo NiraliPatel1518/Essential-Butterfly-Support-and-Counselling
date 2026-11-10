@@ -26,8 +26,20 @@ function Navbar() {
   const [, setAuthVersion] = useState(0);
 
   useEffect(() => {
+    setMenuOpen(false);
     setAuthVersion((version) => version + 1);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [menuOpen]);
 
   useEffect(() => {
     const refreshAuth = () => {
@@ -155,7 +167,7 @@ function Navbar() {
                 className="login-button"
                 onClick={() => setMenuOpen(false)}
               >
-                Client Login
+                Sign in
               </Link>
             )}
           </div>

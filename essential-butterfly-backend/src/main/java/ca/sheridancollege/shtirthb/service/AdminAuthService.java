@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.service;
 
 import java.time.LocalDateTime;
@@ -5,6 +6,7 @@ import java.time.LocalDateTime;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
 
@@ -42,9 +44,7 @@ public class AdminAuthService {
         if (admin.getLockedUntil() != null) {
 
             if (now.isBefore(admin.getLockedUntil())) {
-                throw new IllegalStateException(
-                        "Admin account is temporarily locked"
-                );
+                throw new AppExceptions.AccountLockedException();
             }
 
             admin.setLockedUntil(null);
@@ -61,7 +61,6 @@ public class AdminAuthService {
             admin.setFailedLoginAttempts(failedAttempts);
 
             if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-
                 admin.setLockedUntil(
                         now.plusMinutes(LOCKOUT_MINUTES)
                 );

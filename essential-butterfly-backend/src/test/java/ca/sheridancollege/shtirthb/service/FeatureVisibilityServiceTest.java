@@ -1,5 +1,7 @@
 package ca.sheridancollege.shtirthb.service;
 
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import java.util.*;
@@ -26,23 +28,23 @@ class FeatureVisibilityServiceTest {
     }
 
     @Test void updateRejectsMissingOrIncompleteFeatureSet() {
-        assertThrows(IllegalArgumentException.class, () -> service.updateFeatures(List.of()));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(List.of()));
         List<FeatureVisibilityRequest> invalid = List.of(request("NEWSLETTER", true));
-        assertThrows(IllegalArgumentException.class, () -> service.updateFeatures(invalid));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(invalid));
         verifyNoInteractions(repository);
     }
 
     @Test void updateRejectsUnknownFeatureKey() {
         List<FeatureVisibilityRequest> requests = List.of(
             request("NEWSLETTER", true), request("TESTIMONIALS", true), request("OTHER", true));
-        assertThrows(IllegalArgumentException.class, () -> service.updateFeatures(requests));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(requests));
         verifyNoInteractions(repository);
     }
 
     @Test void updateRejectsNullVisibility() {
         List<FeatureVisibilityRequest> requests = List.of(
             request("NEWSLETTER", true), request("TESTIMONIALS", true), request("UPDATES", null));
-        assertThrows(IllegalArgumentException.class, () -> service.updateFeatures(requests));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(requests));
         verifyNoInteractions(repository);
     }
 

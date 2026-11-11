@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import ca.sheridancollege.shtirthb.dto.LoginRequest;
 import ca.sheridancollege.shtirthb.dto.SignupRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.ClientUser;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
 import ca.sheridancollege.shtirthb.service.AuthService;
@@ -37,7 +38,7 @@ class AuthControllerTest {
     @Test void loginReturnsUnauthorizedForInvalidCredentials() {
         LoginRequest request = mock(LoginRequest.class);
         when(authService.authenticate(request)).thenReturn(null);
-        assertEquals(HttpStatus.UNAUTHORIZED, controller.login(request).getStatusCode());
+        assertThrows(AppExceptions.InvalidCredentialsException.class, () -> controller.login(request));
         verifyNoInteractions(jwtService);
     }
     @Test void loginReturnsGeneratedJwt() {
@@ -56,6 +57,6 @@ class AuthControllerTest {
     @Test void returnsNotFoundWhenCurrentUserMissing() {
         when(authentication.getName()).thenReturn("missing@example.com");
         when(users.findByEmail("missing@example.com")).thenReturn(Optional.empty());
-        assertEquals(HttpStatus.NOT_FOUND, controller.getCurrentUser(authentication).getStatusCode());
+        assertThrows(AppExceptions.ResourceNotFoundException.class, () -> controller.getCurrentUser(authentication));
     }
 }

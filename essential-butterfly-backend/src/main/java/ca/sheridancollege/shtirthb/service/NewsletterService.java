@@ -1,14 +1,14 @@
+
 package ca.sheridancollege.shtirthb.service;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.FeatureVisibility;
 import ca.sheridancollege.shtirthb.model.NewsletterCampaign;
 import ca.sheridancollege.shtirthb.model.NewsletterDelivery;
@@ -43,12 +43,13 @@ public class NewsletterService {
 
     // PUBLIC: subscribe to newsletter
     @Transactional
-    public Map<String, Object> subscribe(String email, Boolean consent) {
+    public Map<String, Object> subscribe(
+            String email,
+            Boolean consent) {
 
         if (!newsletterEnabled()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Newsletter subscriptions are unavailable."
+            throw new AppExceptions.ResourceNotFoundException(
+                    "Newsletter subscriptions"
             );
         }
 
@@ -56,15 +57,13 @@ public class NewsletterService {
                 "^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$")
                 || email.length() > 254) {
 
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+            throw new AppExceptions.ValidationException(
                     "Enter a valid email address."
             );
         }
 
         if (!Boolean.TRUE.equals(consent)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+            throw new AppExceptions.ValidationException(
                     "Consent is required to subscribe."
             );
         }
@@ -93,7 +92,8 @@ public class NewsletterService {
 
         return Map.of(
                 "success", true,
-                "message", "You have successfully subscribed to the newsletter."
+                "message",
+                "You have successfully subscribed to the newsletter."
         );
     }
 
@@ -102,18 +102,18 @@ public class NewsletterService {
     public Map<String, Object> unsubscribe(String token) {
 
         if (token == null || token.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+            throw new AppExceptions.ValidationException(
                     "Unsubscribe token is required."
             );
         }
 
         NewsletterSubscriber subscriber = subscribers
                 .findByUnsubscribeToken(token)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "This unsubscribe link is invalid."
-                ));
+                .orElseThrow(() ->
+                        new AppExceptions.ResourceNotFoundException(
+                                "Unsubscribe link"
+                        )
+                );
 
         subscriber.unsubscribe();
 
@@ -151,12 +151,17 @@ public class NewsletterService {
 
     // ADMIN: create a newsletter draft
     @Transactional
-    public Map<String, Object> createCampaign(String subject, String content) {
+    public Map<String, Object> createCampaign(
+            String subject,
+            String content) {
 
         validateCampaign(subject, content);
 
         NewsletterCampaign campaign = campaigns.save(
-                new NewsletterCampaign(subject.trim(), content.trim())
+                new NewsletterCampaign(
+                        subject.trim(),
+                        content.trim()
+                )
         );
 
         return campaignMap(campaign);
@@ -175,9 +180,10 @@ public class NewsletterService {
 
         try {
             campaign.update(subject.trim(), content.trim());
+
         } catch (IllegalStateException ex) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
+
+            throw new AppExceptions.ConflictException(
                     ex.getMessage()
             );
         }
@@ -204,8 +210,7 @@ public class NewsletterService {
         NewsletterCampaign campaign = getCampaign(id);
 
         if (!"DRAFT".equals(campaign.getStatus())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
+            throw new AppExceptions.ConflictException(
                     "This newsletter has already been processed."
             );
         }
@@ -214,8 +219,7 @@ public class NewsletterService {
                 subscribers.findAllByActiveTrueOrderByCreatedAtDesc();
 
         if (active.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
+            throw new AppExceptions.ConflictException(
                     "No active subscribers."
             );
         }
@@ -226,7 +230,9 @@ public class NewsletterService {
         for (NewsletterSubscriber subscriber : active) {
 
             NewsletterDelivery delivery =
-                    deliveries.save(new NewsletterDelivery(campaign, subscriber));
+                    deliveries.save(
+                            new NewsletterDelivery(campaign, subscriber)
+                    );
 
             try {
                 mailService.send(campaign, subscriber);
@@ -257,8 +263,7 @@ public class NewsletterService {
                 deliveries.findAllByCampaignIdAndStatus(id, "FAILED");
 
         if (failedDeliveries.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
+            throw new AppExceptions.ConflictException(
                     "There are no failed recipients to retry."
             );
         }
@@ -275,7 +280,11 @@ public class NewsletterService {
             }
 
             try {
-                mailService.send(campaign, delivery.getSubscriber());
+                mailService.send(
+                        campaign,
+                        delivery.getSubscriber()
+                );
+
                 delivery.markSent();
                 success++;
 
@@ -303,9 +312,15 @@ public class NewsletterService {
                 deliveries.findAllByCampaignId(id)
                         .stream()
                         .map(d -> {
-                            Map<String, Object> item = new LinkedHashMap<>();
 
-                            item.put("email", d.getSubscriber().getEmail());
+                            Map<String, Object> item =
+                                    new LinkedHashMap<>();
+
+                            item.put(
+                                    "email",
+                                    d.getSubscriber().getEmail()
+                            );
+
                             item.put("status", d.getStatus());
                             item.put("errorMessage", d.getErrorMessage());
                             item.put("sentAt", d.getSentAt());
@@ -320,17 +335,16 @@ public class NewsletterService {
         );
     }
 
-    // Find a campaign or return 404
     private NewsletterCampaign getCampaign(Long id) {
 
         return campaigns.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Newsletter not found."
-                ));
+                .orElseThrow(() ->
+                        new AppExceptions.ResourceNotFoundException(
+                                "Newsletter"
+                        )
+                );
     }
 
-    // Check whether the newsletter feature is enabled
     private boolean newsletterEnabled() {
 
         return features.findByFeatureKey("NEWSLETTER")
@@ -338,38 +352,40 @@ public class NewsletterService {
                 .orElse(false);
     }
 
-    // Validate campaign details
-    private void validateCampaign(String subject, String content) {
+    private void validateCampaign(
+            String subject,
+            String content) {
 
-        if (subject == null || subject.isBlank() || subject.length() > 200) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+        if (subject == null
+                || subject.isBlank()
+                || subject.length() > 200) {
+
+            throw new AppExceptions.ValidationException(
                     "Subject is required and must be 200 characters or fewer."
             );
         }
 
         if (content == null || content.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+            throw new AppExceptions.ValidationException(
                     "Newsletter content is required."
             );
         }
     }
 
-    // Convert campaign entity to API response
-    private Map<String, Object> campaignMap(NewsletterCampaign c) {
+    private Map<String, Object> campaignMap(
+            NewsletterCampaign campaign) {
 
         Map<String, Object> result = new LinkedHashMap<>();
 
-        result.put("id", c.getId());
-        result.put("subject", c.getSubject());
-        result.put("content", c.getContent());
-        result.put("status", c.getStatus());
-        result.put("recipientCount", c.getRecipientCount());
-        result.put("successCount", c.getSuccessCount());
-        result.put("failedCount", c.getFailedCount());
-        result.put("createdAt", c.getCreatedAt());
-        result.put("sentAt", c.getSentAt());
+        result.put("id", campaign.getId());
+        result.put("subject", campaign.getSubject());
+        result.put("content", campaign.getContent());
+        result.put("status", campaign.getStatus());
+        result.put("recipientCount", campaign.getRecipientCount());
+        result.put("successCount", campaign.getSuccessCount());
+        result.put("failedCount", campaign.getFailedCount());
+        result.put("createdAt", campaign.getCreatedAt());
+        result.put("sentAt", campaign.getSentAt());
 
         return result;
     }

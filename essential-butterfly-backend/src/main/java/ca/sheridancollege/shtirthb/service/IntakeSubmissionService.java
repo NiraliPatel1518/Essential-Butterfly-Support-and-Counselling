@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ca.sheridancollege.shtirthb.dto.IntakeAdminResponse;
 import ca.sheridancollege.shtirthb.dto.IntakeClientStatusResponse;
 import ca.sheridancollege.shtirthb.dto.IntakeSubmissionRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.ClientUser;
 import ca.sheridancollege.shtirthb.model.IntakeSubmission;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
@@ -19,7 +20,6 @@ import ca.sheridancollege.shtirthb.repository.IntakeSubmissionRepository;
 @Service
 public class IntakeSubmissionService {
 
-    // NEW is included for older records already saved in the database.
     private static final List<String> PENDING_STATUSES =
             Arrays.asList("NEW", "SUBMITTED", "IN_PROGRESS");
 
@@ -42,7 +42,10 @@ public class IntakeSubmissionService {
         ClientUser clientUser = clientUserRepository
                 .findByEmail(userEmail)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User account not found"));
+                        new AppExceptions.ResourceNotFoundException(
+                                "User account"
+                        )
+                );
 
         boolean hasPendingSubmission =
                 intakeSubmissionRepository
@@ -52,7 +55,7 @@ public class IntakeSubmissionService {
                         );
 
         if (hasPendingSubmission) {
-            throw new IllegalArgumentException(
+            throw new AppExceptions.ConflictException(
                     "You already have an intake request under review. "
                     + "Please wait until a decision has been made."
             );
@@ -74,7 +77,7 @@ public class IntakeSubmissionService {
         intakeSubmissionRepository.save(submission);
     }
 
-    // Admin: retrieve all intake requests without changing their status.
+    // Admin: retrieve all intake requests.
     @Transactional(readOnly = true)
     public List<IntakeAdminResponse> getAllSubmissions() {
 
@@ -96,6 +99,7 @@ public class IntakeSubmissionService {
                 || "SUBMITTED".equals(submission.getStatus())) {
 
             submission.setStatus("IN_PROGRESS");
+
             submission = intakeSubmissionRepository.save(submission);
         }
 
@@ -118,15 +122,15 @@ public class IntakeSubmissionService {
         );
     }
 
-    // Admin: reject a pending request with a required reason.
+    // Admin: reject a pending request.
     @Transactional
     public IntakeAdminResponse rejectSubmission(
             Long id,
             String rejectionReason) {
 
         if (rejectionReason == null || rejectionReason.isBlank()) {
-            throw new IllegalArgumentException(
-                    "A rejection reason is required"
+            throw new AppExceptions.ValidationException(
+                    "A rejection reason is required."
             );
         }
 
@@ -142,7 +146,7 @@ public class IntakeSubmissionService {
         );
     }
 
-    // Client: retrieve only the status and, if rejected, the rejection reason.
+    // Client: retrieve only the status and rejection reason.
     @Transactional(readOnly = true)
     public IntakeClientStatusResponse getClientIntakeStatus(
             String userEmail) {
@@ -150,7 +154,10 @@ public class IntakeSubmissionService {
         ClientUser clientUser = clientUserRepository
                 .findByEmail(userEmail)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User account not found"));
+                        new AppExceptions.ResourceNotFoundException(
+                                "User account"
+                        )
+                );
 
         List<IntakeSubmission> submissions =
                 intakeSubmissionRepository
@@ -166,7 +173,9 @@ public class IntakeSubmissionService {
 
         IntakeSubmission latestSubmission = submissions.get(0);
 
-        String status = normalizeStatus(latestSubmission.getStatus());
+        String status = normalizeStatus(
+                latestSubmission.getStatus()
+        );
 
         String rejectionReason = "REJECTED".equals(status)
                 ? latestSubmission.getRejectionReason()
@@ -183,21 +192,22 @@ public class IntakeSubmissionService {
         return intakeSubmissionRepository
                 .findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Intake submission not found"
-                        ));
+                        new AppExceptions.ResourceNotFoundException(
+                                "Intake submission"
+                        )
+                );
     }
 
-    private void validatePendingStatus(IntakeSubmission submission) {
+    private void validatePendingStatus(
+            IntakeSubmission submission) {
 
         if (!PENDING_STATUSES.contains(submission.getStatus())) {
-            throw new IllegalArgumentException(
-                    "This intake request has already been decided"
+            throw new AppExceptions.ConflictException(
+                    "This intake request has already been decided."
             );
         }
     }
 
-    // Convert legacy database status NEW into the current status SUBMITTED.
     private String normalizeStatus(String status) {
 
         if ("NEW".equals(status)) {

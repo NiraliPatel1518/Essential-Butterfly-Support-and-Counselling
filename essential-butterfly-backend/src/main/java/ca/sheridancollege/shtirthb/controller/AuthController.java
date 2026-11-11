@@ -1,5 +1,6 @@
 package ca.sheridancollege.shtirthb.controller;
 
+
 import java.util.Map;
 import java.util.Optional;
 
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import ca.sheridancollege.shtirthb.dto.LoginRequest;
 import ca.sheridancollege.shtirthb.dto.SignupRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.ClientUser;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
 import ca.sheridancollege.shtirthb.service.AuthService;
@@ -25,68 +27,69 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthService authService;
-    private final JwtService jwtService;
-    private final ClientUserRepository clientUserRepository;
+private final AuthService authService;
+private final JwtService jwtService;
+private final ClientUserRepository clientUserRepository;
 
-    public AuthController(
-            AuthService authService,
-            JwtService jwtService,
-            ClientUserRepository clientUserRepository) {
+public AuthController(
+AuthService authService,
+JwtService jwtService,
+ClientUserRepository clientUserRepository) {
 
-        this.authService = authService;
-        this.jwtService = jwtService;
-        this.clientUserRepository = clientUserRepository;
-    }
+this.authService = authService;
+this.jwtService = jwtService;
+this.clientUserRepository = clientUserRepository;
+}
 
-    @PostMapping("/signup")
-    public ResponseEntity<String> signup(
-            @Valid @RequestBody SignupRequest request) {
+@PostMapping("/signup")
+public ResponseEntity<String> signup(
+@Valid @RequestBody SignupRequest request) {
 
-        authService.signup(request);
+authService.signup(request);
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body("Account created successfully");
-    }
+return ResponseEntity
+.status(HttpStatus.CREATED)
+.body("Account created successfully");
+}
 
-    @PostMapping("/login")
-    public ResponseEntity<String> login(
-            @Valid @RequestBody LoginRequest request) {
+@PostMapping("/login")
+public ResponseEntity<String> login(
+@Valid @RequestBody LoginRequest request) {
 
-        AuthService.AuthenticatedAccount account =
-                authService.authenticate(request);
+AuthService.AuthenticatedAccount account =
+authService.authenticate(request);
 
-        if (account == null) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid email or password");
-        }
+if (account == null) {
+throw new AppExceptions.InvalidCredentialsException();
+}
 
-        String token = jwtService.generateToken(
-                account.email(),
-                account.role());
+String token = jwtService.generateToken(
+account.email(),
+account.role()
+);
 
-        return ResponseEntity.ok(token);
-    }
+return ResponseEntity.ok(token);
+}
 
-    @GetMapping("/me")
-    public ResponseEntity<Map<String, String>> getCurrentUser(
-            Authentication authentication) {
+@GetMapping("/me")
+public ResponseEntity<Map<String, String>> getCurrentUser(
+Authentication authentication) {
 
-        String email = authentication.getName();
+String email = authentication.getName();
 
-        Optional<ClientUser> userOptional =
-                clientUserRepository.findByEmail(email);
+Optional<ClientUser> userOptional =
+clientUserRepository.findByEmail(email);
 
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
+if (userOptional.isEmpty()) {
+throw new AppExceptions.ResourceNotFoundException(
+"User account"
+);
+}
 
-        ClientUser user = userOptional.get();
+ClientUser user = userOptional.get();
 
-        return ResponseEntity.ok(
-                Map.of("fullName", user.getFullName())
-        );
-    }
+return ResponseEntity.ok(
+Map.of("fullName", user.getFullName())
+);
+}
 }

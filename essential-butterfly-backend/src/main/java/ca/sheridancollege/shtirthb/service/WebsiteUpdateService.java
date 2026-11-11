@@ -1,15 +1,15 @@
 package ca.sheridancollege.shtirthb.service;
 
+
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import ca.sheridancollege.shtirthb.dto.PublicUpdateSummaryResponse;
 import ca.sheridancollege.shtirthb.dto.WebsiteUpdateRequest;
 import ca.sheridancollege.shtirthb.dto.WebsiteUpdateResponse;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.FeatureVisibility;
 import ca.sheridancollege.shtirthb.model.WebsiteUpdate;
 import ca.sheridancollege.shtirthb.repository.FeatureVisibilityRepository;
@@ -18,184 +18,219 @@ import ca.sheridancollege.shtirthb.repository.WebsiteUpdateRepository;
 @Service
 public class WebsiteUpdateService {
 
-    private final WebsiteUpdateRepository updateRepository;
-    private final FeatureVisibilityRepository featureRepository;
+private final WebsiteUpdateRepository updateRepository;
+private final FeatureVisibilityRepository featureRepository;
 
-    public WebsiteUpdateService(
-            WebsiteUpdateRepository updateRepository,
-            FeatureVisibilityRepository featureRepository) {
-        this.updateRepository = updateRepository;
-        this.featureRepository = featureRepository;
-    }
+public WebsiteUpdateService(
+WebsiteUpdateRepository updateRepository,
+FeatureVisibilityRepository featureRepository) {
 
-    @Transactional(readOnly = true)
-    public List<PublicUpdateSummaryResponse> getPublicUpdates() {
-        if (!updatesEnabled()) return List.of();
+this.updateRepository = updateRepository;
+this.featureRepository = featureRepository;
+}
 
-        return updateRepository.findAllByPublishedTrueOrderByUpdatedAtDesc()
-            .stream()
-            .map(update -> new PublicUpdateSummaryResponse(
-                update.getId(),
-                update.getTitle(),
-                createPreview(update.getContent()),
-                update.getCreatedAt(),
-                update.getUpdatedAt(),
-                update.getPhotos().isEmpty()
-                    ? null
-                    : update.getPhotos().get(0)
-            ))
-            .toList();
-    }
+@Transactional(readOnly = true)
+public List<PublicUpdateSummaryResponse> getPublicUpdates() {
 
-    @Transactional(readOnly = true)
-    public WebsiteUpdateResponse getPublicUpdate(Long id) {
-        if (!updatesEnabled()) {
-            throw new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Updates are currently unavailable."
-            );
-        }
+if (!updatesEnabled()) {
+return List.of();
+}
 
-        WebsiteUpdate update = updateRepository.findByIdAndPublishedTrue(id)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "This update is unavailable."
-            ));
+return updateRepository.findAllByPublishedTrueOrderByUpdatedAtDesc()
+.stream()
+.map(update -> new PublicUpdateSummaryResponse(
+update.getId(),
+update.getTitle(),
+createPreview(update.getContent()),
+update.getCreatedAt(),
+update.getUpdatedAt(),
+update.getPhotos().isEmpty()
+? null
+: update.getPhotos().get(0)
+))
+.toList();
+}
 
-        return toResponse(update);
-    }
+@Transactional(readOnly = true)
+public WebsiteUpdateResponse getPublicUpdate(Long id) {
 
-    @Transactional(readOnly = true)
-    public List<WebsiteUpdateResponse> getAllAdminUpdates() {
-        return updateRepository.findAllByOrderByUpdatedAtDesc()
-            .stream().map(this::toResponse).toList();
-    }
+if (!updatesEnabled()) {
+throw new AppExceptions.ResourceNotFoundException(
+"Updates"
+);
+}
 
-    @Transactional
-    public WebsiteUpdateResponse createUpdate(WebsiteUpdateRequest request) {
-        validateRequest(request);
+WebsiteUpdate update = updateRepository
+.findByIdAndPublishedTrue(id)
+.orElseThrow(() ->
+new AppExceptions.ResourceNotFoundException(
+"Update"
+)
+);
 
-        WebsiteUpdate update = new WebsiteUpdate(
-            request.getTitle().trim(),
-            request.getContent().trim(),
-            request.getPublished()
-        );
+return toResponse(update);
+}
 
-        applyOptionalContent(update, request);
-        return toResponse(updateRepository.save(update));
-    }
+@Transactional(readOnly = true)
+public List<WebsiteUpdateResponse> getAllAdminUpdates() {
 
-    @Transactional
-    public WebsiteUpdateResponse editUpdate(
-            Long id, WebsiteUpdateRequest request) {
-        validateRequest(request);
+return updateRepository.findAllByOrderByUpdatedAtDesc()
+.stream()
+.map(this::toResponse)
+.toList();
+}
 
-        WebsiteUpdate update = updateRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Update not found."
-            ));
+@Transactional
+public WebsiteUpdateResponse createUpdate(
+WebsiteUpdateRequest request) {
 
-        update.setTitle(request.getTitle().trim());
-        update.setContent(request.getContent().trim());
-        update.setPublished(request.getPublished());
+validateRequest(request);
 
-        applyOptionalContent(update, request);
-        return toResponse(updateRepository.save(update));
-    }
+WebsiteUpdate update = new WebsiteUpdate(
+request.getTitle().trim(),
+request.getContent().trim(),
+request.getPublished()
+);
 
-    @Transactional
-    public void deleteUpdate(Long id) {
-        WebsiteUpdate update = updateRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Update not found."
-            ));
+applyOptionalContent(update, request);
 
-        updateRepository.delete(update);
-    }
+return toResponse(updateRepository.save(update));
+}
 
-    private void applyOptionalContent(
-            WebsiteUpdate update, WebsiteUpdateRequest request) {
+@Transactional
+public WebsiteUpdateResponse editUpdate(
+Long id,
+WebsiteUpdateRequest request) {
 
-        List<String> photos = request.getPhotos() == null
-            ? List.of() : request.getPhotos();
+validateRequest(request);
 
-        List<String> links = request.getSocialLinks() == null
-            ? List.of() : request.getSocialLinks();
+WebsiteUpdate update = updateRepository.findById(id)
+.orElseThrow(() ->
+new AppExceptions.ResourceNotFoundException(
+"Update"
+)
+);
 
-        if (photos.size() > 5) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, "Maximum 5 photos are allowed."
-            );
-        }
+update.setTitle(request.getTitle().trim());
+update.setContent(request.getContent().trim());
+update.setPublished(request.getPublished());
 
-        if (links.size() > 5) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, "Maximum 5 social links are allowed."
-            );
-        }
+applyOptionalContent(update, request);
 
-        for (String photo : photos) {
-            if (photo == null ||
-                !(photo.startsWith("data:image/jpeg;base64,") ||
-                  photo.startsWith("data:image/png;base64,") ||
-                  photo.startsWith("data:image/webp;base64,")) ||
-                photo.length() > 3_000_000) {
-                throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Use JPEG, PNG or WebP photos. Each photo must be under 2 MB."
-                );
-            }
-        }
+return toResponse(updateRepository.save(update));
+}
 
-        for (String link : links) {
-            if (link == null ||
-                !(link.startsWith("https://") || link.startsWith("http://")) ||
-                link.length() > 1000) {
-                throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Social links must be valid HTTP or HTTPS URLs."
-                );
-            }
-        }
+@Transactional
+public void deleteUpdate(Long id) {
 
-        update.setPhotos(photos);
-        update.setSocialLinks(links);
-    }
+WebsiteUpdate update = updateRepository.findById(id)
+.orElseThrow(() ->
+new AppExceptions.ResourceNotFoundException(
+"Update"
+)
+);
 
-    private boolean updatesEnabled() {
-        return featureRepository.findByFeatureKey("UPDATES")
-            .map(FeatureVisibility::isEnabled)
-            .orElse(false);
-    }
+updateRepository.delete(update);
+}
 
-    private void validateRequest(WebsiteUpdateRequest request) {
-        if (request == null ||
-            request.getTitle() == null || request.getTitle().isBlank() ||
-            request.getContent() == null || request.getContent().isBlank() ||
-            request.getPublished() == null) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Title, content and publishing status are required."
-            );
-        }
-    }
+private void applyOptionalContent(
+WebsiteUpdate update,
+WebsiteUpdateRequest request) {
 
-    private String createPreview(String content) {
-        String plainText = content.replaceAll("\\s+", " ").trim();
+List<String> photos = request.getPhotos() == null
+? List.of()
+: request.getPhotos();
 
-        return plainText.length() <= 200
-            ? plainText
-            : plainText.substring(0, 200).trim() + "...";
-    }
+List<String> links = request.getSocialLinks() == null
+? List.of()
+: request.getSocialLinks();
 
-    private WebsiteUpdateResponse toResponse(WebsiteUpdate update) {
-        return new WebsiteUpdateResponse(
-            update.getId(),
-            update.getTitle(),
-            update.getContent(),
-            update.isPublished(),
-            update.getCreatedAt(),
-            update.getUpdatedAt(),
-            update.getPhotos(),
-            update.getSocialLinks()
-        );
-    }
+if (photos.size() > 5) {
+throw new AppExceptions.ValidationException(
+"Maximum 5 photos are allowed."
+);
+}
+
+if (links.size() > 5) {
+throw new AppExceptions.ValidationException(
+"Maximum 5 social links are allowed."
+);
+}
+
+for (String photo : photos) {
+
+if (photo == null
+|| !(photo.startsWith("data:image/jpeg;base64,")
+|| photo.startsWith("data:image/png;base64,")
+|| photo.startsWith("data:image/webp;base64,"))
+|| photo.length() > 3_000_000) {
+
+throw new AppExceptions.ValidationException(
+"Use JPEG, PNG or WebP photos. Each photo must be under 2 MB."
+);
+}
+}
+
+for (String link : links) {
+
+if (link == null
+|| !(link.startsWith("https://")
+|| link.startsWith("http://"))
+|| link.length() > 1000) {
+
+throw new AppExceptions.ValidationException(
+"Social links must be valid HTTP or HTTPS URLs."
+);
+}
+}
+
+update.setPhotos(photos);
+update.setSocialLinks(links);
+}
+
+private boolean updatesEnabled() {
+
+return featureRepository.findByFeatureKey("UPDATES")
+.map(FeatureVisibility::isEnabled)
+.orElse(false);
+}
+
+private void validateRequest(WebsiteUpdateRequest request) {
+
+if (request == null
+|| request.getTitle() == null
+|| request.getTitle().isBlank()
+|| request.getContent() == null
+|| request.getContent().isBlank()
+|| request.getPublished() == null) {
+
+throw new AppExceptions.ValidationException(
+"Title, content and publishing status are required."
+);
+}
+}
+
+private String createPreview(String content) {
+
+String plainText = content.replaceAll("\s+", " ").trim();
+
+return plainText.length() <= 200
+? plainText
+: plainText.substring(0, 200).trim() + "...";
+}
+
+private WebsiteUpdateResponse toResponse(
+WebsiteUpdate update) {
+
+return new WebsiteUpdateResponse(
+update.getId(),
+update.getTitle(),
+update.getContent(),
+update.isPublished(),
+update.getCreatedAt(),
+update.getUpdatedAt(),
+update.getPhotos(),
+update.getSocialLinks()
+);
+}
 }

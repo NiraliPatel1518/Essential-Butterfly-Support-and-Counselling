@@ -1,13 +1,14 @@
+
 package ca.sheridancollege.shtirthb.config;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import javax.crypto.SecretKey;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -18,26 +19,40 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import io.jsonwebtoken.security.Keys;
 
 @Configuration
 public class SecurityConfig {
 
-    
+    private final AppProperties properties;
+
+    public SecurityConfig(AppProperties properties) {
+        this.properties = properties;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-      @Bean
-    public JwtDecoder jwtDecoder(@Value("${app.jwt.secret}") String secret) {
+    @Bean
+    public JwtDecoder jwtDecoder() {
+
+        String secret = properties.getJwt().getSecret();
+
+        if (secret == null
+                || secret.getBytes(StandardCharsets.UTF_8).length < 48) {
+
+            throw new IllegalStateException(
+                    "JWT secret must contain at least 48 UTF-8 bytes."
+            );
+        }
+
         SecretKey key = Keys.hmacShaKeyFor(
-                secret.getBytes(StandardCharsets.UTF_8));
-                    
+                secret.getBytes(StandardCharsets.UTF_8)
+        );
+
         return NimbusJwtDecoder
                 .withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS384)
@@ -46,6 +61,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
+
         JwtGrantedAuthoritiesConverter authoritiesConverter =
                 new JwtGrantedAuthoritiesConverter();
 
@@ -61,37 +77,19 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        configuration.setAllowedOrigins(
-                List.of("http://localhost:5173"));
-
-        configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration("/**", configuration);
-
-        return source;
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors ->
-                cors.configurationSource(corsConfigurationSource()))
+
+            // CORS policy is defined separately in CorsConfig.
+            .cors(Customizer.withDefaults())
+
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS))
+
             .authorizeHttpRequests(auth -> auth
 
                 // Public feature visibility
@@ -109,12 +107,13 @@ public class SecurityConfig {
                     "/api/testimonials/featured"
                 ).permitAll()
 
-                // Public newsletter subscription and unsubscribe
+                // Public newsletter subscription
                 .requestMatchers(
                     HttpMethod.POST,
                     "/api/newsletter/subscribe"
                 ).permitAll()
 
+                // Public newsletter unsubscribe
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/newsletter/unsubscribe"
@@ -129,20 +128,22 @@ public class SecurityConfig {
                     "/api/contact"
                 ).permitAll()
 
-                // All admin endpoints require ADMIN role
+                // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                // Full update content requires a valid client or admin JWT
+                // Full update content requires authentication
                 .requestMatchers(HttpMethod.GET, "/api/updates/**")
                     .authenticated()
 
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
+
             .oauth2ResourceServer(oauth2 ->
                 oauth2.jwt(jwt ->
                     jwt.jwtAuthenticationConverter(
                         jwtAuthenticationConverter())))
+
             .httpBasic(httpBasic -> httpBasic.disable())
             .formLogin(formLogin -> formLogin.disable());
 

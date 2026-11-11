@@ -1,6 +1,6 @@
-
 import {
   BrowserRouter,
+  Link,
   Routes,
   Route,
   Navigate,
@@ -17,7 +17,6 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicFeatureRoute from "./components/PublicFeatureRoute";
-import SessionTimeout from "./components/SessionTimeout";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -41,11 +40,34 @@ import {
   Sitemap,
 } from "./pages/InformationPages";
 
-import {
-  PublicFeatureProvider,
-} from "./context/PublicFeatureContext";
+import { PublicFeatureProvider } from "./context/PublicFeatureContext";
 
 import "./AccessibilityOverrides.css";
+
+const pageTitles: Record<string, string> = {
+  "/": "Home",
+  "/about": "About Casey",
+  "/services": "Services",
+  "/contact": "Contact",
+  "/testimonials": "Testimonials",
+  "/updates": "Updates",
+  "/newsletter/unsubscribe": "Newsletter Unsubscribe",
+  "/intake": "Secure Intake",
+  "/login": "Sign In",
+  "/signup": "Create Account",
+  "/forgot-password": "Forgot Password",
+  "/reset-password": "Reset Password",
+  "/admin-dashboard": "Admin Dashboard",
+  "/client-dashboard": "Client Dashboard",
+  "/privacy": "Privacy",
+  "/accessibility": "Accessibility",
+  "/sitemap": "Site Map",
+};
+
+function getPageTitle(pathname: string) {
+  if (pathname.startsWith("/updates/")) return "Update Details";
+  return pageTitles[pathname] ?? "Page Not Found";
+}
 
 function RouteFocus() {
   const { pathname, search, hash, key } = useLocation();
@@ -64,6 +86,9 @@ function RouteFocus() {
   }, []);
 
   useLayoutEffect(() => {
+    const pageTitle = getPageTitle(pathname);
+    document.title = `${pageTitle} | Essential Butterfly`;
+
     const mainContent = document.getElementById("main-content");
 
     mainContent?.focus({ preventScroll: true });
@@ -95,8 +120,7 @@ function RouteFocus() {
 
   useEffect(() => {
     if (announcement.current) {
-      announcement.current.textContent =
-        `Page changed to ${document.title}`;
+      announcement.current.textContent = `Page changed to ${getPageTitle(pathname)}`;
     }
   }, [pathname, search, hash, key]);
 
@@ -119,8 +143,6 @@ function AppLayout() {
 
   return (
     <>
-      <SessionTimeout />
-
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -244,8 +266,16 @@ function AppLayout() {
           <Route path="/accessibility" element={<Accessibility />} />
           <Route path="/sitemap" element={<Sitemap />} />
 
-          {/* Unknown routes */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="*"
+            element={
+              <main className="information-page">
+                <h1>Page not found</h1>
+                <p>The page you requested is unavailable or may have moved.</p>
+                <Link to="/">Return to the home page</Link>
+              </main>
+            }
+          />
         </Routes>
       </div>
 

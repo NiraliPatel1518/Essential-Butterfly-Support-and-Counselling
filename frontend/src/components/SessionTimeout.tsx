@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -12,20 +11,26 @@ function SessionTimeout() {
     const isAdminSession = Boolean(localStorage.getItem("adminToken"));
     const isClientSession = Boolean(localStorage.getItem("authToken"));
 
-    if (!isAdminSession && !isClientSession) return;
+    if (!isAdminSession && !isClientSession) {
+      return;
+    }
 
     const tokenKey = isAdminSession ? "adminToken" : "authToken";
+    const loginPath = "/login?sessionExpired=true";
 
     let timeoutId: number;
 
     const logout = () => {
       localStorage.removeItem(tokenKey);
-      navigate("/login?sessionExpired=true", { replace: true });
+      navigate(loginPath, { replace: true });
     };
 
     const resetTimer = () => {
       window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(logout, INACTIVITY_LIMIT);
+
+      timeoutId = window.setTimeout(() => {
+        logout();
+      }, INACTIVITY_LIMIT);
     };
 
     const activityEvents = [
@@ -37,17 +42,18 @@ function SessionTimeout() {
       "click",
     ];
 
-    activityEvents.forEach((event) =>
-      window.addEventListener(event, resetTimer)
-    );
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
 
     resetTimer();
 
     return () => {
       window.clearTimeout(timeoutId);
-      activityEvents.forEach((event) =>
-        window.removeEventListener(event, resetTimer)
-      );
+
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
     };
   }, [location.pathname, navigate]);
 

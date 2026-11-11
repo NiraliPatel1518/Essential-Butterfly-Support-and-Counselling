@@ -1,9 +1,10 @@
-
 package ca.sheridancollege.shtirthb.service;
+
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,134 +19,151 @@ import ca.sheridancollege.shtirthb.repository.PasswordResetTokenRepository;
 @Service
 public class PasswordResetService {
 
-    private final ClientUserRepository clientUserRepository;
-    private final AdminUserRepository adminUserRepository;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final PasswordEncoder passwordEncoder;
+private final ClientUserRepository clientUserRepository;
+private final AdminUserRepository adminUserRepository;
+private final PasswordResetTokenRepository passwordResetTokenRepository;
+private final PasswordEncoder passwordEncoder;
+private final String frontendBaseUrl;
 
-    public PasswordResetService(
-            ClientUserRepository clientUserRepository,
-            AdminUserRepository adminUserRepository,
-            PasswordResetTokenRepository passwordResetTokenRepository,
-            PasswordEncoder passwordEncoder) {
+public PasswordResetService(
+ClientUserRepository clientUserRepository,
+AdminUserRepository adminUserRepository,
+PasswordResetTokenRepository passwordResetTokenRepository,
+PasswordEncoder passwordEncoder,
+@Value("${app.frontend-base-url:http://localhost:5173}")
+String frontendBaseUrl) {
 
-        this.clientUserRepository = clientUserRepository;
-        this.adminUserRepository = adminUserRepository;
-        this.passwordResetTokenRepository = passwordResetTokenRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+this.clientUserRepository = clientUserRepository;
+this.adminUserRepository = adminUserRepository;
+this.passwordResetTokenRepository = passwordResetTokenRepository;
+this.passwordEncoder = passwordEncoder;
+this.frontendBaseUrl = frontendBaseUrl;
+}
 
-    @Transactional
-    public void requestPasswordReset(String email) {
-        String normalizedEmail = email.trim().toLowerCase();
+@Transactional
+public void requestPasswordReset(String email) {
 
-        ClientUser client = clientUserRepository
-                .findByEmail(normalizedEmail)
-                .orElse(null);
+String normalizedEmail = email.trim().toLowerCase();
 
-        AdminUser admin = adminUserRepository
-                .findByEmail(normalizedEmail)
-                .orElse(null);
+ClientUser client = clientUserRepository
+.findByEmail(normalizedEmail)
+.orElse(null);
 
-        // A single email must not identify two different account types.
-        // This also matches the ambiguity protection in authentication.
-        if (client != null && admin != null) {
-            return;
-        }
+AdminUser admin = adminUserRepository
+.findByEmail(normalizedEmail)
+.orElse(null);
 
-        if (client != null) {
-            createResetToken("CLIENT", client.getId());
-        } else if (admin != null) {
-            createResetToken("ADMIN", admin.getId());
-        }
-    }
+if (client != null && admin != null) {
+return;
+}
 
-    private void createResetToken(String userType, Long userId) {
-        String token = UUID.randomUUID().toString();
+if (client != null) {
+createResetToken("CLIENT", client.getId());
 
-        LocalDateTime expiresAt =
-                LocalDateTime.now().plusMinutes(30);
+} else if (admin != null) {
+createResetToken("ADMIN", admin.getId());
+}
+}
 
-        PasswordResetToken resetToken = new PasswordResetToken(
-                token,
-                userType,
-                userId,
-                expiresAt
-        );
+private void createResetToken(
+String userType,
+Long userId) {
 
-        passwordResetTokenRepository.save(resetToken);
+String token = UUID.randomUUID().toString();
 
-        String resetLink =
-                "http://localhost:5173/reset-password?token=" + token;
+LocalDateTime expiresAt =
+LocalDateTime.now().plusMinutes(30);
 
-        // Development only: replace console output with email delivery
-        // before deploying the application.
-        System.out.println();
-        System.out.println("======================================");
-        System.out.println("PASSWORD RESET REQUEST");
-        System.out.println("User type: " + userType);
-        System.out.println("Reset token: " + token);
-        System.out.println("Reset link: " + resetLink);
-        System.out.println("Expires in: 30 minutes");
-        System.out.println("======================================");
-        System.out.println();
-    }
+PasswordResetToken resetToken = new PasswordResetToken(
+token,
+userType,
+userId,
+expiresAt
+);
 
-    @Transactional
-    public boolean resetPassword(String token, String newPassword) {
-        if (token == null || token.isBlank()
-                || newPassword == null || newPassword.length() < 8) {
-            return false;
-        }
+passwordResetTokenRepository.save(resetToken);
 
-        PasswordResetToken resetToken = passwordResetTokenRepository
-                .findByToken(token)
-                .orElse(null);
+String resetLink = frontendBaseUrl
++ "/reset-password?token="
++ token;
 
-        if (resetToken == null || resetToken.isUsed()) {
-            return false;
-        }
+// Development only: replace console output with email delivery
+// before deploying the application.
+System.out.println();
+System.out.println("======================================");
+System.out.println("PASSWORD RESET REQUEST");
+System.out.println("User type: " + userType);
+System.out.println("Reset token: " + token);
+System.out.println("Reset link: " + resetLink);
+System.out.println("Expires in: 30 minutes");
+System.out.println("======================================");
+System.out.println();
+}
 
-        if (!resetToken.getExpiresAt().isAfter(LocalDateTime.now())) {
-            return false;
-        }
+@Transactional
+public boolean resetPassword(
+String token,
+String newPassword) {
 
-        String encodedPassword = passwordEncoder.encode(newPassword);
+if (token == null
+|| token.isBlank()
+|| newPassword == null
+|| newPassword.length() < 8) {
 
-        if ("CLIENT".equals(resetToken.getUserType())) {
-            ClientUser user = clientUserRepository
-                    .findById(resetToken.getUserId())
-                    .orElse(null);
+return false;
+}
 
-            if (user == null) {
-                return false;
-            }
+PasswordResetToken resetToken = passwordResetTokenRepository
+.findByToken(token)
+.orElse(null);
 
-            user.setPassword(encodedPassword);
-            clientUserRepository.save(user);
+if (resetToken == null || resetToken.isUsed()) {
+return false;
+}
 
-        } else if ("ADMIN".equals(resetToken.getUserType())) {
-            AdminUser admin = adminUserRepository
-                    .findById(resetToken.getUserId())
-                    .orElse(null);
+if (!resetToken.getExpiresAt().isAfter(LocalDateTime.now())) {
+return false;
+}
 
-            if (admin == null) {
-                return false;
-            }
+String encodedPassword =
+passwordEncoder.encode(newPassword);
 
-            admin.setPassword(encodedPassword);
-            admin.setFailedLoginAttempts(0);
-            admin.setLockedUntil(null);
+if ("CLIENT".equals(resetToken.getUserType())) {
 
-            adminUserRepository.save(admin);
+ClientUser user = clientUserRepository
+.findById(resetToken.getUserId())
+.orElse(null);
 
-        } else {
-            return false;
-        }
+if (user == null) {
+return false;
+}
 
-        resetToken.setUsed(true);
-        passwordResetTokenRepository.save(resetToken);
+user.setPassword(encodedPassword);
+clientUserRepository.save(user);
 
-        return true;
-    }
+} else if ("ADMIN".equals(resetToken.getUserType())) {
+
+AdminUser admin = adminUserRepository
+.findById(resetToken.getUserId())
+.orElse(null);
+
+if (admin == null) {
+return false;
+}
+
+admin.setPassword(encodedPassword);
+admin.setFailedLoginAttempts(0);
+admin.setLockedUntil(null);
+
+adminUserRepository.save(admin);
+
+} else {
+return false;
+}
+
+resetToken.setUsed(true);
+passwordResetTokenRepository.save(resetToken);
+
+return true;
+}
 }

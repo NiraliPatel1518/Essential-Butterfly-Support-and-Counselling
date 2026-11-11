@@ -218,7 +218,18 @@ function Updates() {
             {links.length > 0 && (
               <div className="updates-social-links">
                 {links.map((link, index) => (
-                  <a key={index} href={link} target="_blank" rel="noopener noreferrer">
+                  <a
+                    key={index}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${
+                      link.includes("instagram") ? "Instagram" :
+                      link.includes("facebook") ? "Facebook" :
+                      link.includes("linkedin") ? "LinkedIn" :
+                      link.includes("youtube") ? "YouTube" : "External link"
+                    } (opens in a new tab)`}
+                  >
                     {link.includes("instagram") ? "Instagram" :
                      link.includes("facebook") ? "Facebook" :
                      link.includes("linkedin") ? "LinkedIn" :

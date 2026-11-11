@@ -22,7 +22,7 @@ function Icon({ name }: { name: IconName }) {
 const instagramUrl = import.meta.env.VITE_INSTAGRAM_URL || "https://www.instagram.com/";
 const facebookUrl = import.meta.env.VITE_FACEBOOK_URL || "https://www.facebook.com/";
 const linkedinUrl = import.meta.env.VITE_LINKEDIN_URL || "https://www.linkedin.com/";
-const locationUrl = import.meta.env.VITE_LOCATION_URL || "https://www.google.com/maps/search/?api=1&query=Oakville%2C%20Ontario";
+const locationUrl = import.meta.env.VITE_LOCATION_URL || "https://www.google.com/maps/search/?api=1&query=Oakville%2C%20Burlington%2C%20Waterdown%2C%20Ontario";
 
 function Footer() {
   const { isEnabled } = usePublicFeatures();
@@ -46,9 +46,9 @@ function Footer() {
 
         <div className="footer-column footer-contact">
           <h2>Contact</h2>
-          <a className="footer-contact-link" href="mailto:casey@essentialbutterfly.com"><span className="contact-icon"><Icon name="email" /></span><span>casey@essentialbutterfly.com</span></a>
-          <a className="footer-contact-link" href="tel:+12092582002"><span className="contact-icon"><Icon name="phone" /></span><span>(209) 258-0202</span></a>
-          <a className="footer-contact-link" href={locationUrl} target="_blank" rel="noreferrer"><span className="contact-icon"><Icon name="location" /></span><span>Oakville, Ontario <span className="sr-only">(opens in a new tab)</span></span></a>
+          <a className="footer-contact-link" href="mailto:essentialbutterflyy@gmail.com"><span className="contact-icon"><Icon name="email" /></span><span>essentialbutterflyy@gmail.com</span></a>
+          <a className="footer-contact-link" href="tel:+12898802387"><span className="contact-icon"><Icon name="phone" /></span><span>289-880-2387</span></a>
+          <a className="footer-contact-link" href={locationUrl} target="_blank" rel="noreferrer"><span className="contact-icon"><Icon name="location" /></span><span>Oakville, Burlington and Waterdown, Ontario <span className="sr-only">(opens in a new tab)</span></span></a>
           <div className="social-links" aria-label="Social media">
             <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram (opens in a new tab)"><Icon name="instagram" /></a>
             <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook (opens in a new tab)"><Icon name="facebook" /></a>

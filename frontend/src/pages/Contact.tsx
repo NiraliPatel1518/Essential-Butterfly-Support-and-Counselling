@@ -82,6 +82,12 @@ function Contact() {
 
       <section className="contact-hero">
         <div className="contact-intro">
+          <img
+            className="contact-brand-logo"
+            src="/images/essential-butterfly-logo.png"
+            alt="Essential Butterfly Support and Counselling"
+          />
+
           <span className="contact-eyebrow">GET IN TOUCH</span>
 
           <h1>
@@ -99,7 +105,7 @@ function Contact() {
           <div className="contact-information">
             <a
               className="contact-information-item"
-              href="mailto:casey@essentialbutterfly.com"
+              href="mailto:essentialbutterflyy@gmail.com"
             >
               <div className="contact-icon">
                 <svg
@@ -118,11 +124,11 @@ function Contact() {
 
               <span>
                 <h2>Email</h2>
-                <span>casey@essentialbutterfly.com</span>
+                <span>essentialbutterflyy@gmail.com</span>
               </span>
             </a>
 
-            <a className="contact-information-item" href="tel:+12092582002">
+            <a className="contact-information-item" href="tel:+12898802387">
               <div className="contact-icon">
                 <svg
                   viewBox="0 0 24 24"
@@ -139,13 +145,13 @@ function Contact() {
 
               <span>
                 <h2>Phone</h2>
-                <span>(209) 258-0202</span>
+                <span>289-880-2387</span>
               </span>
             </a>
 
             <a
               className="contact-information-item"
-              href="https://www.google.com/maps/search/?api=1&query=Oakville%2C%20Ontario"
+              href="https://www.google.com/maps/search/?api=1&query=Oakville%2C%20Burlington%2C%20Waterdown%2C%20Ontario"
               target="_blank"
               rel="noreferrer"
             >
@@ -167,7 +173,7 @@ function Contact() {
               <span>
                 <h2>Location</h2>
                 <span>
-                  Oakville, Ontario{" "}
+                  Oakville, Burlington and Waterdown, Ontario{" "}
                   <span className="sr-only">(opens in a new tab)</span>
                 </span>
               </span>

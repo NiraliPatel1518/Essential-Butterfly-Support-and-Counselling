@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
+import ca.sheridancollege.shtirthb.config.AppProperties;
 import ca.sheridancollege.shtirthb.config.SecurityConfig;
 
 /**
@@ -37,11 +38,17 @@ class JwtServiceTest {
     private static final String TEST_SECRET =
             "test-secret-for-unit-tests-only-test-secret-for-unit-tests-only-1234";
 
-    private final JwtService jwtService = new JwtService(TEST_SECRET);
+    private static AppProperties testProperties() {
+        AppProperties properties = new AppProperties();
+        properties.getJwt().setSecret(TEST_SECRET);
+        return properties;
+    }
 
-    private final SecurityConfig securityConfig = new SecurityConfig();
+    private final JwtService jwtService = new JwtService(testProperties());
 
-    private final JwtDecoder decoder = securityConfig.jwtDecoder(TEST_SECRET);
+    private final SecurityConfig securityConfig = new SecurityConfig(testProperties());
+
+    private final JwtDecoder decoder = securityConfig.jwtDecoder();
 
     /*
      * TEST 1: Token is accepted

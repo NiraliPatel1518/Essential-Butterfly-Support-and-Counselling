@@ -1,4 +1,5 @@
 package ca.sheridancollege.shtirthb.service;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -199,10 +200,10 @@ class AdminAuthServiceTest {
         when(adminUserRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(admin));
 
         // Act + Assert: login throws "locked" error
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        AppExceptions.AccountLockedException ex = assertThrows(AppExceptions.AccountLockedException.class,
                 () -> adminAuthService.authenticate("admin@test.com", "Admin@12345"));
 
-        assertEquals("Admin account is temporarily locked", ex.getMessage());
+        assertEquals("Admin account is temporarily locked. Please use the password reset option.", ex.getMessage());
         verify(passwordEncoder, never()).matches(anyString(), anyString());
     }
 

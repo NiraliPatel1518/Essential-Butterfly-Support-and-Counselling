@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ca.sheridancollege.shtirthb.dto.LoginRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.dto.SignupRequest;
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.model.ClientUser;
@@ -41,14 +42,14 @@ class AuthServiceTest {
 
     @Test void signupRejectsExistingEmail() {
         when(clients.existsByEmail("jane@mail.com")).thenReturn(true);
-        assertThrows(IllegalArgumentException.class, () -> service.signup(
+        assertThrows(AppExceptions.DuplicateEmailException.class, () -> service.signup(
                 signup("Jane@mail.com", "Jane", "Password123", "Password123")));
         verify(clients, never()).save(any());
     }
 
     @Test void signupRejectsPasswordMismatch() {
         when(clients.existsByEmail("jane@mail.com")).thenReturn(false);
-        assertThrows(IllegalArgumentException.class, () -> service.signup(
+        assertThrows(AppExceptions.ValidationException.class, () -> service.signup(
                 signup("jane@mail.com", "Jane", "Password123", "Different123")));
         verify(clients, never()).save(any());
     }
@@ -87,7 +88,7 @@ class AuthServiceTest {
                 new ClientUser("Client", "both@mail.com", "HASH")));
         when(admins.findByEmail("both@mail.com")).thenReturn(Optional.of(
                 new AdminUser("Admin", "both@mail.com", "HASH")));
-        assertThrows(IllegalStateException.class, () -> service.authenticate(login("both@mail.com", "Password123")));
+        assertThrows(AppExceptions.ConflictException.class, () -> service.authenticate(login("both@mail.com", "Password123")));
         verifyNoInteractions(adminAuth);
     }
 

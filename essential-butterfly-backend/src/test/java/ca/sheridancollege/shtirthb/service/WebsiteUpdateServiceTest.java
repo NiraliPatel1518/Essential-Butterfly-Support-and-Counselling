@@ -9,7 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
+import ca.sheridancollege.shtirthb.exception.ExceptionMapping;
 import ca.sheridancollege.shtirthb.dto.WebsiteUpdateRequest;
 import ca.sheridancollege.shtirthb.model.FeatureVisibility;
 import ca.sheridancollege.shtirthb.model.WebsiteUpdate;
@@ -38,21 +39,21 @@ class WebsiteUpdateServiceTest {
     }
 
     @Test void createUpdateRejectsMissingRequiredFields() {
-        assertThrows(ResponseStatusException.class, () -> service.createUpdate(request(" ", "Body", true)));
-        assertThrows(ResponseStatusException.class, () -> service.createUpdate(request("Title", "Body", null)));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.createUpdate(request(" ", "Body", true)));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.createUpdate(request("Title", "Body", null)));
         verifyNoInteractions(updates);
     }
 
     @Test void createUpdateRejectsMoreThanFivePhotos() {
         WebsiteUpdateRequest r = request("Title", "Body", true); r.setPhotos(List.of("data:image/png;base64,QQ==", "data:image/png;base64,QQ==", "data:image/png;base64,QQ==", "data:image/png;base64,QQ==", "data:image/png;base64,QQ==", "data:image/png;base64,QQ=="));
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.createUpdate(r));
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        AppExceptions.ValidationException ex = assertThrows(AppExceptions.ValidationException.class, () -> service.createUpdate(r));
+        assertEquals(HttpStatus.BAD_REQUEST, ExceptionMapping.getStatus(ex));
         verifyNoInteractions(updates);
     }
 
     @Test void deleteUpdateRejectsUnknownId() {
         when(updates.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(ResponseStatusException.class, () -> service.deleteUpdate(99L));
+        assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.deleteUpdate(99L));
         verify(updates, never()).delete(any(WebsiteUpdate.class));
     }
 

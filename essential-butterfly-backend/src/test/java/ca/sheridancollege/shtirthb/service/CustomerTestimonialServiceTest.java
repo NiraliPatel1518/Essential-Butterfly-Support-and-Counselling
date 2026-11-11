@@ -1,5 +1,7 @@
 package ca.sheridancollege.shtirthb.service;
 
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -33,20 +35,20 @@ class CustomerTestimonialServiceTest {
     }
 
     @Test void submitRequiresPublicationConsent() {
-        assertThrows(IllegalArgumentException.class, () -> service.submit("jane@mail.com", request("Jane", "A sufficiently long testimonial.", false)));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.submit("jane@mail.com", request("Jane", "A sufficiently long testimonial.", false)));
         verifyNoInteractions(clients, testimonials);
     }
 
     @Test void submitRejectsShortContentAndMoreThanThreePhotos() {
-        assertThrows(IllegalArgumentException.class, () -> service.submit("jane@mail.com", request("Jane", "Too short", true)));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.submit("jane@mail.com", request("Jane", "Too short", true)));
         TestimonialRequest r = request("Jane", "This testimonial is long enough.", true); r.setPhotos(List.of("a", "b", "c", "d"));
-        assertThrows(IllegalArgumentException.class, () -> service.submit("jane@mail.com", r));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.submit("jane@mail.com", r));
         verifyNoInteractions(clients, testimonials);
     }
 
     @Test void submitRejectsMissingClientAccount() {
         when(clients.findByEmail("missing@mail.com")).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class, () -> service.submit("missing@mail.com", request("Jane", "This testimonial is long enough.", true)));
+        assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.submit("missing@mail.com", request("Jane", "This testimonial is long enough.", true)));
         verify(testimonials, never()).save(any());
     }
 

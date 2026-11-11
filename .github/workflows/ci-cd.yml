@@ -34,7 +34,7 @@ jobs:
 
       - name: Build backend
         working-directory: ./essential-butterfly-backend
-        run: mvn --batch-mode clean package -Dmaven.test.skip=true
+        run: mvn --batch-mode clean package
 
 
   # 2. BUILD AND TEST FRONTEND

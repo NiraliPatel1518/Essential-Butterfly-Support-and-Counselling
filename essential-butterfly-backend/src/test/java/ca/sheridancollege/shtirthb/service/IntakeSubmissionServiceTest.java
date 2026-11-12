@@ -35,6 +35,12 @@ class IntakeSubmissionServiceTest {
 
     private final List<String> pendingStatuses =
             List.of("NEW", "SUBMITTED", "IN_PROGRESS");
+        // The service now requires a verified phone number before an intake can be submitted.
+    private ClientUser verifiedClient() {
+        ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+        user.setPhoneVerified(true);
+        return user;
+    }
 
     private IntakeSubmissionRequest validRequest() {
         IntakeSubmissionRequest request = new IntakeSubmissionRequest();
@@ -53,7 +59,7 @@ class IntakeSubmissionServiceTest {
     @Test
     void submitIntake_savesSubmission_linkedToLoggedInUser() {
         ClientUser user =
-                new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+                verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -102,7 +108,7 @@ class IntakeSubmissionServiceTest {
     @Test
     void submitIntake_throwsError_whenPendingIntakeAlreadyExists() {
         ClientUser user =
-                new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+                verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -126,7 +132,7 @@ class IntakeSubmissionServiceTest {
     @Test
     void submitIntake_checksAllPendingStatusesBeforeSaving() {
         ClientUser user =
-                new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+                verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -142,5 +148,27 @@ class IntakeSubmissionServiceTest {
 
         verify(intakeSubmissionRepository)
                 .save(any(IntakeSubmission.class));
+
+    }
+    
+    @Test
+    void submitIntake_throwsError_whenPhoneNumberIsNotVerified() {
+        ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+
+        when(clientUserRepository.findByEmail("alex@mail.com"))
+                .thenReturn(Optional.of(user));
+
+        AppExceptions.BusinessRuleException exception =
+                assertThrows(AppExceptions.BusinessRuleException.class,
+                        () -> intakeSubmissionService.submitIntake(
+                                validRequest(), "alex@mail.com"));
+
+        assertEquals(
+                "Please verify your phone number before submitting an intake request.",
+                exception.getMessage());
+
+        verify(intakeSubmissionRepository, never()).save(any());
+        verify(intakeSubmissionRepository, never())
+                .existsByClientUserAndStatusIn(any(), any());
     }
 }

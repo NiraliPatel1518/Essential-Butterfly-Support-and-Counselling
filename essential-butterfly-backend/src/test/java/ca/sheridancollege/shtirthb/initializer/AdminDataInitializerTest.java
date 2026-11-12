@@ -20,8 +20,6 @@ import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
 
 class AdminDataInitializerTest {
 
-    private static final String DEFAULT_EMAIL = "admin@test.com";
-
     private AdminUserRepository repository;
     private PasswordEncoder encoder;
     private CommandLineRunner runner;
@@ -34,20 +32,20 @@ class AdminDataInitializerTest {
     }
 
     @Test
-    void createsTheDefaultAdminWhenNoneExists() throws Exception {
-        when(repository.existsByEmail(DEFAULT_EMAIL)).thenReturn(false);
+    void createsTheDefaultAdminWhenThereAreNoAdmins() throws Exception {
+        when(repository.count()).thenReturn(0L);
 
         runner.run();
 
         ArgumentCaptor<AdminUser> saved = ArgumentCaptor.forClass(AdminUser.class);
         verify(repository).save(saved.capture());
         assertEquals("Administrator", saved.getValue().getFullName());
-        assertEquals(DEFAULT_EMAIL, saved.getValue().getEmail());
+        assertEquals("admin@test.com", saved.getValue().getEmail());
     }
 
     @Test
     void storesOnlyAHashedPassword() throws Exception {
-        when(repository.existsByEmail(DEFAULT_EMAIL)).thenReturn(false);
+        when(repository.count()).thenReturn(0L);
 
         runner.run();
 
@@ -59,8 +57,19 @@ class AdminDataInitializerTest {
     }
 
     @Test
-    void doesNotCreateASecondAdminWhenOneAlreadyExists() throws Exception {
-        when(repository.existsByEmail(DEFAULT_EMAIL)).thenReturn(true);
+    void doesNotCreateAnAdminWhenOneAlreadyExists() throws Exception {
+        when(repository.count()).thenReturn(1L);
+
+        runner.run();
+
+        verify(repository, never()).save(any(AdminUser.class));
+    }
+
+    @Test
+    void doesNotRecreateTheDefaultAdminAfterTheAdminChangedTheirEmail() throws Exception {
+        // The only admin now has a different email, so admin@test.com does not exist.
+        when(repository.count()).thenReturn(1L);
+        when(repository.existsByEmail("admin@test.com")).thenReturn(false);
 
         runner.run();
 

@@ -22,6 +22,7 @@ public final class ExceptionMapping {
             BusinessRuleException.class, HttpStatus.CONFLICT,
             ConflictException.class, HttpStatus.CONFLICT,
             InvalidCredentialsException.class, HttpStatus.UNAUTHORIZED,
+            EmailNotVerifiedException.class, HttpStatus.FORBIDDEN,
             AccountLockedException.class, HttpStatus.LOCKED,
             ServiceUnavailableException.class,
             HttpStatus.SERVICE_UNAVAILABLE

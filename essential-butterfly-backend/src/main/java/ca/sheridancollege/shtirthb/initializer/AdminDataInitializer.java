@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.initializer;
 
 import org.springframework.boot.CommandLineRunner;
@@ -20,7 +21,13 @@ public class AdminDataInitializer {
 
             String email = "admin@test.com";
 
-            if (!adminUserRepository.existsByEmail(email)) {
+            /*
+             * Only create the initial admin when the table is empty.
+             *
+             * Do not recreate admin@test.com merely because the
+             * administrator changed their registered email address.
+             */
+            if (adminUserRepository.count() == 0) {
 
                 AdminUser admin = new AdminUser(
                         "Administrator",
@@ -36,4 +43,4 @@ public class AdminDataInitializer {
             }
         };
     }
-} 
+}

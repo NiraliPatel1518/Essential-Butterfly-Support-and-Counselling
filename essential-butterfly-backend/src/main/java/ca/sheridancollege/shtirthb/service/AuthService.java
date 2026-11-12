@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ca.sheridancollege.shtirthb.dto.LoginRequest;
 import ca.sheridancollege.shtirthb.dto.SignupRequest;
@@ -22,19 +23,23 @@ public class AuthService {
     private final AdminUserRepository adminUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminAuthService adminAuthService;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthService(
             ClientUserRepository clientUserRepository,
             AdminUserRepository adminUserRepository,
             PasswordEncoder passwordEncoder,
-            AdminAuthService adminAuthService) {
+            AdminAuthService adminAuthService,
+            EmailVerificationService emailVerificationService) {
 
         this.clientUserRepository = clientUserRepository;
         this.adminUserRepository = adminUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminAuthService = adminAuthService;
+        this.emailVerificationService = emailVerificationService;
     }
 
+    @Transactional
     public void signup(SignupRequest request) {
 
         String email = normalizeEmail(request.getEmail());
@@ -58,7 +63,9 @@ public class AuthService {
                 encodedPassword
         );
 
+        user.setEmailVerified(false);
         clientUserRepository.save(user);
+        emailVerificationService.sendVerificationCode(user);
     }
 
     public AuthenticatedAccount authenticate(LoginRequest request) {
@@ -99,6 +106,10 @@ public class AuthService {
         if (client.isPresent()) {
 
             ClientUser clientUser = client.get();
+
+            if (!clientUser.isEmailVerified()) {
+                throw new AppExceptions.EmailNotVerifiedException();
+            }
 
             if (!passwordEncoder.matches(
                     request.getPassword(),

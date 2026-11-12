@@ -34,7 +34,9 @@ import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
         "spring.datasource.password=test",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false",
-        "app.jwt.secret=integration-test-secret-integration-test-secret-1234567890"
+        "app.jwt.secret=integration-test-secret-integration-test-secret-1234567890",
+        "app.admin.email=admin@test.com",
+        "app.admin.password=Admin@12345"
 })
 class ApplicationStartupIntegrationTest {
 

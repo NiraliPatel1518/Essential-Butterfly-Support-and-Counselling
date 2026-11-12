@@ -38,6 +38,8 @@ services:
       - gmail_username
       - gmail_app_password
       - jwt_secret
+      - admin_email
+      - admin_password
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -45,6 +47,8 @@ services:
         export GMAIL_USERNAME="$$(cat /run/secrets/gmail_username)"
         export GMAIL_APP_PASSWORD="$$(cat /run/secrets/gmail_app_password)"
         export JWT_SECRET="$$(cat /run/secrets/jwt_secret)"
+        export ADMIN_EMAIL="$$(cat /run/secrets/admin_email)"
+        export ADMIN_PASSWORD="$$(cat /run/secrets/admin_password)"
         exec java -jar app.jar
     ports:
       - "8080:8080"
@@ -84,3 +88,7 @@ secrets:
     file: ./secrets/gmail_app_password.txt
   jwt_secret:
     file: ./secrets/jwt_secret.txt
+  admin_email:
+    file: ./secrets/admin_email.txt
+  admin_password:
+    file: ./secrets/admin_password.txt

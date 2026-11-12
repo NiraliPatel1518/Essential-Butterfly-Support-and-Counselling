@@ -86,7 +86,9 @@ jobs:
           echo "ci@example.com" > secrets/gmail_username.txt
           echo "ci-placeholder-password" > secrets/gmail_app_password.txt
           echo "ci-dummy-jwt-secret-for-pipeline-only-ci-dummy-jwt-secret-for-pipeline-only" > secrets/jwt_secret.txt
-
+          echo "ci-admin@example.com" > secrets/admin_email.txt
+          echo "ci-dummy-admin-password-for-pipeline-only" > secrets/admin_password.txt
+          
       - name: Validate Docker Compose
         run: docker compose -f docker-compose.yml config
 

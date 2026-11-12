@@ -229,6 +229,8 @@ class WebsiteUpdateFlowIntegrationTest {
     void theCoverImageIsTheFirstPhoto() throws Exception {
         create(json("With photo", "News.", "true", "[\"" + PHOTO + "\"]", "[]"))
                 .andExpect(status().isCreated());
+        // Updates created in the same millisecond have the same time, so wait a little.
+        Thread.sleep(25);
         create(json("Without photo", "News.", "true", "[]", "[]"))
                 .andExpect(status().isCreated());
 

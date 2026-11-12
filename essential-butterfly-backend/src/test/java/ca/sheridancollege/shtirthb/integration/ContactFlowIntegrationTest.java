@@ -74,6 +74,11 @@ class ContactFlowIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /** Messages sent in the same millisecond have the same time, so wait a little. */
+    private void pauseSoTimesDiffer() throws InterruptedException {
+        Thread.sleep(25);
+    }
+
     private ContactMessage bySubject(String subject) {
         return messages.findAll().stream()
                 .filter(m -> m.getSubject().equals(subject))
@@ -161,6 +166,7 @@ class ContactFlowIntegrationTest {
     @Test
     void newestMessageIsFirst() throws Exception {
         sendValid("First message");
+        pauseSoTimesDiffer();
         sendValid("Second message");
 
         inbox().andExpect(jsonPath("$.length()").value(2))

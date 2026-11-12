@@ -53,6 +53,13 @@ class AppExceptionsTest {
                 new AccountLockedException().getMessage());
     }
 
+        @Test
+    void emailNotVerifiedUsesAFixedMessage() {
+        assertEquals(
+                "Please verify your email address before logging in. Check your inbox for the verification code.",
+                new EmailNotVerifiedException().getMessage());
+    }
+
     @Test
     void serviceUnavailableKeepsMessageAndOptionalCause() {
         ServiceUnavailableException plain = new ServiceUnavailableException("Mail is down.");
@@ -83,6 +90,7 @@ class AppExceptionsTest {
         assertInstanceOf(AppBaseException.class, new ConflictException("x"));
         assertInstanceOf(AppBaseException.class, new InvalidCredentialsException());
         assertInstanceOf(AppBaseException.class, new AccountLockedException());
+        assertInstanceOf(AppBaseException.class, new EmailNotVerifiedException());
         assertInstanceOf(AppBaseException.class, new ServiceUnavailableException("x"));
         assertInstanceOf(RuntimeException.class, new ValidationException("x"));
     }

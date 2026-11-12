@@ -78,6 +78,9 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, handler
                 .handleApplicationException(new ServiceUnavailableException("down"), request)
                 .getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, handler
+                .handleApplicationException(new EmailNotVerifiedException(), request)
+                .getStatusCode());
     }
 
     @Test

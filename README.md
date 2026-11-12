@@ -107,7 +107,7 @@ cd essential-butterfly-backend && ./mvnw test
 cd frontend && npm test
 ```
 
-Test cases, tools and results are listed in [TESTING.md](TESTING.md). Frontend tests run automatically on GitHub Actions for every push and pull request.
+Test cases, tools and results are listed in [TESTING.md](TESTING.md). The backend integration tests need Docker Desktop running. All tests run automatically on GitHub Actions for every push and pull request.
 
 ## Documentation
 

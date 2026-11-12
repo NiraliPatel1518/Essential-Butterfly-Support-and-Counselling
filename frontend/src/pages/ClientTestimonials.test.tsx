@@ -18,7 +18,7 @@ function mine(overrides: Record<string, unknown> = {}) {
 }
 
 function stubApi(list: unknown[] = [], post?: () => Promise<unknown>) {
-  const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+  const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
     if (init?.method === "POST") {
       return post ? post() : jsonResponse({});
     }

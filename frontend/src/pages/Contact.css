@@ -96,6 +96,14 @@
   padding-left: 18px;
 }
 
+.contact-brand-logo {
+  display: block;
+  width: min(230px, 70%);
+  height: auto;
+  margin: 0 0 24px;
+  border-radius: 16px;
+}
+
 .contact-eyebrow {
   display: inline-block;
   margin-bottom: 15px;

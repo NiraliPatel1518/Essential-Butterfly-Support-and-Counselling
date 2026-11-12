@@ -3,6 +3,43 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import "./intake.css";
 
+async function readIntakeError(response: Response): Promise<string> {
+  const responseText = (await response.text()).trim();
+
+  if (responseText) {
+    try {
+      const responseBody = JSON.parse(responseText) as {
+        message?: string;
+        error?: string;
+      };
+
+      if (responseBody.message?.trim()) return responseBody.message.trim();
+
+      if (
+        responseBody.error?.trim() &&
+        responseBody.error.toLowerCase() !== "bad request"
+      ) {
+        return responseBody.error.trim();
+      }
+    } catch {
+      if (!/^error\s*\d+$/i.test(responseText)) return responseText;
+    }
+  }
+
+  if (response.status === 409) {
+    return (
+      "You already have an intake request under review. " +
+      "Please wait until a decision has been made."
+    );
+  }
+
+  if (response.status === 400) {
+    return "Please review the form and correct any missing or invalid information.";
+  }
+
+  return "Unable to submit the intake form. Please try again.";
+}
+
 function Intake() {
   const navigate = useNavigate();
 
@@ -76,12 +113,8 @@ function Intake() {
         }),
       });
 
-      const result = await response.text();
-
       if (!response.ok) {
-        setError(
-          result || "Unable to submit the intake form."
-        );
+        setError(await readIntakeError(response));
         return;
       }
 

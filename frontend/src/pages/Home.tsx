@@ -76,8 +76,9 @@ function Home() {
           <div className="hero-image-wrapper">
             <div className="hero-image-shape">
               <img
-                src="/images/hero-flower.jpg"
-                alt="White flowers growing in a warm natural landscape"
+                src="/images/essential-butterfly-logo.png"
+                alt="Essential Butterfly Support and Counselling"
+                className="hero-brand-logo"
               />
             </div>
 
@@ -222,14 +223,14 @@ function Home() {
             />
 
             <ServiceItem
-              title="Tutoring & Assistive Technology (AT) for Daily Living"
+              title="Tutoring and Assistive Tech / Tech Coaching"
               icon="▣"
             />
 
             <ServiceItem title="Counselling" icon="○" />
 
             <ServiceItem
-              title="ADHD Education & Executive Coaching"
+              title="ADHD Coaching and Executive Function Coaching"
               icon="✥"
             />
 
@@ -245,8 +246,8 @@ function Home() {
         <div className="section-container casey-container">
           <div className="casey-image-wrapper">
             <img
-              src="/images/casey-back-view.jpg"
-              alt="Person looking toward a mountain landscape"
+              src="/images/casey-bio.jpg"
+              alt="Casey, founder of Essential Butterfly Support and Counselling"
             />
           </div>
 
@@ -265,10 +266,9 @@ function Home() {
             </p>
 
             <p>
-              As a mother to a neurodiverse child and someone who has
-              navigated her own journey, she understands the unique
-              challenges and strengths that come with different ways of
-              thinking, learning and being.
+              As a neurodiverse adult and someone who has navigated her own
+              journey, Casey understands the unique challenges and strengths
+              that come with different ways of thinking, learning and being.
             </p>
 
             <p>

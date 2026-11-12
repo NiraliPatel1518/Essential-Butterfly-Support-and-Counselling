@@ -10,6 +10,29 @@ function ForgotPassword() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const readError = async (response: Response): Promise<string> => {
+    const responseText = (await response.text()).trim();
+
+    if (!responseText) {
+      return "Unable to process your request. Please try again.";
+    }
+
+    try {
+      const responseBody = JSON.parse(responseText) as {
+        message?: string;
+        error?: string;
+      };
+
+      return (
+        responseBody.message ||
+        responseBody.error ||
+        "Unable to process your request. Please try again."
+      );
+    } catch {
+      return responseText;
+    }
+  };
+
   const handleSubmit = async () => {
     setMessage("");
     setError("");
@@ -39,10 +62,8 @@ function ForgotPassword() {
         { method: "POST" }
       );
 
-      const data = await response.text();
-
       if (!response.ok) {
-        setError(data || "Unable to process your request.");
+        setError(await readError(response));
         return;
       }
 
@@ -63,9 +84,9 @@ function ForgotPassword() {
     <main className="forgot-password-page">
       <section className="forgot-password-card">
         <div className="forgot-password-content">
-          <span className="forgot-password-eyebrow">
+          <p className="forgot-password-eyebrow">
             ACCOUNT RECOVERY
-          </span>
+          </p>
 
           <h1>Forgot your password?</h1>
 
@@ -91,14 +112,29 @@ function ForgotPassword() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your email"
                 autoComplete="email"
+                inputMode="email"
+                aria-describedby={
+                  error
+                    ? "forgot-password-help forgot-password-error"
+                    : "forgot-password-help"
+                }
+                aria-invalid={Boolean(error)}
                 required
                 disabled={loading}
               />
+
+              <p
+                id="forgot-password-help"
+                className="forgot-password-help"
+              >
+                Use the email address connected to your account.
+              </p>
             </div>
 
             {error && (
               <p
                 className="forgot-password-error"
+                id="forgot-password-error"
                 role="alert"
               >
                 {error}

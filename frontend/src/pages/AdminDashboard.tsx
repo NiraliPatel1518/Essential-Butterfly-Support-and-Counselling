@@ -175,6 +175,25 @@ function AdminDashboard() {
     void refreshCurrentSection();
   }, [refreshCurrentSection]);
 
+  // Populate the intake overview count as soon as the dashboard opens.
+  useEffect(() => {
+    if (section === "intakes") return;
+
+    const loadIntakeOverview = async () => {
+      try {
+        await loadIntakes();
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Unable to load the intake request count."
+        );
+      }
+    };
+
+    void loadIntakeOverview();
+  }, [loadIntakes, section]);
+
   const openContact = async (id: number) => {
     setError("");
     setNotice("");

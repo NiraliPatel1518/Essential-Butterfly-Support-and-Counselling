@@ -574,6 +574,13 @@
 
 }
 
+.hero-image-shape .hero-brand-logo {
+  object-fit: contain;
+  object-position: center;
+  padding: clamp(24px, 5vw, 64px);
+  background: #ffffff;
+}
+
 
 
 .hero-gold-line {

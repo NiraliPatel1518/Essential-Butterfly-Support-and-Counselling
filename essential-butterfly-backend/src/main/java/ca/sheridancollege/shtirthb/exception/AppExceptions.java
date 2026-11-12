@@ -59,6 +59,14 @@ public final class AppExceptions {
         }
     }
 
+
+    public static class EmailNotVerifiedException
+            extends AppBaseException {
+        public EmailNotVerifiedException() {
+            super("Please verify your email address before logging in. Check your inbox for the verification code.");
+        }
+    }
+
     public static class InvalidCredentialsException
             extends AppBaseException {
 

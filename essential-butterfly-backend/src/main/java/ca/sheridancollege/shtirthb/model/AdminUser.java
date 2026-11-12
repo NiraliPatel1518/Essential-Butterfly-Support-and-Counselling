@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.model;
 
 import jakarta.persistence.*;
@@ -29,6 +30,46 @@ public class AdminUser {
     @Column
     private LocalDateTime lockedUntil;
 
+    // ==========================================
+    // ADMIN LOGIN TWO-FACTOR AUTHENTICATION
+    // ==========================================
+
+    @Column(length = 100)
+    private String loginChallengeTokenHash;
+
+    @Column(length = 100)
+    private String loginOtpHash;
+
+    private LocalDateTime loginOtpExpiry;
+
+    private LocalDateTime loginOtpLastSentAt;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int loginOtpAttempts = 0;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int loginOtpResendCount = 0;
+
+    // ==========================================
+    // ADMIN EMAIL CHANGE VERIFICATION
+    // ==========================================
+
+    @Column(length = 254)
+    private String pendingEmail;
+
+    @Column(length = 100)
+    private String emailChangeOtpHash;
+
+    private LocalDateTime emailChangeOtpExpiry;
+
+    private LocalDateTime emailChangeOtpLastSentAt;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int emailChangeOtpAttempts = 0;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int emailChangeOtpResendCount = 0;
+
     public AdminUser() {
     }
 
@@ -44,6 +85,10 @@ public class AdminUser {
         this.failedLoginAttempts = 0;
         this.lockedUntil = null;
     }
+
+    // ==========================================
+    // BASIC GETTERS AND SETTERS
+    // ==========================================
 
     public Long getId() {
         return id;
@@ -95,5 +140,109 @@ public class AdminUser {
 
     public void setLockedUntil(LocalDateTime lockedUntil) {
         this.lockedUntil = lockedUntil;
+    }
+
+    // ==========================================
+    // LOGIN OTP GETTERS AND SETTERS
+    // ==========================================
+
+    public String getLoginChallengeTokenHash() {
+        return loginChallengeTokenHash;
+    }
+
+    public void setLoginChallengeTokenHash(String value) {
+        this.loginChallengeTokenHash = value;
+    }
+
+    public String getLoginOtpHash() {
+        return loginOtpHash;
+    }
+
+    public void setLoginOtpHash(String value) {
+        this.loginOtpHash = value;
+    }
+
+    public LocalDateTime getLoginOtpExpiry() {
+        return loginOtpExpiry;
+    }
+
+    public void setLoginOtpExpiry(LocalDateTime value) {
+        this.loginOtpExpiry = value;
+    }
+
+    public LocalDateTime getLoginOtpLastSentAt() {
+        return loginOtpLastSentAt;
+    }
+
+    public void setLoginOtpLastSentAt(LocalDateTime value) {
+        this.loginOtpLastSentAt = value;
+    }
+
+    public int getLoginOtpAttempts() {
+        return loginOtpAttempts;
+    }
+
+    public void setLoginOtpAttempts(int value) {
+        this.loginOtpAttempts = value;
+    }
+
+    public int getLoginOtpResendCount() {
+        return loginOtpResendCount;
+    }
+
+    public void setLoginOtpResendCount(int value) {
+        this.loginOtpResendCount = value;
+    }
+
+    // ==========================================
+    // EMAIL CHANGE GETTERS AND SETTERS
+    // ==========================================
+
+    public String getPendingEmail() {
+        return pendingEmail;
+    }
+
+    public void setPendingEmail(String value) {
+        this.pendingEmail = value;
+    }
+
+    public String getEmailChangeOtpHash() {
+        return emailChangeOtpHash;
+    }
+
+    public void setEmailChangeOtpHash(String value) {
+        this.emailChangeOtpHash = value;
+    }
+
+    public LocalDateTime getEmailChangeOtpExpiry() {
+        return emailChangeOtpExpiry;
+    }
+
+    public void setEmailChangeOtpExpiry(LocalDateTime value) {
+        this.emailChangeOtpExpiry = value;
+    }
+
+    public LocalDateTime getEmailChangeOtpLastSentAt() {
+        return emailChangeOtpLastSentAt;
+    }
+
+    public void setEmailChangeOtpLastSentAt(LocalDateTime value) {
+        this.emailChangeOtpLastSentAt = value;
+    }
+
+    public int getEmailChangeOtpAttempts() {
+        return emailChangeOtpAttempts;
+    }
+
+    public void setEmailChangeOtpAttempts(int value) {
+        this.emailChangeOtpAttempts = value;
+    }
+
+    public int getEmailChangeOtpResendCount() {
+        return emailChangeOtpResendCount;
+    }
+
+    public void setEmailChangeOtpResendCount(int value) {
+        this.emailChangeOtpResendCount = value;
     }
 }

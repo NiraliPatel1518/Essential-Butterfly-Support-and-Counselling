@@ -1,0 +1,284 @@
+
+.phone-verification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(28, 13, 39, 0.62);
+  backdrop-filter: blur(5px);
+}
+
+.phone-verification-dialog {
+  position: relative;
+  width: min(100%, 480px);
+  padding: 38px;
+  border: 1px solid #eadcf3;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(20, 8, 32, 0.28);
+  color: #382347;
+}
+
+.phone-verification-close {
+  position: absolute;
+  top: 15px;
+  right: 17px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #f6effa;
+  color: #51247b;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.phone-verification-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.phone-verification-symbol {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 20px;
+  border-radius: 17px;
+  background: #f1e5fa;
+  color: #65358c;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.phone-verification-eyebrow {
+  margin: 0 0 9px;
+  color: #8a6b9e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.phone-verification-dialog h2 {
+  margin: 0;
+  color: #352047;
+  font-size: clamp(23px, 4vw, 29px);
+  line-height: 1.2;
+}
+
+.phone-verification-description {
+  margin: 13px 0 25px;
+  color: #71677a;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.phone-verification-dialog form {
+  display: grid;
+  gap: 10px;
+}
+
+.phone-verification-dialog label {
+  color: #493457;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.phone-verification-dialog input {
+  width: 100%;
+  min-height: 49px;
+  padding: 12px 14px;
+  border: 1px solid #d9c9e5;
+  border-radius: 10px;
+  outline: none;
+  background: #fff;
+  color: #352047;
+  font: inherit;
+  font-size: 15px;
+}
+
+.phone-verification-dialog input:focus {
+  border-color: #75439a;
+  box-shadow: 0 0 0 3px rgba(117, 67, 154, 0.15);
+}
+
+.phone-verification-dialog input:disabled {
+  background: #f7f4f9;
+}
+
+.phone-verification-hint,
+.phone-verification-footnote {
+  margin: 0;
+  color: #817687;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.phone-verification-primary {
+  min-height: 49px;
+  margin-top: 8px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #65358c;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.phone-verification-primary:hover:not(:disabled) {
+  background: #512477;
+  transform: translateY(-1px);
+}
+
+.phone-verification-primary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.phone-verification-error,
+.phone-verification-success {
+  margin: 5px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.phone-verification-error {
+  background: #fff0f0;
+  color: #a52532;
+}
+
+.phone-verification-success {
+  background: #edf8f0;
+  color: #236b3b;
+}
+
+.phone-verification-destination {
+  margin: 0 0 7px;
+  color: #71677a;
+  font-size: 13px;
+}
+
+.phone-verification-resend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  color: #796e82;
+  font-size: 12px;
+}
+
+.phone-verification-resend button {
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #65358c;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.phone-verification-resend button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.phone-verification-resend .phone-verification-change {
+  color: #796e82;
+  font-weight: 600;
+}
+
+.phone-verification-footnote {
+  margin-top: 22px;
+  padding-top: 15px;
+  border-top: 1px solid #f0e8f4;
+}
+
+@media (max-width: 520px) {
+  .phone-verification-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .phone-verification-dialog {
+    padding: 30px 22px 24px;
+    border-radius: 20px 20px 14px 14px;
+  }
+}
+
+
+/* Client dashboard account-menu verification indicators */
+
+.client-account-button {
+  position: relative;
+}
+
+.client-phone-account-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+}
+
+.client-account-menu .client-phone-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+}
+
+.client-phone-status-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 21px;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.client-phone-status-icon.verified {
+  background: #e4f5e9;
+  color: #218344;
+}
+
+.client-phone-status-icon.unverified {
+  background: #fde8e8;
+  color: #c52d3b;
+}
+
+.phone-gate-loading {
+  min-height: 60vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 30px;
+  color: #513467;
+  text-align: center;
+}
+
+.phone-gate-loading button {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #65358c;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}

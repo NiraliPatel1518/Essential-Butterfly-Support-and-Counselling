@@ -2,18 +2,22 @@
 
 ![Tests](https://github.com/NiraliPatel1518/Essential-Butterfly-Support-and-Counselling/actions/workflows/tests.yml/badge.svg)
 
-This document describes how we test the Essential Butterfly website for Sprint 1.
-It lists our testing tools, our test cases, and where to see live test runs.
+This document describes how we test the Essential Butterfly website.
+It lists our testing tools, how to run the tests, what each group of tests covers, and where to see live test runs.
 
 ## Summary
 
 | Area | Tool | Number of tests | Result |
 |---|---|---|---|
-| Frontend (React pages and components) | Vitest + React Testing Library | 55 | 55 pass |
-| Backend unit tests (services, JWT) | JUnit 5 + Mockito | 41 | 41 pass |
-| Backend API tests (controllers) | JUnit 5 + MockMvc | 36 | 35 pass, 1 skipped (known bug) |
-| **Total automated tests** | | **132** | **131 pass, 1 skipped** |
+| Frontend (pages, components, routing, API address) | Vitest + React Testing Library | 229 (in 32 files) | 229 pass |
+| Backend unit tests (services) | JUnit 5 + Mockito | 155 | 155 pass |
+| Backend API tests (controllers) | JUnit 5 + MockMvc | 73 | 73 pass |
+| Backend config, security rules, error handling, admin setup | JUnit 5 + Mockito | 60 | 60 pass |
+| Backend integration tests (real database) | Spring Boot Test + Testcontainers + PostgreSQL | 211 | 211 pass |
+| **Total automated tests** | | **728** | **728 pass, 0 skipped** |
 | Mobile layout (manual) | Chrome DevTools + Playwright screenshots | 12 pages x 3 screen sizes | See "Manual testing" |
+
+The backend total is 499 tests (155 + 73 + 60 + 211). Last full run: 12 November 2026.
 
 ## Testing tools
 
@@ -24,17 +28,20 @@ It lists our testing tools, our test cases, and where to see live test runs.
 | **user-event** | Simulates real typing and clicking. |
 | **jsdom** | A fake browser, so frontend tests run without opening Chrome. |
 | **JUnit 5** | Runs the backend (Java) tests. |
-| **Mockito** | Creates fake versions of the database and other services, so each class is tested on its own. |
-| **MockMvc** | Sends fake HTTP requests to our API controllers and checks the status code and response. |
-| **GitHub Actions** | Runs every test automatically on each push and pull request. |
+| **Mockito** | Creates fake versions of the database, email sender and other services, so each class is tested on its own. |
+| **MockMvc** | Sends HTTP requests to our API (with the real security rules) and checks the status code and response. |
+| **Spring Boot Test** | Starts the real application for the integration tests. |
+| **Testcontainers + Docker** | Starts a real, temporary PostgreSQL database for the integration tests and removes it afterwards. |
+| **GitHub Actions** | Runs the tests automatically on each push and pull request. |
 | **Chrome DevTools / Playwright** | Manual and screenshot-based mobile layout testing. |
 
 ## How we test (test levels)
 
-1. **Unit tests (backend services):** test one class at a time. The database is replaced with a fake (mock), so tests are fast and do not need PostgreSQL.
-2. **API tests (backend controllers):** send a fake HTTP request to an endpoint and check the status code (200, 201, 400, 401, 423) and message.
-3. **Frontend component tests:** render one page, fill in the form like a user, and check what the user sees. The backend is replaced with a fake `fetch`, so the backend does not need to be running.
-4. **Manual testing:** check the layout on phone and tablet sizes.
+1. **Unit tests (backend services):** test one class at a time. The database and email sender are replaced with fakes (mocks), so tests are fast and need no database.
+2. **API tests (backend controllers):** send an HTTP request to an endpoint and check the status code (200, 201, 400, 401, 403, 423) and message.
+3. **Integration tests (backend flows):** start the real application with a real PostgreSQL database and walk through a full user journey, for example *signup, verify the email, log in*. The real security rules, validation, services and database all work together. Only the outside world is faked (see "Safety").
+4. **Frontend component tests:** render one page, fill in the form like a user, and check what the user sees. The backend is replaced with a fake `fetch`, so the backend does not need to be running.
+5. **Manual testing:** check the layout on phone and tablet sizes.
 
 Every test follows the same pattern: **Arrange** (set up data), **Act** (do the action), **Assert** (check the result).
 
@@ -45,39 +52,126 @@ Every test follows the same pattern: **Arrange** (set up data), **Act** (do the 
 ```bash
 cd frontend
 npm install
+npm run build
 npm test
 ```
 
+`npm run build` is also run by GitHub Actions before the tests. It catches TypeScript errors.
+
 ### Backend
 
-Needs Java 17 or newer. No database is needed.
+Needs Java 17 or newer. **Docker Desktop must be running** (the integration tests start a PostgreSQL container).
 
 ```bash
-cd backend
-./mvnw test "-Dtest=*ServiceTest,*ControllerTest"
+cd essential-butterfly-backend
+./mvnw test
 ```
 
 On Windows use `.\mvnw.cmd` instead of `./mvnw`.
 
-Note: the default `contextLoads` test starts the whole app and needs a running PostgreSQL database, so it is not part of this command.
+Useful variations:
+
+```bash
+# Only the integration tests (needs Docker)
+./mvnw test "-Dtest=*IntegrationTest"
+
+# Only the unit and API tests (no Docker needed)
+./mvnw test "-Dtest=*ServiceTest,*ControllerTest"
+
+# One test class
+./mvnw test "-Dtest=NewsletterFlowIntegrationTest"
+```
+
+The first integration run downloads the PostgreSQL image, so it takes longer.
+
+## Safety: no real SMS or email in tests
+
+- **SMS (Twilio):** the free Twilio plan has only 100 messages and the rest are kept for the demo. The integration tests set the Twilio settings to empty, so the app stops with "Phone verification is not configured" before it contacts Twilio. This is true even if real Twilio keys exist on the computer. The unit tests replace the sender with a fake.
+- **Email (Gmail):** the mail sender is replaced by a mock. Tests check *who* would receive an email, but nothing is sent.
+- **Codes and tokens:** the tests put known codes into the test database, so the "enter the code" steps can be tested fully.
+- **Admin account:** the integration tests that need an admin set a test email and password in the test settings only. No real credentials are used or stored.
+- **Clean database:** every integration test is rolled back at the end, and each flow uses its own temporary database.
 
 ## Live test runs (GitHub Actions)
 
 Tests run automatically on GitHub every time someone pushes code or opens a pull request.
 
+| Workflow | Job | What it runs |
+|---|---|---|
+| **Tests** (`.github/workflows/tests.yml`) | Frontend tests (Vitest) | `npm run build`, then all 229 frontend tests |
+| **CI/CD Pipeline** (`.github/workflows/ci-cd.yml`) | Build Backend | `mvn clean package`, which builds the backend and runs all 499 backend tests (GitHub provides Docker for the integration tests) |
+| | Build and Test Frontend | `npm run build` and the frontend tests |
+| | Docker Build and Integration Tests | Builds the containers, starts them and checks the database, backend and frontend |
+
 **How to see them:**
 
 1. Open the repository on GitHub.
 2. Click the **Actions** tab.
-3. Click the latest **Tests** run.
+3. Click the latest run.
 4. Green tick = all tests passed. Red cross = a test failed.
-5. Scroll down to **Frontend Test Results** and **Backend Test Results** to see every single test by name.
+5. Open a failed job and scroll to the red lines to see the name of the failed test.
 
-The badge at the top of this file always shows the result of the latest run.
+The badge at the top of this file shows the result of the latest **Tests** run.
 
-The workflow file is `.github/workflows/tests.yml`.
+## Backend integration test flows (211 tests)
 
-## Test cases
+Each flow is one file in `essential-butterfly-backend/src/test/java/ca/sheridancollege/shtirthb/integration/`.
+
+| Flow | File | Tests | What it checks |
+|---|---|---|---|
+| Signup, email verification, login | `AuthFlowIntegrationTest` | 19 | Signup creates an unverified account and sends a code; wrong, expired and too many codes; unverified login is blocked; client login; admin login with an email code; admin token opens the admin area |
+| Intake request | `IntakeFlowIntegrationTest` | 18 | Client submits an intake (phone must be verified); duplicate rule; status page; admin accepts or rejects with a reason; clients cannot use admin pages |
+| Testimonials | `TestimonialFlowIntegrationTest` | 23 | Consent, text and photo rules; admin approves, rejects, removes; where it is shown; at most 2 on the home page; website switch turns it off |
+| Newsletter | `NewsletterFlowIntegrationTest` | 27 | Subscribe with consent; unsubscribe link and re-subscribe; admin draft, edit, preview, send; only active people get it; failed emails and retry |
+| Password reset | `PasswordResetFlowIntegrationTest` | 15 | One-time token that lasts 30 minutes; same answer for unknown emails; new password works and old one stops; used, expired and wrong tokens; admin lock is cleared |
+| Contact form | `ContactFlowIntegrationTest` | 11 | Visitor sends a message without logging in; validation; admin inbox, newest first; opening a message marks it viewed |
+| Website updates | `WebsiteUpdateFlowIntegrationTest` | 24 | Admin creates, edits, publishes, unpublishes, deletes; photo and link rules; visitors see a preview, logged-in users see the full text; drafts stay hidden; website switch |
+| Phone verification | `PhoneVerificationFlowIntegrationTest` | 19 | Phone format; code entry; wrong, expired and 5 wrong codes; new number replaces the old one only after its code works; resend limits. No SMS is sent |
+| Admin account | `AdminAccountFlowIntegrationTest` | 20 | Admin profile; changing the login email with a code sent to the new address; wrong codes; the old token stops working; resend limits |
+| Startup and database | `ApplicationStartupIntegrationTest` and 3 repository test files | 35 | The whole app starts on PostgreSQL; all tables are created; admin account is created from the settings; database rules (for example, two accounts cannot share an email) |
+
+## Frontend tests (229 tests)
+
+Each test file sits next to the page or component it tests.
+
+| File | Tests |
+|---|---|
+| `src/App.test.tsx` | 14 |
+| `src/api/api.test.ts` | 5 |
+| `src/components/AdminAccountSettings.test.tsx` | 13 |
+| `src/components/AdminLoginOtpModal.test.tsx` | 11 |
+| `src/components/Footer.test.tsx` | 1 |
+| `src/components/Navbar.test.tsx` | 5 |
+| `src/components/NewsletterSignup.test.tsx` | 3 |
+| `src/components/PhoneVerificationModal.test.tsx` | 15 |
+| `src/components/ProtectedRoute.test.tsx` | 9 |
+| `src/components/PublicFeatureRoute.test.tsx` | 4 |
+| `src/components/SessionTimeout.test.tsx` | 7 |
+| `src/context/PublicFeatureContext.test.tsx` | 5 |
+| `src/pages/AdminDashboard.test.tsx` | 8 |
+| `src/pages/AdminNewsletter.test.tsx` | 13 |
+| `src/pages/AdminTestimonials.test.tsx` | 6 |
+| `src/pages/AdminUpdates.test.tsx` | 17 |
+| `src/pages/ClientDashboard.test.tsx` | 8 |
+| `src/pages/ClientTestimonials.test.tsx` | 11 |
+| `src/pages/Contact.test.tsx` | 5 |
+| `src/pages/FeatureVisibility.test.tsx` | 10 |
+| `src/pages/ForgotPassword.test.tsx` | 3 |
+| `src/pages/FormValidation.test.tsx` | 8 |
+| `src/pages/InformationPages.test.tsx` | 3 |
+| `src/pages/Intake.test.tsx` | 4 |
+| `src/pages/Login.test.tsx` | 11 |
+| `src/pages/NewsletterUnsubscribe.test.tsx` | 5 |
+| `src/pages/PasswordReset.test.tsx` | 7 |
+| `src/pages/PublicPages.test.tsx` | 3 |
+| `src/pages/ResetPassword.test.tsx` | 4 |
+| `src/pages/Signup.test.tsx` | 7 |
+| `src/pages/Testimonials.test.tsx` | 2 |
+| `src/pages/Updates.test.tsx` | 2 |
+
+## Sprint 1 test cases (original list)
+
+The tables below are the original Sprint 1 test cases with their IDs. Many more tests have been added since then (see the summary and flow tables above). The IDs below are kept as the Sprint 1 record.
 
 Test IDs:
 - `FE-...` = frontend test
@@ -117,7 +211,7 @@ Each test file has a comment above every test that explains what it checks.
 | API-AUTH-06 | Backend API | Successful login | The response is 200 OK; The login token is sent back in the response; The token is made with the role "CLIENT" | ✅ Pass |
 | API-AUTH-07 | Backend API | Wrong login details | The response is 401 Unauthorized with "Invalid email or password"; No token is created | ✅ Pass |
 | API-AUTH-08 | Backend API | Password is empty | The response is 400 Bad Request | ✅ Pass |
-| API-AUTH-09 | Backend API | Token should use lowercase email | The login token is created with the lowercase email | ⏸️ Skipped (known bug) |
+| API-AUTH-09 | Backend API | Token should use lowercase email | The login token is created with the lowercase email | ✅ Pass (was skipped in Sprint 1, fixed since) |
 
 ### UC-02: Submit Intake Request or Contact Message (23 tests)
 
@@ -263,11 +357,10 @@ No page scrolls sideways on any screen size.
 
 | Issue | Found by | Status |
 |---|---|---|
-| Login token uses the email exactly as typed (for example `Jane@Mail.com`), but the database stores it in lowercase. The intake form can then fail with "User account not found". | Test `API-AUTH-09` | Open. Fix in `AuthController.login`: use `request.getEmail().trim().toLowerCase()`. Then remove `@Disabled` from the test. |
-| Navigation links are hidden on phones and there is no menu button. | Mobile testing | Open |
-| `/client-dashboard` and `/admin-dashboard` pages do not exist yet. Login redirects there. | Test `FE-LOGIN-01`, `FE-LOGIN-05` | Open |
+| Login token used the email exactly as typed, but the database stores it in lowercase. | Test `API-AUTH-09` (Sprint 1) | Fixed. The test is no longer skipped and passes. |
+| Navigation links are hidden on phones and there is no menu button. | Mobile testing (Sprint 1) | Check again after the client design changes. |
 
 ## Not tested yet
 
-- About and Services pages (no content yet)
-- Full end-to-end tests with a real backend and database (planned for a later sprint)
+- Home, About and Services page tests will be updated after the client design changes are merged, so the tests match the new design.
+- Full end-to-end tests in a real browser (frontend and backend together).

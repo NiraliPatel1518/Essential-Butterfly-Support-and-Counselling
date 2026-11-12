@@ -13,11 +13,17 @@ import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 import java.util.Optional;
+import ca.sheridancollege.shtirthb.dto.AdminLoginChallengeResponse;
 import ca.sheridancollege.shtirthb.dto.LoginRequest;
+import ca.sheridancollege.shtirthb.dto.ResendVerificationRequest;
+import ca.sheridancollege.shtirthb.dto.VerifyEmailRequest;
 import ca.sheridancollege.shtirthb.dto.SignupRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.ClientUser;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
+import ca.sheridancollege.shtirthb.service.AdminEmailSecurityService;
 import ca.sheridancollege.shtirthb.service.AuthService;
+import ca.sheridancollege.shtirthb.service.EmailVerificationService;
 import ca.sheridancollege.shtirthb.service.JwtService;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +31,8 @@ class AuthControllerTest {
     @Mock AuthService authService;
     @Mock JwtService jwtService;
     @Mock ClientUserRepository users;
+    @Mock EmailVerificationService emailVerificationService;
+    @Mock AdminEmailSecurityService adminEmailSecurityService;
     @Mock org.springframework.security.core.Authentication authentication;
     @InjectMocks AuthController controller;
 
@@ -37,7 +45,7 @@ class AuthControllerTest {
     @Test void loginReturnsUnauthorizedForInvalidCredentials() {
         LoginRequest request = mock(LoginRequest.class);
         when(authService.authenticate(request)).thenReturn(null);
-        assertEquals(HttpStatus.UNAUTHORIZED, controller.login(request).getStatusCode());
+        assertThrows(AppExceptions.InvalidCredentialsException.class, () -> controller.login(request));
         verifyNoInteractions(jwtService);
     }
     @Test void loginReturnsGeneratedJwt() {
@@ -56,6 +64,46 @@ class AuthControllerTest {
     @Test void returnsNotFoundWhenCurrentUserMissing() {
         when(authentication.getName()).thenReturn("missing@example.com");
         when(users.findByEmail("missing@example.com")).thenReturn(Optional.empty());
-        assertEquals(HttpStatus.NOT_FOUND, controller.getCurrentUser(authentication).getStatusCode());
+        assertThrows(AppExceptions.ResourceNotFoundException.class, () -> controller.getCurrentUser(authentication));
+    }
+    @Test void signupTellsTheUserAVerificationCodeWasSent() {
+        SignupRequest request = mock(SignupRequest.class);
+        var response = controller.signup(request);
+        assertTrue(response.getBody().contains("verification code has been sent"));
+    }
+    @Test void verifyEmailCallsTheServiceAndReturnsOk() {
+        VerifyEmailRequest request = mock(VerifyEmailRequest.class);
+        var response = controller.verifyEmail(request);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("verified successfully"));
+        verify(emailVerificationService).verify(request);
+    }
+    @Test void verifyEmailPassesTheServiceErrorOn() {
+        VerifyEmailRequest request = mock(VerifyEmailRequest.class);
+        doThrow(new AppExceptions.ValidationException("The verification code is incorrect."))
+                .when(emailVerificationService).verify(request);
+        assertThrows(AppExceptions.ValidationException.class, () -> controller.verifyEmail(request));
+    }
+    @Test void resendVerificationCallsTheServiceAndReturnsOk() {
+        ResendVerificationRequest request = mock(ResendVerificationRequest.class);
+        var response = controller.resendVerification(request);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(emailVerificationService).resend(request);
+    }
+    @Test void adminLoginStartsTheEmailCodeStepAndIssuesNoJwt() {
+        LoginRequest request = mock(LoginRequest.class);
+        var challenge = new AdminLoginChallengeResponse(true, "7.secret", "ad***@test.com");
+        when(authService.authenticate(request)).thenReturn(new AuthService.AuthenticatedAccount("admin@test.com","ADMIN"));
+        when(adminEmailSecurityService.startLoginVerification("admin@test.com")).thenReturn(challenge);
+        var response = controller.login(request);
+        assertSame(challenge, response.getBody());
+        verifyNoInteractions(jwtService);
+    }
+    @Test void clientLoginDoesNotAskForAnEmailCode() {
+        LoginRequest request = mock(LoginRequest.class);
+        when(authService.authenticate(request)).thenReturn(new AuthService.AuthenticatedAccount("a@example.com","CLIENT"));
+        when(jwtService.generateToken("a@example.com","CLIENT")).thenReturn("jwt-token");
+        controller.login(request);
+        verifyNoInteractions(adminEmailSecurityService);
     }
 }

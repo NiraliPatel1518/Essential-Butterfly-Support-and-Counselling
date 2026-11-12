@@ -1,4 +1,3 @@
-
 package ca.sheridancollege.shtirthb.service;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ca.sheridancollege.shtirthb.dto.IntakeSubmissionRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.ClientUser;
 import ca.sheridancollege.shtirthb.model.IntakeSubmission;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
@@ -35,6 +35,12 @@ class IntakeSubmissionServiceTest {
 
     private final List<String> pendingStatuses =
             List.of("NEW", "SUBMITTED", "IN_PROGRESS");
+        // The service now requires a verified phone number before an intake can be submitted.
+    private ClientUser verifiedClient() {
+        ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+        user.setPhoneVerified(true);
+        return user;
+    }
 
     private IntakeSubmissionRequest validRequest() {
         IntakeSubmissionRequest request = new IntakeSubmissionRequest();
@@ -53,7 +59,7 @@ class IntakeSubmissionServiceTest {
     @Test
     void submitIntake_savesSubmission_linkedToLoggedInUser() {
         ClientUser user =
-                new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+                verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -87,12 +93,12 @@ class IntakeSubmissionServiceTest {
         when(clientUserRepository.findByEmail("ghost@mail.com"))
                 .thenReturn(Optional.empty());
 
-        IllegalArgumentException exception =
-                assertThrows(IllegalArgumentException.class,
+        AppExceptions.ResourceNotFoundException exception =
+                assertThrows(AppExceptions.ResourceNotFoundException.class,
                         () -> intakeSubmissionService.submitIntake(
                                 validRequest(), "ghost@mail.com"));
 
-        assertEquals("User account not found", exception.getMessage());
+        assertEquals("User account not found.", exception.getMessage());
 
         verify(intakeSubmissionRepository, never()).save(any());
         verify(intakeSubmissionRepository, never())
@@ -102,7 +108,7 @@ class IntakeSubmissionServiceTest {
     @Test
     void submitIntake_throwsError_whenPendingIntakeAlreadyExists() {
         ClientUser user =
-                new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+                verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -110,8 +116,8 @@ class IntakeSubmissionServiceTest {
         when(intakeSubmissionRepository.existsByClientUserAndStatusIn(
                 user, pendingStatuses)).thenReturn(true);
 
-        IllegalArgumentException exception =
-                assertThrows(IllegalArgumentException.class,
+        AppExceptions.ConflictException exception =
+                assertThrows(AppExceptions.ConflictException.class,
                         () -> intakeSubmissionService.submitIntake(
                                 validRequest(), "alex@mail.com"));
 
@@ -126,7 +132,7 @@ class IntakeSubmissionServiceTest {
     @Test
     void submitIntake_checksAllPendingStatusesBeforeSaving() {
         ClientUser user =
-                new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+                verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -142,5 +148,27 @@ class IntakeSubmissionServiceTest {
 
         verify(intakeSubmissionRepository)
                 .save(any(IntakeSubmission.class));
+
+    }
+    
+    @Test
+    void submitIntake_throwsError_whenPhoneNumberIsNotVerified() {
+        ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
+
+        when(clientUserRepository.findByEmail("alex@mail.com"))
+                .thenReturn(Optional.of(user));
+
+        AppExceptions.BusinessRuleException exception =
+                assertThrows(AppExceptions.BusinessRuleException.class,
+                        () -> intakeSubmissionService.submitIntake(
+                                validRequest(), "alex@mail.com"));
+
+        assertEquals(
+                "Please verify your phone number before submitting an intake request.",
+                exception.getMessage());
+
+        verify(intakeSubmissionRepository, never()).save(any());
+        verify(intakeSubmissionRepository, never())
+                .existsByClientUserAndStatusIn(any(), any());
     }
 }

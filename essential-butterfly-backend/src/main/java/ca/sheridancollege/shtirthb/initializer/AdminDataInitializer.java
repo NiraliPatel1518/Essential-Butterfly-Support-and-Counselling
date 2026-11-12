@@ -34,7 +34,13 @@ public class AdminDataInitializer {
             // Login lowercases the email, so we save it the same way.
             String email = adminEmail.trim().toLowerCase();
 
-            if (!adminUserRepository.existsByEmail(email)) {
+            /*
+             * Only create the initial admin when the table is empty.
+             *
+             * Do not recreate admin@test.com merely because the
+             * administrator changed their registered email address.
+             */
+            if (adminUserRepository.count() == 0) {
 
                 AdminUser admin = new AdminUser(
                         "Administrator",

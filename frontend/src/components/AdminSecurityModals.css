@@ -1,0 +1,248 @@
+
+.admin-security-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(28, 13, 39, 0.66);
+  backdrop-filter: blur(5px);
+}
+
+.admin-security-modal {
+  position: relative;
+  width: min(100%, 470px);
+  padding: 36px;
+  border: 1px solid #eadcf3;
+  border-radius: 20px;
+  background: #fff;
+  color: #382347;
+  box-shadow: 0 24px 80px rgba(20, 8, 32, 0.28);
+}
+
+.admin-security-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 18px;
+  border-radius: 16px;
+  background: #f1e5fa;
+  color: #65358c;
+  font-size: 24px;
+}
+
+.admin-security-eyebrow {
+  margin: 0 0 8px;
+  color: #8a6b9e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.admin-security-modal h2 {
+  margin: 0;
+  color: #352047;
+  font-size: 27px;
+  line-height: 1.2;
+}
+
+.admin-security-description {
+  margin: 13px 0 24px;
+  color: #71677a;
+  font-size: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.admin-security-modal form {
+  display: grid;
+  gap: 11px;
+}
+
+.admin-security-modal label {
+  color: #493457;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-security-modal input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 49px;
+  padding: 12px 14px;
+  border: 1px solid #d9c9e5;
+  border-radius: 10px;
+  outline: none;
+  background: #fff;
+  color: #352047;
+  font: inherit;
+  font-size: 15px;
+}
+
+.admin-security-modal input:focus {
+  border-color: #75439a;
+  box-shadow: 0 0 0 3px rgba(117, 67, 154, 0.15);
+}
+
+.admin-security-primary {
+  min-height: 48px;
+  margin-top: 7px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #65358c;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-security-primary:hover:not(:disabled) {
+  background: #512477;
+}
+
+.admin-security-primary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-security-error,
+.admin-security-success {
+  margin: 5px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-security-error {
+  background: #fff0f0;
+  color: #a52532;
+}
+
+.admin-security-success {
+  background: #edf8f0;
+  color: #236b3b;
+}
+
+.admin-security-resend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  margin-top: 8px;
+  color: #796e82;
+  font-size: 12px;
+}
+
+.admin-security-resend button,
+.admin-security-cancel {
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: #65358c;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-security-cancel {
+  display: block;
+  margin: 16px auto 0;
+  color: #796e82;
+  font-size: 12px;
+}
+
+.admin-security-close {
+  position: absolute;
+  top: 13px;
+  right: 15px;
+  width: 35px;
+  height: 35px;
+  border: 0;
+  border-radius: 50%;
+  background: #f6effa;
+  color: #51247b;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.admin-security-footnote {
+  margin: 20px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #f0e8f4;
+  color: #817687;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* Admin profile card */
+
+.admin-account-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  box-sizing: border-box;
+  width: min(1180px, calc(100% - 40px));
+  margin: 18px auto 0;
+  padding: 18px 22px;
+  border: 1px solid #e8deee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgb(52 34 68 / 4%);
+}
+
+.admin-account-card h2 {
+  margin: 0;
+  color: #392849;
+  font-size: 1.25rem;
+}
+
+.admin-account-description {
+  margin: 8px 0 0;
+  color: #716879;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.admin-account-current {
+  display: grid;
+  gap: 7px;
+  min-width: min(330px, 45%);
+}
+
+.admin-account-current span {
+  color: #716879;
+  font-size: 0.8rem;
+}
+
+.admin-account-current strong {
+  color: #51366b;
+  overflow-wrap: anywhere;
+}
+
+.admin-account-current button {
+  justify-self: start;
+  margin-top: 5px;
+}
+
+@media (max-width: 680px) {
+  .admin-security-modal {
+    padding: 30px 22px 24px;
+  }
+
+  .admin-account-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-account-current {
+    min-width: 0;
+  }
+}

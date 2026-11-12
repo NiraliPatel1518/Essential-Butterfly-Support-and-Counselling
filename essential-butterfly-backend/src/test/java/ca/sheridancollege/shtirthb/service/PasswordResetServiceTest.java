@@ -43,7 +43,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         service = new PasswordResetService(
-                clients, admins, tokens, encoder);
+                clients, admins, tokens, encoder, "http://localhost:5173");
     }
 
     @Test

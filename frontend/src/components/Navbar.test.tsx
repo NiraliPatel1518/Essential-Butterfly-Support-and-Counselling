@@ -1,11 +1,14 @@
 import {
+  afterEach,
   beforeEach,
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 
 import {
+  act,
   render,
   screen,
 } from "@testing-library/react";
@@ -19,6 +22,7 @@ import {
 
 import Navbar from "./Navbar";
 import { PublicFeatureProvider } from "../context/PublicFeatureContext";
+import { jsonResponse } from "../test/render";
 
 function CurrentLocation() {
   const location = useLocation();
@@ -46,6 +50,22 @@ function renderNavbar(
 describe("Navbar", () => {
   beforeEach(() => {
     localStorage.clear();
+
+    // The provider loads website features on mount.
+    // Answer it right away so no request is left running.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(jsonResponse([]))
+      )
+    );
+  });
+
+  afterEach(async () => {
+    // Let the feature request finish before the test ends.
+    await act(async () => {
+      await Promise.resolve();
+    });
   });
 
   test(

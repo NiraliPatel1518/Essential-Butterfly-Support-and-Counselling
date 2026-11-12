@@ -1,5 +1,8 @@
+
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
+
+import AdminAccountSettings from "./AdminAccountSettings";
 
 type UserRole = "ADMIN" | "CLIENT";
 
@@ -11,13 +14,19 @@ interface ProtectedRouteProps {
 interface TokenPayload {
   role?: string;
   exp?: number;
+  mfa?: boolean;
 }
 
-function readValidToken(token: string | null): TokenPayload | null {
+function readValidToken(
+  token: string | null
+): TokenPayload | null {
+
   if (!token) return null;
 
   try {
+
     const parts = token.split(".");
+
     if (parts.length !== 3) return null;
 
     const base64 = parts[1]
@@ -25,7 +34,12 @@ function readValidToken(token: string | null): TokenPayload | null {
       .replace(/_/g, "/");
 
     const payload = JSON.parse(
-      atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="))
+      atob(
+        base64.padEnd(
+          Math.ceil(base64.length / 4) * 4,
+          "="
+        )
+      )
     ) as TokenPayload;
 
     if (
@@ -36,13 +50,24 @@ function readValidToken(token: string | null): TokenPayload | null {
       return null;
     }
 
-    const role = payload.role.replace(/^ROLE_/, "").toUpperCase();
+    const role = payload.role
+      .replace(/^ROLE_/, "")
+      .toUpperCase();
 
     if (role !== "ADMIN" && role !== "CLIENT") {
       return null;
     }
 
-    return { ...payload, role };
+    // An administrator must have completed email OTP verification.
+    if (role === "ADMIN" && payload.mfa !== true) {
+      return null;
+    }
+
+    return {
+      ...payload,
+      role,
+    };
+
   } catch {
     return null;
   }
@@ -52,11 +77,18 @@ export default function ProtectedRoute({
   allowedRole,
   children,
 }: ProtectedRouteProps) {
-  const adminToken = localStorage.getItem("adminToken");
-  const clientToken = localStorage.getItem("authToken");
 
-  const adminPayload = readValidToken(adminToken);
-  const clientPayload = readValidToken(clientToken);
+  const adminToken =
+    localStorage.getItem("adminToken");
+
+  const clientToken =
+    localStorage.getItem("authToken");
+
+  const adminPayload =
+    readValidToken(adminToken);
+
+  const clientPayload =
+    readValidToken(clientToken);
 
   if (adminToken && !adminPayload) {
     localStorage.removeItem("adminToken");
@@ -66,11 +98,20 @@ export default function ProtectedRoute({
     localStorage.removeItem("authToken");
   }
 
-  const validAdmin = adminPayload?.role === "ADMIN";
-  const validClient = clientPayload?.role === "CLIENT";
+  const validAdmin =
+    adminPayload?.role === "ADMIN";
+
+  const validClient =
+    clientPayload?.role === "CLIENT";
 
   if (allowedRole === "ADMIN" && validAdmin) {
-    return <>{children}</>;
+
+    return (
+      <>
+        <AdminAccountSettings />
+        {children}
+      </>
+    );
   }
 
   if (allowedRole === "CLIENT" && validClient) {
@@ -78,11 +119,21 @@ export default function ProtectedRoute({
   }
 
   if (validAdmin) {
-    return <Navigate to="/admin-dashboard" replace />;
+    return (
+      <Navigate
+        to="/admin-dashboard"
+        replace
+      />
+    );
   }
 
   if (validClient) {
-    return <Navigate to="/client-dashboard" replace />;
+    return (
+      <Navigate
+        to="/client-dashboard"
+        replace
+      />
+    );
   }
 
   const hadInvalidToken =
@@ -91,7 +142,11 @@ export default function ProtectedRoute({
 
   return (
     <Navigate
-      to={hadInvalidToken ? "/login?sessionExpired=true" : "/login"}
+      to={
+        hadInvalidToken
+          ? "/login?sessionExpired=true"
+          : "/login"
+      }
       replace
     />
   );

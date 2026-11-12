@@ -10,7 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
+import ca.sheridancollege.shtirthb.exception.ExceptionMapping;
 import ca.sheridancollege.shtirthb.model.FeatureVisibility;
 import ca.sheridancollege.shtirthb.model.NewsletterSubscriber;
 import ca.sheridancollege.shtirthb.repository.*;
@@ -35,15 +36,15 @@ class NewsletterServiceTest {
 
     @Test void subscribeRejectsWhenFeatureDisabled() {
         when(features.findByFeatureKey("NEWSLETTER")).thenReturn(Optional.of(new FeatureVisibility("NEWSLETTER", "Newsletter Signup", false, 1)));
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.subscribe("jane@mail.com", true));
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        AppExceptions.ResourceNotFoundException ex = assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.subscribe("jane@mail.com", true));
+        assertEquals(HttpStatus.NOT_FOUND, ExceptionMapping.getStatus(ex));
         verifyNoInteractions(subscribers);
     }
 
     @Test void subscribeRejectsInvalidEmailAndMissingConsent() {
         when(features.findByFeatureKey("NEWSLETTER")).thenReturn(Optional.of(new FeatureVisibility("NEWSLETTER", "Newsletter Signup", true, 1)));
-        assertThrows(ResponseStatusException.class, () -> service.subscribe("bad-address", true));
-        assertThrows(ResponseStatusException.class, () -> service.subscribe("jane@mail.com", false));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.subscribe("bad-address", true));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.subscribe("jane@mail.com", false));
         verify(subscribers, never()).save(any());
     }
 
@@ -63,13 +64,13 @@ class NewsletterServiceTest {
 
     @Test void unsubscribeRejectsUnknownToken() {
         when(subscribers.findByUnsubscribeToken("bad")).thenReturn(Optional.empty());
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.unsubscribe("bad"));
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        AppExceptions.ResourceNotFoundException ex = assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.unsubscribe("bad"));
+        assertEquals(HttpStatus.NOT_FOUND, ExceptionMapping.getStatus(ex));
     }
 
     @Test void createCampaignRejectsBlankSubjectOrContent() {
-        assertThrows(ResponseStatusException.class, () -> service.createCampaign(" ", "Body"));
-        assertThrows(ResponseStatusException.class, () -> service.createCampaign("Subject", " "));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.createCampaign(" ", "Body"));
+        assertThrows(AppExceptions.ValidationException.class, () -> service.createCampaign("Subject", " "));
         verifyNoInteractions(campaigns);
     }
 }

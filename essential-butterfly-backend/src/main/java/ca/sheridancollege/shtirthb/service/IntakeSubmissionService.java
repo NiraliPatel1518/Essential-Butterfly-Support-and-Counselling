@@ -47,6 +47,13 @@ public class IntakeSubmissionService {
                         )
                 );
 
+        // Server-side phone verification enforcement.
+        if (!clientUser.isPhoneVerified()) {
+            throw new AppExceptions.BusinessRuleException(
+                    "Please verify your phone number before submitting an intake request."
+            );
+        }
+
         boolean hasPendingSubmission =
                 intakeSubmissionRepository
                         .existsByClientUserAndStatusIn(

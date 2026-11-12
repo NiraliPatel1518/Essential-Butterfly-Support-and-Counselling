@@ -46,6 +46,8 @@ public class JwtService {
         return Jwts.builder()
                 .subject(email)
                 .claim("role", role)
+                // Admin JWTs are issued only after successful email OTP verification.
+                .claim("mfa", "ADMIN".equalsIgnoreCase(role))
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(key, Jwts.SIG.HS384)

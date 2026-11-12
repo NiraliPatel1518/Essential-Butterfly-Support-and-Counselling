@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ca.sheridancollege.shtirthb.dto.LoginRequest;
+import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.dto.SignupRequest;
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.model.ClientUser;
@@ -26,9 +27,12 @@ class AuthServiceTest {
     @Mock AdminUserRepository admins;
     @Mock PasswordEncoder encoder;
     @Mock AdminAuthService adminAuth;
+    @Mock EmailVerificationService emailVerification;
     AuthService service;
 
-    @BeforeEach void setUp() { service = new AuthService(clients, admins, encoder, adminAuth); }
+    @BeforeEach void setUp() {
+        service = new AuthService(clients, admins, encoder, adminAuth, emailVerification);
+    }
 
     @Test void signupNormalizesEmailAndEncodesPassword() {
         SignupRequest r = signup(" Jane@Mail.com ", "Jane Doe", "Password123", "Password123");
@@ -39,18 +43,29 @@ class AuthServiceTest {
                 u.getFullName().equals("Jane Doe") && u.getPassword().equals("HASH")));
     }
 
+    @Test void signupMarksTheEmailUnverifiedAndSendsAVerificationCode() {
+        SignupRequest r = signup("jane@mail.com", "Jane Doe", "Password123", "Password123");
+        when(clients.existsByEmail("jane@mail.com")).thenReturn(false);
+        when(encoder.encode("Password123")).thenReturn("HASH");
+        service.signup(r);
+        verify(clients).save(argThat(u -> !u.isEmailVerified()));
+        verify(emailVerification).sendVerificationCode(argThat(u -> u.getEmail().equals("jane@mail.com")));
+    }
+
     @Test void signupRejectsExistingEmail() {
         when(clients.existsByEmail("jane@mail.com")).thenReturn(true);
-        assertThrows(IllegalArgumentException.class, () -> service.signup(
+        assertThrows(AppExceptions.DuplicateEmailException.class, () -> service.signup(
                 signup("Jane@mail.com", "Jane", "Password123", "Password123")));
         verify(clients, never()).save(any());
+        verifyNoInteractions(emailVerification);
     }
 
     @Test void signupRejectsPasswordMismatch() {
         when(clients.existsByEmail("jane@mail.com")).thenReturn(false);
-        assertThrows(IllegalArgumentException.class, () -> service.signup(
+        assertThrows(AppExceptions.ValidationException.class, () -> service.signup(
                 signup("jane@mail.com", "Jane", "Password123", "Different123")));
         verify(clients, never()).save(any());
+        verifyNoInteractions(emailVerification);
     }
 
     @Test void authenticateReturnsClientAccountWithNormalizedEmail() {
@@ -62,6 +77,16 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals("jane@mail.com", result.email());
         assertEquals("CLIENT", result.role());
+    }
+
+    @Test void authenticateBlocksAClientWhoHasNotVerifiedTheEmail() {
+        ClientUser user = new ClientUser("Jane", "jane@mail.com", "HASH");
+        user.setEmailVerified(false);
+        when(clients.findByEmail("jane@mail.com")).thenReturn(Optional.of(user));
+        when(admins.findByEmail("jane@mail.com")).thenReturn(Optional.empty());
+        assertThrows(AppExceptions.EmailNotVerifiedException.class,
+                () -> service.authenticate(login("jane@mail.com", "Password123")));
+        verifyNoInteractions(encoder);
     }
 
     @Test void authenticateReturnsNullForIncorrectClientPassword() {
@@ -87,7 +112,7 @@ class AuthServiceTest {
                 new ClientUser("Client", "both@mail.com", "HASH")));
         when(admins.findByEmail("both@mail.com")).thenReturn(Optional.of(
                 new AdminUser("Admin", "both@mail.com", "HASH")));
-        assertThrows(IllegalStateException.class, () -> service.authenticate(login("both@mail.com", "Password123")));
+        assertThrows(AppExceptions.ConflictException.class, () -> service.authenticate(login("both@mail.com", "Password123")));
         verifyNoInteractions(adminAuth);
     }
 

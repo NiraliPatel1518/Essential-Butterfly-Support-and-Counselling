@@ -15,6 +15,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
@@ -53,10 +59,40 @@ public class SecurityConfig {
                 secret.getBytes(StandardCharsets.UTF_8)
         );
 
-        return NimbusJwtDecoder
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
                 .withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS384)
                 .build();
+
+        OAuth2TokenValidator<Jwt> adminMfaValidator = jwt -> {
+
+            Object role = jwt.getClaims().get("role");
+
+            if ("ADMIN".equalsIgnoreCase(String.valueOf(role))
+                    && !Boolean.TRUE.equals(
+                            jwt.getClaims().get("mfa"))) {
+
+                return OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error(
+                                "invalid_token",
+                                "Administrator two-factor verification is required.",
+                                null
+                        )
+                );
+            }
+
+            return OAuth2TokenValidatorResult.success();
+        };
+
+        // Reject pre-2FA admin JWTs as well as any admin JWT without MFA.
+        decoder.setJwtValidator(
+                new DelegatingOAuth2TokenValidator<>(
+                        JwtValidators.createDefault(),
+                        adminMfaValidator
+                )
+        );
+
+        return decoder;
     }
 
     @Bean
@@ -71,7 +107,9 @@ public class SecurityConfig {
         JwtAuthenticationConverter converter =
                 new JwtAuthenticationConverter();
 
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        converter.setJwtGrantedAuthoritiesConverter(
+                authoritiesConverter
+        );
 
         return converter;
     }
@@ -83,7 +121,6 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
 
-            // CORS policy is defined separately in CorsConfig.
             .cors(Customizer.withDefaults())
 
             .sessionManagement(session ->
@@ -123,13 +160,24 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/signup",
                     "/api/auth/login",
+                    "/api/auth/verify-email",
+                    "/api/auth/resend-verification",
                     "/api/password/forgot",
                     "/api/password/reset",
                     "/api/contact"
                 ).permitAll()
 
-                // Admin endpoints
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Admin login OTP endpoints.
+                // Access is controlled by the opaque challenge token.
+                .requestMatchers("/api/admin-auth/**").permitAll()
+
+                // Admin account settings require authenticated ADMIN.
+                .requestMatchers("/api/admin-account/**")
+                    .hasRole("ADMIN")
+
+                // Existing admin endpoints
+                .requestMatchers("/api/admin/**")
+                    .hasRole("ADMIN")
 
                 // Full update content requires authentication
                 .requestMatchers(HttpMethod.GET, "/api/updates/**")
@@ -142,7 +190,10 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth2 ->
                 oauth2.jwt(jwt ->
                     jwt.jwtAuthenticationConverter(
-                        jwtAuthenticationConverter())))
+                        jwtAuthenticationConverter()
+                    )
+                )
+            )
 
             .httpBasic(httpBasic -> httpBasic.disable())
             .formLogin(formLogin -> formLogin.disable());

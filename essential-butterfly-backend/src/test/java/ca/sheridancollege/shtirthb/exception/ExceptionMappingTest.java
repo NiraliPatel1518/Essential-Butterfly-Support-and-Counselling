@@ -48,6 +48,12 @@ class ExceptionMappingTest {
                 ExceptionMapping.getStatus(new AccountLockedException()));
     }
 
+        @Test
+    void emailNotVerifiedMapsToForbidden() {
+        assertEquals(HttpStatus.FORBIDDEN,
+                ExceptionMapping.getStatus(new EmailNotVerifiedException()));
+    }
+
     @Test
     void serviceUnavailableMapsTo503() {
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE,

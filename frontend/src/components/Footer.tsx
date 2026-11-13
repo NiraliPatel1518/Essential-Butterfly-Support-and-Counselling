@@ -40,7 +40,7 @@ function Footer() {
         <div className="footer-column">
           <h2>Explore</h2>
           <nav aria-label="Footer navigation">
-            <Link to="/">Home</Link>{isEnabled("ABOUT") && <Link to="/about">About Casey</Link>}{isEnabled("SERVICES") && <Link to="/services">Services &amp; Supports</Link>}<Link to="/resources">Resource Library</Link>{isEnabled("APPOINTMENTS") && <Link to="/appointments">Appointments</Link>}{isEnabled("CONTACT") && <Link to="/contact">Contact</Link>}{isEnabled("INTAKE") && <Link to="/intake">Secure Intake</Link>}
+            <Link to="/">Home</Link>{isEnabled("ABOUT") && <Link to="/about">About Casey</Link>}{isEnabled("SERVICES") && <Link to="/services">Services &amp; Supports</Link>}<Link to="/resources">Resource Library</Link>{isEnabled("MEMORY_WALL") && <Link to="/memory-wall">Memory Wall</Link>}{isEnabled("APPOINTMENTS") && <Link to="/appointments">Appointments</Link>}{isEnabled("CONTACT") && <Link to="/contact">Contact</Link>}{isEnabled("INTAKE") && <Link to="/intake">Secure Intake</Link>}
           </nav>
         </div>
 

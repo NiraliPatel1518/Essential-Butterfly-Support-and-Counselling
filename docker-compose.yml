@@ -43,6 +43,9 @@ services:
       - twilio_account_sid
       - twilio_auth_token
       - twilio_verify_service_sid
+      - google_calendar_client_id
+      - google_calendar_client_secret
+      - google_calendar_refresh_token
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -55,7 +58,12 @@ services:
         export TWILIO_ACCOUNT_SID="$$(tr -d '\r\n' < /run/secrets/twilio_account_sid)"
         export TWILIO_AUTH_TOKEN="$$(tr -d '\r\n' < /run/secrets/twilio_auth_token)"
         export TWILIO_VERIFY_SERVICE_SID="$$(tr -d '\r\n' < /run/secrets/twilio_verify_service_sid)"
+        export GOOGLE_CALENDAR_CLIENT_ID="$$(tr -d '\r\n' < /run/secrets/google_calendar_client_id)"
+        export GOOGLE_CALENDAR_CLIENT_SECRET="$$(tr -d '\r\n' < /run/secrets/google_calendar_client_secret)"
+        export GOOGLE_CALENDAR_REFRESH_TOKEN="$$(tr -d '\r\n' < /run/secrets/google_calendar_refresh_token)"
         exec java -jar app.jar
+    volumes:
+      - memory-wall-data:/app/data/memory-wall
     ports:
       - "8080:8080"
     networks:
@@ -84,6 +92,7 @@ networks:
 
 volumes:
   postgres-data:
+  memory-wall-data:
 
 secrets:
   postgres_password:
@@ -104,3 +113,9 @@ secrets:
     file: ./secrets/twilio_auth_token.txt
   twilio_verify_service_sid:
     file: ./secrets/twilio_verify_service_sid.txt
+  google_calendar_client_id:
+    file: ./secrets/google_calendar_client_id.txt
+  google_calendar_client_secret:
+    file: ./secrets/google_calendar_client_secret.txt
+  google_calendar_refresh_token:
+    file: ./secrets/google_calendar_refresh_token.txt

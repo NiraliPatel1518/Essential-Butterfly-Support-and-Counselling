@@ -148,6 +148,13 @@ public class SecurityConfig {
                     "/api/resources/*/download"
                 ).permitAll()
 
+                // Public Memory Wall (published photos only)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/memory-wall",
+                    "/api/memory-wall/photos/*/image"
+                ).permitAll()
+
                 // Public appointment availability (open slots only, no
                 // client or booking information)
                 .requestMatchers(

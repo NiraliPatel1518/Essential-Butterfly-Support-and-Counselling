@@ -24,7 +24,7 @@ export type AvailabilityRule = {
   id: number;
   // 1 = Monday ... 7 = Sunday; null for a slot on one specific date
   weekday: number | null;
-  // yyyy-MM-dd for a one-date slot; null for a weekly slot
+  // a valid date for a one-date slot; null for a weekly slot
   date: string | null;
   startTime: string;
   endTime: string;

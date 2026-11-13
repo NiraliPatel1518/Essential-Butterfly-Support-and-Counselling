@@ -404,6 +404,10 @@ function AdminDashboard() {
               Manage Appointments
             </Link>
 
+            <Link to="/admin-memory-wall" className="dashboard-refresh">
+              Manage Memory Wall
+            </Link>
+
             {section !== "features" &&
               section !== "updates" &&
               section !== "newsletter" &&

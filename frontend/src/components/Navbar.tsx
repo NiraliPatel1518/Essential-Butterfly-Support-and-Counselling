@@ -141,6 +141,18 @@ function Navbar() {
               </NavLink>
             )}
 
+            {isEnabled("MEMORY_WALL") && (
+              <NavLink
+                to="/memory-wall"
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  `nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Memory Wall
+              </NavLink>
+            )}
+
             {isEnabled("UPDATES") && (
               <NavLink
                 to="/updates"

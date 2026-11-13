@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,10 +18,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import ca.sheridancollege.shtirthb.dto.ErrorResponse;
 import ca.sheridancollege.shtirthb.exception.AppExceptions.AppBaseException;
+import ca.sheridancollege.shtirthb.service.ResourceUploadValidator;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,6 +33,9 @@ public class GlobalExceptionHandler {
 
     @Value("${app.errors.include-stacktrace:false}")
     private boolean includeStacktrace;
+
+    @Value("${app.content.max-file-size-bytes:10485760}")
+    private long maxFileSizeBytes;
 
     private ResponseEntity<ErrorResponse> buildResponse(
             HttpStatus status,
@@ -154,6 +160,48 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "The request body is missing or contains invalid data.",
                 "InvalidRequestBody",
+                request,
+                null
+        );
+    }
+
+    /*
+     * Spring rejects an upload that is far larger than any allowed file before
+     * the application code runs. The answer is the same clear size-limit
+     * message the Resource Library gives for a file just over the limit.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request) {
+
+        return handleApplicationException(
+                new AppExceptions.PayloadTooLargeException(
+                        ResourceUploadValidator.sizeLimitMessage(maxFileSizeBytes)),
+                request
+        );
+    }
+
+    /*
+     * A database rule rejected the change, for example two people saving the
+     * same resource title at the same moment. Nothing was saved.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request) {
+
+        logger.warn(
+                "Data integrity violation | method={} | path={}",
+                request.getMethod(),
+                request.getRequestURI()
+        );
+
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "This change conflicts with information that already exists. "
+                        + "Please refresh and try again.",
+                "DataIntegrityViolation",
                 request,
                 null
         );

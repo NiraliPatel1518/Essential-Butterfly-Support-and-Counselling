@@ -1,52 +1,21 @@
 import { Link } from "react-router-dom";
+import { usePageContent } from "../hooks/usePageContent";
+import type { PageContent } from "../content/pageLayouts";
 import "./DetailPages.css";
 
-const services = [
-  {
-    id: "respite",
-    title: "Respite",
-    text: "One-to-one or small-group respite for children or adults, at home or in the community. Support can focus on life skills, financial literacy, art, new hobbies and goals chosen with the client and family.",
-  },
-  {
-    id: "social-life-skills",
-    title: "Social Skills and Life Skills Coaching",
-    text: "Individual or small-group support for friendships, independent-living safety, relationships, employment or volunteer preparation and other goals based on the person’s needs.",
-  },
-  {
-    id: "tutoring-technology",
-    title: "Tutoring and Assistive Tech / Tech Coaching",
-    text: "Tutoring and technology coaching informed by more than 18 years of experience with assistive technology, SEA equipment, Google, Microsoft, Apple and communication applications.",
-  },
-  {
-    id: "counselling",
-    title: "Counselling",
-    text: "Individual counselling shaped around your needs and goals through an empathetic, strengths-based and neurodiversity-informed approach.",
-  },
-  {
-    id: "adhd-coaching",
-    title: "ADHD Coaching and Executive Function Coaching",
-    text: "Practical tools for procrastination, task management, organization, emotional regulation, self-advocacy, manageable goals and supportive check-ins.",
-  },
-  {
-    id: "animal-dbt",
-    title: "Animal-Based DBT (Dialectical Behaviour Therapy)",
-    text: "A developing service focused on emotional-regulation skills, confidence and meaningful connection. Contact Casey for current availability and details.",
-    comingSoon: true,
-  },
-];
+// "preview" is used by the editor to show unsaved wording inside the real page.
+function Services({ preview }: { preview?: PageContent }) {
+  const { text, services } = usePageContent("services", preview);
+  const Root = preview ? "div" : "main";
 
-function Services() {
   return (
-    <main className="detail-page">
+    <Root className="detail-page">
       <section className="detail-hero services-hero" aria-labelledby="services-title">
         <div className="detail-shell detail-hero-grid">
           <div>
-            <p className="detail-eyebrow">Services and counselling supports</p>
-            <h1 id="services-title">Support shaped around your needs, strengths and goals.</h1>
-            <p className="detail-lead">
-              Explore individualized counselling, coaching, tutoring, respite
-              and technology supports for children, adults and families.
-            </p>
+            <p className="detail-eyebrow">{text("heroEyebrow")}</p>
+            <h1 id="services-title">{text("heroTitle")}</h1>
+            <p className="detail-lead">{text("heroLead")}</p>
           </div>
           <img
             className="snapdragon-photo"
@@ -59,33 +28,20 @@ function Services() {
       <section className="detail-section service-area" aria-labelledby="availability-title">
         <div className="detail-shell detail-two-column">
           <div>
-            <p className="detail-eyebrow">Availability and service area</p>
-            <h2 id="availability-title">Flexible support outside regular daytime hours</h2>
+            <p className="detail-eyebrow">{text("availEyebrow")}</p>
+            <h2 id="availability-title">{text("availTitle")}</h2>
           </div>
           <div className="detail-copy">
-            <p>
-              Availability is currently limited because Casey works full time
-              during the day and supports families in the community after
-              hours. When time slots are open, weekday appointments may be
-              available Monday to Friday from 5:00 p.m. to 9:00 p.m.
-            </p>
-            <p>
-              Services may be available in Oakville, Burlington and Waterdown.
-              Rates are reviewed according to support needs. If transportation
-              is required for respite, mileage or an adjusted hourly rate may
-              apply. A résumé and police check can be provided when appropriate.
-            </p>
+            <p>{text("availP1")}</p>
+            <p>{text("availP2")}</p>
           </div>
         </div>
       </section>
 
       <section className="detail-section detail-tint" aria-labelledby="service-list-title">
         <div className="detail-shell">
-          <h2 id="service-list-title">What I offer</h2>
-          <p className="detail-intro">
-            Every service begins with a conversation about needs, strengths,
-            preferences and practical goals.
-          </p>
+          <h2 id="service-list-title">{text("listTitle")}</h2>
+          <p className="detail-intro">{text("listIntro")}</p>
 
           <div className="service-card-grid">
             {services.map((service, index) => (
@@ -111,36 +67,31 @@ function Services() {
       <section className="detail-section" aria-labelledby="tools-title">
         <div className="detail-shell detail-two-column">
           <div>
-            <p className="detail-eyebrow">Technology toolbox</p>
-            <h2 id="tools-title">Assistive technology and learning tools</h2>
+            <p className="detail-eyebrow">{text("toolsEyebrow")}</p>
+            <h2 id="tools-title">{text("toolsTitle")}</h2>
           </div>
           <div className="detail-copy">
-            <p>
-              Coaching may include Kurzweil, Read&amp;Write, Mindomo, Google
-              Workspace for Education, Microsoft 365, speech-to-text,
-              text-to-speech, Google Keep, OneNote, Equatio and accessibility
-              features built into commonly used applications and devices.
-            </p>
+            <p>{text("toolsText")}</p>
           </div>
         </div>
       </section>
 
       <section className="detail-section detail-tint" aria-labelledby="process-title">
         <div className="detail-shell">
-          <p className="detail-eyebrow">What happens next</p>
-          <h2 id="process-title">A simple and respectful first step</h2>
+          <p className="detail-eyebrow">{text("processEyebrow")}</p>
+          <h2 id="process-title">{text("processTitle")}</h2>
           <ol className="process-list">
-            <li><strong>Connect.</strong><span>Send a general question or begin the secure intake process.</span></li>
-            <li><strong>Discuss.</strong><span>Talk about needs, strengths, preferences and practical goals.</span></li>
-            <li><strong>Plan.</strong><span>Confirm whether a service is suitable and agree on the next step.</span></li>
+            <li><strong>{text("step1Title")}</strong><span>{text("step1Text")}</span></li>
+            <li><strong>{text("step2Title")}</strong><span>{text("step2Text")}</span></li>
+            <li><strong>{text("step3Title")}</strong><span>{text("step3Text")}</span></li>
           </ol>
           <div className="detail-actions">
-            <Link className="detail-primary" to="/intake">Begin secure intake</Link>
-            <Link className="detail-secondary" to="/contact">Ask a question</Link>
+            <Link className="detail-primary" to="/intake">{text("primaryButton")}</Link>
+            <Link className="detail-secondary" to="/contact">{text("secondaryButton")}</Link>
           </div>
         </div>
       </section>
-    </main>
+    </Root>
   );
 }
 

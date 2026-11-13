@@ -5,9 +5,9 @@ import FeatureVisibility from "./FeatureVisibility";
 import { renderApp, jsonResponse } from "../test/render";
 
 function featureList(
-  enabled: Record<string, boolean> = { NEWSLETTER: true, TESTIMONIALS: true, UPDATES: true }
+  enabled: Record<string, boolean> = { NEWSLETTER: true, TESTIMONIALS: true, UPDATES: true, APPOINTMENTS: true }
 ) {
-  return ["NEWSLETTER", "TESTIMONIALS", "UPDATES"].map((key, index) => ({
+  return ["NEWSLETTER", "TESTIMONIALS", "UPDATES", "APPOINTMENTS"].map((key, index) => ({
     featureKey: key,
     label: key,
     enabled: enabled[key],
@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe("FeatureVisibility", () => {
-  it("shows a loading message and then the three features", async () => {
+  it("shows a loading message and then the four features", async () => {
     stubApi();
     renderApp("/admin", <FeatureVisibility />);
 
@@ -58,6 +58,7 @@ describe("FeatureVisibility", () => {
     expect(await screen.findByText("Newsletter Signup")).toBeInTheDocument();
     expect(screen.getByText("Testimonials")).toBeInTheDocument();
     expect(screen.getByText("Updates")).toBeInTheDocument();
+    expect(screen.getByText("Appointments")).toBeInTheDocument();
   });
 
   it("sends the admin token when loading", async () => {
@@ -74,21 +75,21 @@ describe("FeatureVisibility", () => {
     renderApp("/admin", <FeatureVisibility />);
     await screen.findByText("Newsletter Signup");
 
-    expect(screen.getAllByText("Visible")).toHaveLength(3);
-    expect(screen.getByText("Features currently visible").parentElement).toHaveTextContent("3 / 3");
+    expect(screen.getAllByText("Visible")).toHaveLength(4);
+    expect(screen.getByText("Features currently visible").parentElement).toHaveTextContent("4 / 4");
     expect(checkbox(/newsletter signup/i)).toBeChecked();
   });
 
   it("reflects the saved settings from the server", async () => {
     stubApi({
-      get: () => jsonResponse(featureList({ NEWSLETTER: false, TESTIMONIALS: true, UPDATES: true })),
+      get: () => jsonResponse(featureList({ NEWSLETTER: false, TESTIMONIALS: true, UPDATES: true, APPOINTMENTS: true })),
     });
     renderApp("/admin", <FeatureVisibility />);
     await screen.findByText("Newsletter Signup");
 
     expect(checkbox(/newsletter signup/i)).not.toBeChecked();
     expect(screen.getByText("Hidden")).toBeInTheDocument();
-    expect(screen.getByText("Features currently visible").parentElement).toHaveTextContent("2 / 3");
+    expect(screen.getByText("Features currently visible").parentElement).toHaveTextContent("3 / 4");
   });
 
   it("starts with nothing to save", async () => {
@@ -111,14 +112,14 @@ describe("FeatureVisibility", () => {
 
     expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
     expect(screen.getByText("Hidden")).toBeInTheDocument();
-    expect(screen.getByText("Features currently visible").parentElement).toHaveTextContent("2 / 3");
+    expect(screen.getByText("Features currently visible").parentElement).toHaveTextContent("3 / 4");
     expect(screen.getByRole("button", { name: /save changes/i })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Discard" })).toBeInTheDocument();
   });
 
   it("saves the new settings, tells the website, and confirms", async () => {
     const fetchMock = stubApi({
-      put: () => jsonResponse(featureList({ NEWSLETTER: true, TESTIMONIALS: false, UPDATES: true })),
+      put: () => jsonResponse(featureList({ NEWSLETTER: true, TESTIMONIALS: false, UPDATES: true, APPOINTMENTS: true })),
     });
     const updated = vi.fn();
     window.addEventListener("public-features-updated", updated);
@@ -138,6 +139,7 @@ describe("FeatureVisibility", () => {
       { featureKey: "NEWSLETTER", enabled: true },
       { featureKey: "TESTIMONIALS", enabled: false },
       { featureKey: "UPDATES", enabled: true },
+      { featureKey: "APPOINTMENTS", enabled: true },
     ]);
     expect(JSON.stringify(put![1]?.headers)).toContain("Bearer admin-token");
 

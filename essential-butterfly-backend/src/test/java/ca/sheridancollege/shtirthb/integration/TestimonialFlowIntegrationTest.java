@@ -370,7 +370,8 @@ class TestimonialFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"featureKey\":\"NEWSLETTER\",\"enabled\":true},"
                                 + "{\"featureKey\":\"TESTIMONIALS\",\"enabled\":false},"
-                                + "{\"featureKey\":\"UPDATES\",\"enabled\":true}]"))
+                                + "{\"featureKey\":\"UPDATES\",\"enabled\":true},"
+                                + "{\"featureKey\":\"APPOINTMENTS\",\"enabled\":true}]"))
                 .andExpect(status().isOk());
 
         publicList().andExpect(jsonPath("$.length()").value(0));

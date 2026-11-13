@@ -76,11 +76,8 @@ public class PhoneVerificationService {
         );
     }
 
-    /*
-     * Starts verification for a new phone number.
-     *
-     * A previously verified number is deliberately not overwritten.
-     */
+     
+    
     @Transactional
     public void startVerification(
             PhoneNumberRequest request,

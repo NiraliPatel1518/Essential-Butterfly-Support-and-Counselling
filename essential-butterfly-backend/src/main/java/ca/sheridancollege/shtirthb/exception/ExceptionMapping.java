@@ -25,7 +25,9 @@ public final class ExceptionMapping {
             EmailNotVerifiedException.class, HttpStatus.FORBIDDEN,
             AccountLockedException.class, HttpStatus.LOCKED,
             ServiceUnavailableException.class,
-            HttpStatus.SERVICE_UNAVAILABLE
+            HttpStatus.SERVICE_UNAVAILABLE,
+            PayloadTooLargeException.class,
+            HttpStatus.valueOf(413)
     );
 
     public static HttpStatus getStatus(

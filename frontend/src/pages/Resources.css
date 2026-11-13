@@ -1,0 +1,251 @@
+.resources-page {
+  width: min(960px, calc(100% - 40px));
+  min-height: 55vh;
+  margin: 0 auto;
+  padding: clamp(48px, 7vw, 88px) 0;
+  color: #302044;
+}
+
+.resources-header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+}
+
+.resources-header p {
+  max-width: 62ch;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.resources-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 28px 0 12px;
+  padding: 18px;
+  border: 1px solid #ded3e9;
+  border-radius: 12px;
+  background: #faf8fd;
+}
+
+.resources-field {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resources-field label {
+  font-weight: 700;
+}
+
+.resources-field input,
+.resources-field select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #8a7a9c;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.resources-page :focus-visible {
+  outline: 3px solid #54248f;
+  outline-offset: 2px;
+}
+
+.resources-count {
+  margin: 12px 0;
+  font-weight: 700;
+}
+
+.resources-message {
+  padding: 16px 0;
+  line-height: 1.6;
+}
+
+.resources-error {
+  padding: 16px;
+  border: 1px solid #c8545f;
+  border-radius: 10px;
+  background: #fff2f3;
+  color: #7a1f2b;
+}
+
+.resources-error button,
+.resource-more,
+.resource-actions a,
+.resource-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid #54248f;
+  border-radius: 8px;
+  background: #54248f;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.resource-more:hover,
+.resource-actions a:hover,
+.resources-error button:hover {
+  background: #32145f;
+  border-color: #32145f;
+}
+
+.resource-actions a:nth-of-type(2),
+.resource-dialog-close {
+  background: #fff;
+  color: #54248f;
+}
+
+/* One horizontal row per resource, stacked top to bottom. */
+.resource-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resource-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  border: 1px solid #ded3e9;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.resource-thumb {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 72px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.resource-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.resource-row h2 {
+  margin: 2px 0 4px;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.resource-row p {
+  margin: 0;
+}
+
+.resource-excerpt {
+  color: #584966;
+  line-height: 1.55;
+}
+
+.resource-more {
+  flex: 0 0 auto;
+}
+
+.resource-category {
+  color: #5b3a7d;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.resource-meta {
+  margin: 0 0 10px;
+  color: #5d5468;
+  font-size: 0.95rem;
+}
+
+.resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* The "Read more" popup */
+.resource-dialog {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: #302044;
+  box-shadow: 0 24px 60px rgba(30, 10, 50, 0.35);
+}
+
+.resource-dialog::backdrop {
+  background: rgba(30, 10, 50, 0.55);
+}
+
+.resource-dialog-body {
+  padding: 24px 26px 28px;
+}
+
+.resource-dialog-close {
+  float: right;
+  margin: 0 0 8px 12px;
+}
+
+.resource-dialog h2 {
+  margin: 4px 0 12px;
+  font-size: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+.resource-dialog h3 {
+  margin: 20px 0 8px;
+  font-size: 1.05rem;
+}
+
+.resource-dialog-text {
+  margin: 0 0 8px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.resource-dialog-image {
+  display: block;
+  max-width: 100%;
+  max-height: 280px;
+  margin: 0 0 14px;
+  border-radius: 10px;
+}
+
+.resource-link-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.resource-link-list a {
+  color: #4b0082;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .resource-row {
+    flex-wrap: wrap;
+  }
+
+  .resource-more {
+    width: 100%;
+  }
+}

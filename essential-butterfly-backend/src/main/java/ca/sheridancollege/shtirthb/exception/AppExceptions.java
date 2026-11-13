@@ -83,6 +83,14 @@ public final class AppExceptions {
         }
     }
 
+    public static class PayloadTooLargeException
+            extends AppBaseException {
+
+        public PayloadTooLargeException(String message) {
+            super(message);
+        }
+    }
+
     public static class ServiceUnavailableException
             extends AppBaseException {
 

@@ -4,6 +4,7 @@ import FeatureVisibility from "./FeatureVisibility";
 import AdminUpdates from "./AdminUpdates";
 import AdminTestimonials from "./AdminTestimonials";
 import AdminNewsletter from "./AdminNewsletter";
+import AdminContent from "./AdminContent";
 import "./Dashboard.css";
 
 type ContactMessage = {
@@ -38,7 +39,8 @@ type Section =
   | "features"
   | "updates"
   | "testimonials"
-  | "newsletter";
+  | "newsletter"
+  | "content";
 
 async function readError(response: Response): Promise<string> {
   const body = await response.text();
@@ -146,7 +148,8 @@ function AdminDashboard() {
       section === "features" ||
       section === "updates" ||
       section === "testimonials" ||
-      section === "newsletter"
+      section === "newsletter" ||
+      section === "content"
     ) {
       return;
     }
@@ -397,7 +400,8 @@ function AdminDashboard() {
 
           {section !== "features" &&
             section !== "updates" &&
-            section !== "newsletter" && (
+            section !== "newsletter" &&
+            section !== "content" && (
               <button
                 type="button"
                 className="dashboard-refresh"
@@ -480,6 +484,15 @@ function AdminDashboard() {
             onClick={() => changeSection("newsletter")}
           >
             Newsletter
+          </button>
+
+          <button
+            type="button"
+            className={section === "content" ? "active" : ""}
+            aria-current={section === "content" ? "page" : undefined}
+            onClick={() => changeSection("content")}
+          >
+            Website Content
           </button>
         </nav>
 
@@ -861,6 +874,12 @@ function AdminDashboard() {
         {!loading && section === "newsletter" && (
           <section className="dashboard-section">
             <AdminNewsletter />
+          </section>
+        )}
+
+        {!loading && section === "content" && (
+          <section className="dashboard-section">
+            <AdminContent />
           </section>
         )}
       </div>

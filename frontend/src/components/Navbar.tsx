@@ -14,6 +14,7 @@ const navigation = [
   { to: "/", label: "Home", end: true },
   { to: "/about", label: "About Casey" },
   { to: "/services", label: "Services" },
+  { to: "/resources", label: "Resources" },
   { to: "/contact", label: "Contact" },
 ];
 

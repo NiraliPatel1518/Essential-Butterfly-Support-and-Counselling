@@ -1,14 +1,20 @@
 import { Link } from "react-router-dom";
+import { usePageContent } from "../hooks/usePageContent";
+import type { PageContent } from "../content/pageLayouts";
 import "./InformationPages.css";
 
-export function Privacy() {
+export function Privacy({ preview }: { preview?: PageContent }) {
+  // Wording published from Manage Website Content; the layout never changes.
+  const { text } = usePageContent("privacy", preview);
+  const Root = preview ? "div" : "main";
+
   return (
-    <main className="information-page">
-      <h1>Privacy</h1>
-      <p>This page is reserved for the client-approved privacy policy. Until that policy is finalized, do not submit sensitive or emergency information through the general contact form.</p>
-      <p>Information submitted through secure intake is intended only to help determine appropriate support and next steps.</p>
-      <Link to="/contact">Contact Casey with a privacy question</Link>
-    </main>
+    <Root className="information-page">
+      <h1>{text("title")}</h1>
+      <p>{text("p1")}</p>
+      <p>{text("p2")}</p>
+      <Link to="/contact">{text("linkText")}</Link>
+    </Root>
   );
 }
 
@@ -25,7 +31,7 @@ export function Accessibility() {
 }
 
 export function Sitemap() {
-  const links = [["Home","/"],["About Casey","/about"],["Services","/services"],["Contact","/contact"],["Secure Intake","/intake"],["Sign In","/login"],["Privacy","/privacy"],["Accessibility","/accessibility"]];
+  const links = [["Home","/"],["About Casey","/about"],["Services","/services"],["Contact","/contact"],["Resource Library","/resources"],["Secure Intake","/intake"],["Sign In","/login"],["Privacy","/privacy"],["Accessibility","/accessibility"]];
   return (
     <main className="information-page">
       <h1>Site map</h1>

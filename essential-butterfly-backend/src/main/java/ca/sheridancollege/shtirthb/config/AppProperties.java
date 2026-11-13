@@ -12,6 +12,7 @@ public class AppProperties {
     private Cors cors = new Cors();
     private Jwt jwt = new Jwt();
     private Mail mail = new Mail();
+    private Content content = new Content();
 
     private String frontendBaseUrl;
     private String publicBaseUrl;
@@ -38,6 +39,14 @@ public class AppProperties {
 
     public void setMail(Mail mail) {
         this.mail = mail;
+    }
+
+    public Content getContent() {
+        return content;
+    }
+
+    public void setContent(Content content) {
+        this.content = content;
     }
 
     public String getFrontendBaseUrl() {
@@ -119,6 +128,44 @@ public class AppProperties {
 
         public void setFromAddress(String fromAddress) {
             this.fromAddress = fromAddress;
+        }
+    }
+
+    /*
+     * Website content and Resource Library rules. The values come from
+     * application.properties (app.content.*), so nothing is hard-coded in
+     * the services.
+     */
+    public static class Content {
+
+        private long maxFileSizeBytes = 10L * 1024 * 1024;
+        private List<String> allowedFileExtensions =
+                new ArrayList<>(List.of("pdf", "docx", "png", "jpg", "jpeg"));
+        private List<String> allowedLinkSchemes =
+                new ArrayList<>(List.of("https"));
+
+        public long getMaxFileSizeBytes() {
+            return maxFileSizeBytes;
+        }
+
+        public void setMaxFileSizeBytes(long maxFileSizeBytes) {
+            this.maxFileSizeBytes = maxFileSizeBytes;
+        }
+
+        public List<String> getAllowedFileExtensions() {
+            return allowedFileExtensions;
+        }
+
+        public void setAllowedFileExtensions(List<String> allowedFileExtensions) {
+            this.allowedFileExtensions = allowedFileExtensions;
+        }
+
+        public List<String> getAllowedLinkSchemes() {
+            return allowedLinkSchemes;
+        }
+
+        public void setAllowedLinkSchemes(List<String> allowedLinkSchemes) {
+            this.allowedLinkSchemes = allowedLinkSchemes;
         }
     }
 }

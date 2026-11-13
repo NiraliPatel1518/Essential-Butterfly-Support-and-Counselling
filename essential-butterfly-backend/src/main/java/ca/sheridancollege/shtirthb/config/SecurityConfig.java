@@ -137,6 +137,17 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/updates")
                     .permitAll()
 
+                // Public website content (published copy only)
+                .requestMatchers(HttpMethod.GET, "/api/content/*")
+                    .permitAll()
+
+                // Public Resource Library (published resources and files only)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/resources",
+                    "/api/resources/*/download"
+                ).permitAll()
+
                 // Public testimonials
                 .requestMatchers(
                     HttpMethod.GET,

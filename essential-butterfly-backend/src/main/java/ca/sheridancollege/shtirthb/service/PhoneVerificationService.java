@@ -11,10 +11,12 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Locale;
-import java.security.SecureRandom;
+import java.util.regex.Pattern;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +34,17 @@ public class PhoneVerificationService {
     private static final int EXPIRY_MINUTES = 10;
     private static final int MAX_RESENDS = 3;
 
+    private static final Logger log =
+            LoggerFactory.getLogger(PhoneVerificationService.class);
+
+    private static final Pattern APPROVED =
+            Pattern.compile("\"status\"\\s*:\\s*\"approved\"");
+
     private final ClientUserRepository users;
-    private final PasswordEncoder passwordEncoder;
     private final String accountSid;
     private final String authToken;
-    private final String fromNumber;
-    private final String apiBaseUrl;
-
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final String verifyServiceSid;
+    private final String verifyBaseUrl;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15))
@@ -47,18 +52,16 @@ public class PhoneVerificationService {
 
     public PhoneVerificationService(
             ClientUserRepository users,
-            PasswordEncoder passwordEncoder,
             @Value("${app.twilio.account-sid:}") String accountSid,
             @Value("${app.twilio.auth-token:}") String authToken,
-            @Value("${app.twilio.from-number:}") String fromNumber,
-            @Value("${app.twilio.api-base-url}") String apiBaseUrl) {
+            @Value("${app.twilio.verify-service-sid:}") String verifyServiceSid,
+            @Value("${app.twilio.verify-base-url:https://verify.twilio.com}") String verifyBaseUrl) {
 
         this.users = users;
-        this.passwordEncoder = passwordEncoder;
         this.accountSid = accountSid;
         this.authToken = authToken;
-        this.fromNumber = fromNumber;
-        this.apiBaseUrl = apiBaseUrl.replaceAll("/+$", "");
+        this.verifyServiceSid = verifyServiceSid;
+        this.verifyBaseUrl = verifyBaseUrl.replaceAll("/+$", "");
     }
 
     @Transactional(readOnly = true)
@@ -94,6 +97,9 @@ public class PhoneVerificationService {
             throw new AppExceptions.BusinessRuleException(
                     "This phone number is already verified.");
         }
+
+        // One phone number belongs to one account only.
+        ensureNumberAvailable(requestedNumber, user);
 
         boolean changedPendingNumber =
                 !requestedNumber.equals(user.getPendingPhoneNumber());
@@ -135,7 +141,7 @@ public class PhoneVerificationService {
         ClientUser user = findUser(email);
 
         if (user.getPendingPhoneNumber() == null
-                || user.getPhoneVerificationCodeHash() == null
+                || user.getPhoneVerificationLastSentAt() == null
                 || user.getPhoneVerificationCodeExpiry() == null) {
 
             throw new AppExceptions.ValidationException(
@@ -157,9 +163,8 @@ public class PhoneVerificationService {
                     "Your verification code has expired. Request a new code.");
         }
 
-        if (!passwordEncoder.matches(
-                request.getCode(),
-                user.getPhoneVerificationCodeHash())) {
+        // Twilio Verify holds the code and decides whether it is correct.
+        if (!checkCode(user.getPendingPhoneNumber(), request.getCode())) {
 
             int attempts =
                     user.getPhoneVerificationAttempts() + 1;
@@ -182,14 +187,19 @@ public class PhoneVerificationService {
                     + remaining + " attempt(s) remaining.");
         }
 
+        // Another account may have verified this number in the meantime.
+        ensureNumberAvailable(user.getPendingPhoneNumber(), user);
+
         /*
          * Only after successful verification do we replace
          * the customer's existing verified phone number.
          */
         user.setPhoneNumber(user.getPendingPhoneNumber());
 
-        user.setPhoneVerified(true);
+        // A stored phone number is, by definition, a verified one; there
+        // is no separate "verified" flag to set.
 
+        // Deletes the phone_verifications row: nothing is left pending.
         user.setPendingPhoneNumber(null);
 
         user.setPhoneVerificationAttempts(0);
@@ -270,23 +280,35 @@ public class PhoneVerificationService {
         };
     }
 
+    /*
+     * Asks Twilio Verify to generate and text a code. The code itself is
+     * never seen or stored by this application.
+     */
     private void sendNewCode(ClientUser user) {
 
-        String code = String.format(
-                Locale.ROOT,
-                "%06d",
-                secureRandom.nextInt(1_000_000));
+        HttpResponse<String> response = callVerify(
+                "Verifications",
+                "To=" + encode(user.getPendingPhoneNumber())
+                + "&Channel=sms");
 
-        sendSms(
-                user.getPendingPhoneNumber(),
-                "Your Essential Butterfly verification code is "
-                + code + ". It expires in 10 minutes. Do not share this code."
-        );
+        if (response.statusCode() < 200
+                || response.statusCode() >= 300) {
+
+            log.error("Twilio Verify rejected the send request: HTTP {} {}",
+                    response.statusCode(), response.body());
+
+            throw new AppExceptions.ServiceUnavailableException(
+                    "We could not send the verification text. "
+                    + "Check the phone number and try again.",
+                    new IllegalStateException(
+                            "Twilio returned HTTP "
+                            + response.statusCode()));
+        }
 
         LocalDateTime now = LocalDateTime.now();
 
-        user.setPhoneVerificationCodeHash(
-                passwordEncoder.encode(code));
+        // No code is kept locally; the expiry only mirrors Twilio's.
+        user.setPhoneVerificationCodeHash(null);
 
         user.setPhoneVerificationCodeExpiry(
                 now.plusMinutes(EXPIRY_MINUTES));
@@ -297,15 +319,51 @@ public class PhoneVerificationService {
     }
 
     /*
-     * Sends an SMS through Twilio's Messages API.
+     * Asks Twilio Verify whether the code is right for this number.
+     * Returns true only when Twilio says "approved".
      */
-    private void sendSms(
-            String toNumber,
-            String body) {
+    private boolean checkCode(String phoneNumber, String code) {
+
+        HttpResponse<String> response = callVerify(
+                "VerificationCheck",
+                "To=" + encode(phoneNumber)
+                + "&Code=" + encode(code));
+
+        int status = response.statusCode();
+
+        if (status == 404) {
+
+            // Twilio no longer has an open verification for this number
+            // (expired, or already approved).
+            throw new AppExceptions.ValidationException(
+                    "Your verification code has expired. Request a new code.");
+        }
+
+        if (status < 200 || status >= 300) {
+
+            log.error("Twilio Verify rejected the check request: HTTP {} {}",
+                    status, response.body());
+
+            throw new AppExceptions.ServiceUnavailableException(
+                    "We could not check the verification code right now. "
+                    + "Please try again.",
+                    new IllegalStateException(
+                            "Twilio returned HTTP " + status));
+        }
+
+        return APPROVED.matcher(response.body()).find();
+    }
+
+    /*
+     * Calls Twilio's Verify API.
+     */
+    private HttpResponse<String> callVerify(
+            String path,
+            String form) {
 
         if (accountSid.isBlank()
                 || authToken.isBlank()
-                || fromNumber.isBlank()) {
+                || verifyServiceSid.isBlank()) {
 
             throw new AppExceptions.ServiceUnavailableException(
                     "Phone verification is not configured. Please contact support.");
@@ -318,15 +376,10 @@ public class PhoneVerificationService {
                             (accountSid + ":" + authToken)
                                     .getBytes(StandardCharsets.UTF_8));
 
-            String form =
-                    "From=" + encode(fromNumber)
-                    + "&To=" + encode(toNumber)
-                    + "&Body=" + encode(body);
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(
-                            apiBaseUrl + "/2010-04-01/Accounts/"
-                            + accountSid + "/Messages.json"))
+                            verifyBaseUrl + "/v2/Services/"
+                            + verifyServiceSid + "/" + path))
                     .timeout(Duration.ofSeconds(30))
                     .header(
                             "Authorization",
@@ -338,24 +391,24 @@ public class PhoneVerificationService {
                             HttpRequest.BodyPublishers.ofString(form))
                     .build();
 
-            HttpResponse<String> response =
-                    httpClient.send(
-                            request,
-                            HttpResponse.BodyHandlers.ofString());
+            return httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() < 200
-                    || response.statusCode() >= 300) {
+        } catch (InterruptedException ex) {
 
-                throw new IllegalStateException(
-                        "Twilio returned HTTP "
-                        + response.statusCode());
-            }
+            Thread.currentThread().interrupt();
+
+            throw new AppExceptions.ServiceUnavailableException(
+                    "We could not reach the phone verification service. "
+                    + "Please try again.",
+                    ex);
 
         } catch (Exception ex) {
 
             throw new AppExceptions.ServiceUnavailableException(
-                    "We could not send the verification text. "
-                    + "Check the phone number and try again.",
+                    "We could not reach the phone verification service. "
+                    + "Please try again.",
                     ex);
         }
     }
@@ -365,6 +418,20 @@ public class PhoneVerificationService {
         return URLEncoder.encode(
                 value,
                 StandardCharsets.UTF_8);
+    }
+
+    private void ensureNumberAvailable(
+            String phoneNumber,
+            ClientUser user) {
+
+        if (users.existsByPhoneNumberAndIdNot(
+                phoneNumber,
+                user.getId())) {
+
+            throw new AppExceptions.ConflictException(
+                    "This phone number is already linked to another account. "
+                    + "Please use a different number.");
+        }
     }
 
     private String normalizePhone(String phoneNumber) {

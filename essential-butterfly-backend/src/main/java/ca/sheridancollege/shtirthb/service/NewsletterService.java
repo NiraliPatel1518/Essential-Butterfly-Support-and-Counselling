@@ -1,6 +1,7 @@
 
 package ca.sheridancollege.shtirthb.service;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -142,10 +143,7 @@ public class NewsletterService {
                         ))
                         .toList(),
 
-                "campaigns", campaigns.findAll()
-                        .stream()
-                        .map(this::campaignMap)
-                        .toList()
+                "campaigns", overviewCampaigns()
         );
     }
 
@@ -247,7 +245,7 @@ public class NewsletterService {
             deliveries.save(delivery);
         }
 
-        campaign.recordResults(active.size(), success, failed);
+        campaign.recordOutcome(success, failed);
         campaigns.save(campaign);
 
         return campaignMap(campaign);
@@ -296,7 +294,16 @@ public class NewsletterService {
             deliveries.save(delivery);
         }
 
-        campaign.recordRetryResults(success, failed);
+        // The campaign status follows the delivery rows, so derive the
+        // totals from them instead of keeping running counters.
+        deliveries.flush();
+
+        Map<String, Long> totals = statusCounts(id);
+
+        campaign.recordOutcome(
+                totals.getOrDefault("SENT", 0L),
+                totals.getOrDefault("FAILED", 0L)
+        );
         campaigns.save(campaign);
 
         return campaignMap(campaign);
@@ -372,8 +379,63 @@ public class NewsletterService {
         }
     }
 
+    // All campaigns, with statistics calculated from their deliveries
+    // in a single query.
+    private List<Map<String, Object>> overviewCampaigns() {
+
+        Map<Long, Map<String, Long>> countsByCampaign = new HashMap<>();
+
+        for (Object[] row : deliveries.countStatusesForAllCampaigns()) {
+
+            countsByCampaign
+                    .computeIfAbsent(
+                            (Long) row[0],
+                            key -> new HashMap<>())
+                    .put((String) row[1], (Long) row[2]);
+        }
+
+        return campaigns.findAll()
+                .stream()
+                .map(campaign -> campaignMap(
+                        campaign,
+                        countsByCampaign.getOrDefault(
+                                campaign.getId(),
+                                Map.of())))
+                .toList();
+    }
+
+    // Delivery counts per status for one campaign.
+    private Map<String, Long> statusCounts(Long campaignId) {
+
+        Map<String, Long> counts = new HashMap<>();
+
+        for (Object[] row : deliveries.countStatusesForCampaign(campaignId)) {
+            counts.put((String) row[0], (Long) row[1]);
+        }
+
+        return counts;
+    }
+
     private Map<String, Object> campaignMap(
             NewsletterCampaign campaign) {
+
+        return campaignMap(campaign, statusCounts(campaign.getId()));
+    }
+
+    /*
+     * recipientCount, successCount and failedCount are not stored
+     * anywhere: they are calculated from the delivery rows every time,
+     * so they can never disagree with what was actually sent.
+     */
+    private Map<String, Object> campaignMap(
+            NewsletterCampaign campaign,
+            Map<String, Long> counts) {
+
+        long recipients = 0;
+
+        for (long count : counts.values()) {
+            recipients += count;
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -381,9 +443,9 @@ public class NewsletterService {
         result.put("subject", campaign.getSubject());
         result.put("content", campaign.getContent());
         result.put("status", campaign.getStatus());
-        result.put("recipientCount", campaign.getRecipientCount());
-        result.put("successCount", campaign.getSuccessCount());
-        result.put("failedCount", campaign.getFailedCount());
+        result.put("recipientCount", recipients);
+        result.put("successCount", counts.getOrDefault("SENT", 0L));
+        result.put("failedCount", counts.getOrDefault("FAILED", 0L));
         result.put("createdAt", campaign.getCreatedAt());
         result.put("sentAt", campaign.getSentAt());
 

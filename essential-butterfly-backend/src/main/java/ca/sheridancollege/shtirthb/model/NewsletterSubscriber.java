@@ -36,6 +36,14 @@ public class NewsletterSubscriber {
 
     private LocalDateTime unsubscribedAt;
 
+    /*
+     * Set by the database when the subscribed address belongs to a
+     * verified client account; null for guest subscriptions.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_user_id", insertable = false, updatable = false)
+    private ClientUser clientUser;
+
     protected NewsletterSubscriber() {}
 
     public NewsletterSubscriber(String email) {
@@ -68,4 +76,5 @@ public class NewsletterSubscriber {
     public LocalDateTime getConsentAt() { return consentAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUnsubscribedAt() { return unsubscribedAt; }
+    public ClientUser getClientUser() { return clientUser; }
 }

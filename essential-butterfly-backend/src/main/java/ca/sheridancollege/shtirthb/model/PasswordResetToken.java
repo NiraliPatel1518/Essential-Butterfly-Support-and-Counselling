@@ -1,8 +1,27 @@
 package ca.sheridancollege.shtirthb.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+/*
+ * A password reset request.
+ *
+ *   - exactly one owner: an administrator or a client (real foreign keys,
+ *     the row disappears with the account)
+ *   - only the SHA-256 hash of the secret token is stored; the secret
+ *     itself exists only in the link that was sent to the user
+ *   - usedAt records when the token was consumed or revoked
+ *   - the database allows at most one unused token per account
+ */
 @Entity
 @Table(name = "password_reset_tokens")
 public class PasswordResetToken {
@@ -11,62 +30,99 @@ public class PasswordResetToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String token;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_user_id", updatable = false)
+    private AdminUser adminUser;
 
-    @Column(nullable = false)
-    private String userType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_user_id", updatable = false)
+    private ClientUser clientUser;
 
-    @Column(nullable = false)
-    private Long userId;
+    @Column(name = "token_hash", nullable = false, length = 64, updatable = false)
+    private String tokenHash;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "expires_at", nullable = false, updatable = false)
     private LocalDateTime expiresAt;
 
-    @Column(nullable = false)
-    private boolean used;
+    @Column(name = "used_at")
+    private LocalDateTime usedAt;
 
-    public PasswordResetToken() {
+    protected PasswordResetToken() {
     }
 
-    public PasswordResetToken(
-            String token,
-            String userType,
-            Long userId,
+    public static PasswordResetToken forAdmin(
+            String tokenHash,
+            AdminUser admin,
             LocalDateTime expiresAt) {
 
-        this.token = token;
-        this.userType = userType;
-        this.userId = userId;
-        this.expiresAt = expiresAt;
-        this.used = false;
+        PasswordResetToken token = new PasswordResetToken();
+        token.adminUser = admin;
+        token.tokenHash = tokenHash;
+        token.createdAt = LocalDateTime.now();
+        token.expiresAt = expiresAt;
+
+        return token;
+    }
+
+    public static PasswordResetToken forClient(
+            String tokenHash,
+            ClientUser client,
+            LocalDateTime expiresAt) {
+
+        PasswordResetToken token = new PasswordResetToken();
+        token.clientUser = client;
+        token.tokenHash = tokenHash;
+        token.createdAt = LocalDateTime.now();
+        token.expiresAt = expiresAt;
+
+        return token;
     }
 
     public Long getId() {
         return id;
     }
 
-    public String getToken() {
-        return token;
+    public String getTokenHash() {
+        return tokenHash;
     }
 
+    public AdminUser getAdminUser() {
+        return adminUser;
+    }
+
+    public ClientUser getClientUser() {
+        return clientUser;
+    }
+
+    /* "ADMIN" or "CLIENT", derived from which owner is set. */
     public String getUserType() {
-        return userType;
+        return adminUser != null ? "ADMIN" : "CLIENT";
     }
 
-    public Long getUserId() {
-        return userId;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public LocalDateTime getExpiresAt() {
         return expiresAt;
     }
 
-    public boolean isUsed() {
-        return used;
+    public LocalDateTime getUsedAt() {
+        return usedAt;
     }
 
+    public boolean isUsed() {
+        return usedAt != null;
+    }
+
+    /* Marking a token as used is one-way; a used token stays used. */
     public void setUsed(boolean used) {
-        this.used = used;
+
+        if (used && usedAt == null) {
+            usedAt = LocalDateTime.now();
+        }
     }
 }

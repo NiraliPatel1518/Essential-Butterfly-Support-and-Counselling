@@ -12,35 +12,61 @@ public class IntakeSubmission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // The customer account that submitted this intake
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "client_user_id", nullable = false)
+    /*
+     * The account that submitted this intake. It becomes null if the
+     * account is later deleted (ON DELETE SET NULL): the submission, and
+     * the submitter details copied below, are history and are kept.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_user_id")
     private ClientUser clientUser;
 
-    @Column(nullable = false)
+    /*
+     * The submitter as they were when the intake was made. Filled by a
+     * database trigger on insert (read-only here), so later changes to the
+     * account never rewrite the original submission.
+     */
+    @Column(name = "submitted_by_name", insertable = false, updatable = false)
+    private String submittedByName;
+
+    @Column(name = "submitted_by_email", insertable = false, updatable = false)
+    private String submittedByEmail;
+
+    @Column(name = "submitted_by_phone", insertable = false, updatable = false)
+    private String submittedByPhone;
+
+    /*
+     * Everything the family wrote is immutable once submitted
+     * (updatable = false here, and enforced by a database trigger).
+     * Only the review status and rejection reason change afterwards.
+     */
+
+    // Who the support is for.
+    @Column(nullable = false, updatable = false)
     private String clientFullName;
 
+    @Column(updatable = false)
     private String parentGuardianName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private String contactInfo;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private String preferredContactMethod;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT", updatable = false)
     private String overview;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT", updatable = false)
     private String supportNeeds;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String respiteGoals;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String subjectFocus;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String additionalNotes;
 
     @Column(nullable = false)
@@ -50,7 +76,7 @@ public class IntakeSubmission {
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public IntakeSubmission() {
@@ -70,7 +96,9 @@ public class IntakeSubmission {
 
         this.clientUser = clientUser;
         this.clientFullName = clientFullName;
-        this.parentGuardianName = parentGuardianName;
+        this.parentGuardianName = parentGuardianName == null || parentGuardianName.isBlank()
+                ? null
+                : parentGuardianName.trim();
         this.contactInfo = contactInfo;
         this.preferredContactMethod = preferredContactMethod;
         this.overview = overview;
@@ -89,6 +117,18 @@ public class IntakeSubmission {
 
     public ClientUser getClientUser() {
         return clientUser;
+    }
+
+    public String getSubmittedByName() {
+        return submittedByName;
+    }
+
+    public String getSubmittedByEmail() {
+        return submittedByEmail;
+    }
+
+    public String getSubmittedByPhone() {
+        return submittedByPhone;
     }
 
     public void setClientUser(ClientUser clientUser) {

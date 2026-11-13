@@ -1,9 +1,34 @@
-
 package ca.sheridancollege.shtirthb.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+/*
+ * An administrator account.
+ *
+ * E-mail addresses live in account_emails (AccountEmail):
+ *   - the primary row is the sign-in address (always verified)
+ *   - the single non-primary row is a PENDING e-mail change, together with
+ *     its verification code state
+ *
+ * The accessor methods keep the original API (getEmail(),
+ * getPendingEmail(), getEmailChangeOtp...) so services do not need to know
+ * where the data is stored.
+ *
+ * The two-factor sign-in challenge columns stay on this table: they are
+ * one-to-one attributes of the account and are cleared after each login.
+ */
 @Entity
 @Table(name = "admin_users")
 public class AdminUser {
@@ -14,9 +39,6 @@ public class AdminUser {
 
     @Column(nullable = false)
     private String fullName;
-
-    @Column(nullable = false, unique = true)
-    private String email;
 
     @Column(nullable = false)
     private String password;
@@ -29,6 +51,13 @@ public class AdminUser {
 
     @Column
     private LocalDateTime lockedUntil;
+
+    @OneToMany(
+            mappedBy = "adminUser",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.EAGER)
+    private List<AccountEmail> emails = new ArrayList<>();
 
     // ==========================================
     // ADMIN LOGIN TWO-FACTOR AUTHENTICATION
@@ -50,26 +79,6 @@ public class AdminUser {
     @Column(nullable = false, columnDefinition = "integer default 0")
     private int loginOtpResendCount = 0;
 
-    // ==========================================
-    // ADMIN EMAIL CHANGE VERIFICATION
-    // ==========================================
-
-    @Column(length = 254)
-    private String pendingEmail;
-
-    @Column(length = 100)
-    private String emailChangeOtpHash;
-
-    private LocalDateTime emailChangeOtpExpiry;
-
-    private LocalDateTime emailChangeOtpLastSentAt;
-
-    @Column(nullable = false, columnDefinition = "integer default 0")
-    private int emailChangeOtpAttempts = 0;
-
-    @Column(nullable = false, columnDefinition = "integer default 0")
-    private int emailChangeOtpResendCount = 0;
-
     public AdminUser() {
     }
 
@@ -79,11 +88,14 @@ public class AdminUser {
             String password) {
 
         this.fullName = fullName;
-        this.email = email;
         this.password = password;
         this.createdAt = LocalDateTime.now();
         this.failedLoginAttempts = 0;
         this.lockedUntil = null;
+
+        AccountEmail primary = new AccountEmail(this, email, true);
+        primary.setVerifiedAt(LocalDateTime.now());
+        this.emails.add(primary);
     }
 
     // ==========================================
@@ -100,14 +112,6 @@ public class AdminUser {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getPassword() {
@@ -195,54 +199,178 @@ public class AdminUser {
     }
 
     // ==========================================
-    // EMAIL CHANGE GETTERS AND SETTERS
+    // E-MAIL (account_emails)
     // ==========================================
 
-    public String getPendingEmail() {
-        return pendingEmail;
+    public List<AccountEmail> getEmails() {
+        return emails;
     }
 
+    private AccountEmail primaryRecord() {
+
+        for (AccountEmail record : emails) {
+            if (record.isPrimaryEmail()) {
+                return record;
+            }
+        }
+
+        return null;
+    }
+
+    private AccountEmail pendingRecord() {
+
+        for (AccountEmail record : emails) {
+            if (!record.isPrimaryEmail()) {
+                return record;
+            }
+        }
+
+        return null;
+    }
+
+    public String getEmail() {
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? null : primary.getEmail();
+    }
+
+    /*
+     * Replaces the sign-in address. An administrator's sign-in address is
+     * always verified, so callers must only use this after the new address
+     * has been verified (the e-mail change flow does).
+     *
+     * If the same address is currently held as the pending change, remove
+     * the pending change first (setPendingEmail(null)) and flush, otherwise
+     * the database's global uniqueness rule is violated for a moment.
+     */
+    public void setEmail(String email) {
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary == null) {
+
+            AccountEmail created = new AccountEmail(this, email, true);
+            created.setVerifiedAt(LocalDateTime.now());
+            emails.add(created);
+            return;
+        }
+
+        String normalized = AccountEmail.normalize(email);
+
+        if (normalized != null && !normalized.equals(primary.getEmail())) {
+            primary.setEmail(normalized);
+            primary.setVerifiedAt(LocalDateTime.now());
+        }
+    }
+
+    public String getPendingEmail() {
+
+        AccountEmail pending = pendingRecord();
+
+        return pending == null ? null : pending.getEmail();
+    }
+
+    /*
+     * Sets (or, with null, cancels) the pending e-mail change.
+     */
     public void setPendingEmail(String value) {
-        this.pendingEmail = value;
+
+        AccountEmail pending = pendingRecord();
+
+        if (value == null) {
+
+            if (pending != null) {
+                emails.remove(pending);
+            }
+
+            return;
+        }
+
+        if (pending == null) {
+            emails.add(new AccountEmail(this, value, false));
+        } else {
+            pending.setEmail(value);
+        }
     }
 
     public String getEmailChangeOtpHash() {
-        return emailChangeOtpHash;
+
+        AccountEmail pending = pendingRecord();
+
+        return pending == null ? null : pending.getCodeHash();
     }
 
     public void setEmailChangeOtpHash(String value) {
-        this.emailChangeOtpHash = value;
+
+        AccountEmail pending = pendingRecord();
+
+        if (pending != null) {
+            pending.setCodeHash(value);
+        }
     }
 
     public LocalDateTime getEmailChangeOtpExpiry() {
-        return emailChangeOtpExpiry;
+
+        AccountEmail pending = pendingRecord();
+
+        return pending == null ? null : pending.getCodeExpiresAt();
     }
 
     public void setEmailChangeOtpExpiry(LocalDateTime value) {
-        this.emailChangeOtpExpiry = value;
+
+        AccountEmail pending = pendingRecord();
+
+        if (pending != null) {
+            pending.setCodeExpiresAt(value);
+        }
     }
 
     public LocalDateTime getEmailChangeOtpLastSentAt() {
-        return emailChangeOtpLastSentAt;
+
+        AccountEmail pending = pendingRecord();
+
+        return pending == null ? null : pending.getCodeLastSentAt();
     }
 
     public void setEmailChangeOtpLastSentAt(LocalDateTime value) {
-        this.emailChangeOtpLastSentAt = value;
+
+        AccountEmail pending = pendingRecord();
+
+        if (pending != null) {
+            pending.setCodeLastSentAt(value);
+        }
     }
 
     public int getEmailChangeOtpAttempts() {
-        return emailChangeOtpAttempts;
+
+        AccountEmail pending = pendingRecord();
+
+        return pending == null ? 0 : pending.getCodeAttempts();
     }
 
     public void setEmailChangeOtpAttempts(int value) {
-        this.emailChangeOtpAttempts = value;
+
+        AccountEmail pending = pendingRecord();
+
+        if (pending != null) {
+            pending.setCodeAttempts(value);
+        }
     }
 
     public int getEmailChangeOtpResendCount() {
-        return emailChangeOtpResendCount;
+
+        AccountEmail pending = pendingRecord();
+
+        return pending == null ? 0 : pending.getCodeResendCount();
     }
 
     public void setEmailChangeOtpResendCount(int value) {
-        this.emailChangeOtpResendCount = value;
+
+        AccountEmail pending = pendingRecord();
+
+        if (pending != null) {
+            pending.setCodeResendCount(value);
+        }
     }
 }

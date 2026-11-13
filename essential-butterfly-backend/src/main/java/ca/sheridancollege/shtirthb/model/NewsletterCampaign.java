@@ -23,15 +23,6 @@ public class NewsletterCampaign {
     private String status = "DRAFT";
 
     @Column(nullable = false)
-    private int recipientCount;
-
-    @Column(nullable = false)
-    private int successCount;
-
-    @Column(nullable = false)
-    private int failedCount;
-
-    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime sentAt;
@@ -53,10 +44,14 @@ public class NewsletterCampaign {
         this.content = content;
     }
 
-    public void recordResults(int recipients, int successful, int failed) {
-        this.recipientCount = recipients;
-        this.successCount = successful;
-        this.failedCount = failed;
+    /*
+     * Records the outcome of a send or a retry.
+     *
+     * The counts are NOT stored on the campaign. Callers pass the totals
+     * they have just derived from the delivery rows; only the status and
+     * the time of the last attempt are kept here.
+     */
+    public void recordOutcome(long successful, long failed) {
         this.sentAt = LocalDateTime.now();
 
         if (failed == 0) {
@@ -68,21 +63,10 @@ public class NewsletterCampaign {
         }
     }
 
-    public void recordRetryResults(int successful, int failed) {
-        this.successCount += successful;
-        this.failedCount = failed;
-        this.sentAt = LocalDateTime.now();
-
-        this.status = failed == 0 ? "SENT" : "PARTIAL";
-    }
-
     public Long getId() { return id; }
     public String getSubject() { return subject; }
     public String getContent() { return content; }
     public String getStatus() { return status; }
-    public int getRecipientCount() { return recipientCount; }
-    public int getSuccessCount() { return successCount; }
-    public int getFailedCount() { return failedCount; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getSentAt() { return sentAt; }
 }

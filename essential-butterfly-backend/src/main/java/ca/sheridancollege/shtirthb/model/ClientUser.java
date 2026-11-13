@@ -1,9 +1,34 @@
-
 package ca.sheridancollege.shtirthb.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+
+/*
+ * A client account.
+ *
+ * Normalised storage:
+ *   - e-mail addresses (and the verification state of the sign-in address)
+ *     live in account_emails (AccountEmail)
+ *   - client_users.phone_number holds ONLY a verified phone number
+ *   - a number that is still being verified lives in phone_verifications
+ *     (PhoneVerification)
+ *
+ * The accessor methods below keep the original API (getEmail(),
+ * isEmailVerified(), getPendingPhoneNumber() ...) so services do not need
+ * to know where the data is stored.
+ */
 @Entity
 @Table(name = "client_users")
 public class ClientUser {
@@ -15,72 +40,46 @@ public class ClientUser {
     @Column(nullable = false)
     private String fullName;
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    /*
-     * Existing accounts remain verified.
-     * New signups explicitly set this value to false.
-     */
-    @Column(nullable = false, columnDefinition = "boolean default true")
-    private Boolean emailVerified = true;
-
-    @Column(length = 100)
-    private String emailVerificationCodeHash;
-
-    private LocalDateTime emailVerificationCodeExpiry;
-
-    @Column(nullable = false, columnDefinition = "integer default 0")
-    private int emailVerificationAttempts = 0;
-
-    private LocalDateTime emailVerificationLastSentAt;
-
-    @Column(nullable = false, columnDefinition = "integer default 0")
-    private int emailVerificationResendCount = 0;
-
-    // Phone verification fields
+    // The verified phone number (international format), or null.
     @Column(length = 20)
     private String phoneNumber;
 
-    @Column(nullable = false, columnDefinition = "boolean default false")
-    private Boolean phoneVerified = false;
+    @OneToMany(
+            mappedBy = "clientUser",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.EAGER)
+    private List<AccountEmail> emails = new ArrayList<>();
 
-    /*
-     * The pending number is separate from the verified number.
-     * This prevents an unsuccessful number change from replacing
-     * the customer's existing verified phone number.
-     */
-    @Column(length = 20)
-    private String pendingPhoneNumber;
-
-    @Column(length = 100)
-    private String phoneVerificationCodeHash;
-
-    private LocalDateTime phoneVerificationCodeExpiry;
-
-    @Column(nullable = false, columnDefinition = "integer default 0")
-    private int phoneVerificationAttempts = 0;
-
-    private LocalDateTime phoneVerificationLastSentAt;
-
-    @Column(nullable = false, columnDefinition = "integer default 0")
-    private int phoneVerificationResendCount = 0;
+    // A phone number that is being verified (at most one).
+    @OneToOne(
+            mappedBy = "clientUser",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private PhoneVerification phoneVerification;
 
     public ClientUser() {
     }
 
+    /*
+     * Creates an account whose sign-in address is already verified.
+     * New signups call setEmailVerified(false) afterwards.
+     */
     public ClientUser(String fullName, String email, String password) {
         this.fullName = fullName;
-        this.email = email;
         this.password = password;
         this.createdAt = LocalDateTime.now();
-        this.emailVerified = true;
+
+        AccountEmail primary = new AccountEmail(this, email, true);
+        primary.setVerifiedAt(LocalDateTime.now());
+        this.emails.add(primary);
     }
 
     public Long getId() {
@@ -93,14 +92,6 @@ public class ClientUser {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getPassword() {
@@ -119,55 +110,148 @@ public class ClientUser {
         this.createdAt = createdAt;
     }
 
+    // ==========================================
+    // E-MAIL (account_emails)
+    // ==========================================
+
+    public List<AccountEmail> getEmails() {
+        return emails;
+    }
+
+    private AccountEmail primaryRecord() {
+
+        for (AccountEmail record : emails) {
+            if (record.isPrimaryEmail()) {
+                return record;
+            }
+        }
+
+        return null;
+    }
+
+    public String getEmail() {
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? null : primary.getEmail();
+    }
+
+    public void setEmail(String email) {
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary == null) {
+            emails.add(new AccountEmail(this, email, true));
+        } else {
+            primary.setEmail(email);
+        }
+    }
+
     public boolean isEmailVerified() {
-        return Boolean.TRUE.equals(emailVerified);
+
+        AccountEmail primary = primaryRecord();
+
+        return primary != null && primary.isVerified();
     }
 
     public void setEmailVerified(boolean emailVerified) {
-        this.emailVerified = emailVerified;
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary == null) {
+            return;
+        }
+
+        if (!emailVerified) {
+            primary.setVerifiedAt(null);
+        } else if (primary.getVerifiedAt() == null) {
+            primary.setVerifiedAt(LocalDateTime.now());
+        }
     }
 
     public String getEmailVerificationCodeHash() {
-        return emailVerificationCodeHash;
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? null : primary.getCodeHash();
     }
 
     public void setEmailVerificationCodeHash(String hash) {
-        this.emailVerificationCodeHash = hash;
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary != null) {
+            primary.setCodeHash(hash);
+        }
     }
 
     public LocalDateTime getEmailVerificationCodeExpiry() {
-        return emailVerificationCodeExpiry;
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? null : primary.getCodeExpiresAt();
     }
 
     public void setEmailVerificationCodeExpiry(LocalDateTime expiry) {
-        this.emailVerificationCodeExpiry = expiry;
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary != null) {
+            primary.setCodeExpiresAt(expiry);
+        }
     }
 
     public int getEmailVerificationAttempts() {
-        return emailVerificationAttempts;
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? 0 : primary.getCodeAttempts();
     }
 
     public void setEmailVerificationAttempts(int attempts) {
-        this.emailVerificationAttempts = attempts;
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary != null) {
+            primary.setCodeAttempts(attempts);
+        }
     }
 
     public LocalDateTime getEmailVerificationLastSentAt() {
-        return emailVerificationLastSentAt;
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? null : primary.getCodeLastSentAt();
     }
 
     public void setEmailVerificationLastSentAt(LocalDateTime sentAt) {
-        this.emailVerificationLastSentAt = sentAt;
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary != null) {
+            primary.setCodeLastSentAt(sentAt);
+        }
     }
 
     public int getEmailVerificationResendCount() {
-        return emailVerificationResendCount;
+
+        AccountEmail primary = primaryRecord();
+
+        return primary == null ? 0 : primary.getCodeResendCount();
     }
 
     public void setEmailVerificationResendCount(int resendCount) {
-        this.emailVerificationResendCount = resendCount;
+
+        AccountEmail primary = primaryRecord();
+
+        if (primary != null) {
+            primary.setCodeResendCount(resendCount);
+        }
     }
 
-    // Phone number getters and setters
+    // ==========================================
+    // PHONE (client_users.phone_number + phone_verifications)
+    // ==========================================
 
     public String getPhoneNumber() {
         return phoneNumber;
@@ -177,59 +261,121 @@ public class ClientUser {
         this.phoneNumber = phoneNumber;
     }
 
+    /*
+     * A phone number is verified if and only if it is stored on the
+     * account, so there is no separate flag that could disagree with it.
+     */
     public boolean isPhoneVerified() {
-        return Boolean.TRUE.equals(phoneVerified);
+        return phoneNumber != null && !phoneNumber.isBlank();
     }
 
+    /*
+     * Kept for compatibility. true is implied by having a stored number;
+     * false removes the stored number.
+     */
     public void setPhoneVerified(boolean phoneVerified) {
-        this.phoneVerified = phoneVerified;
+
+        if (!phoneVerified) {
+            this.phoneNumber = null;
+        }
     }
 
     public String getPendingPhoneNumber() {
-        return pendingPhoneNumber;
+
+        return phoneVerification == null
+                ? null
+                : phoneVerification.getPhoneNumber();
     }
 
+    /*
+     * null cancels the verification (the row is deleted).
+     * A number is stored on the account only by verify().
+     */
     public void setPendingPhoneNumber(String pendingPhoneNumber) {
-        this.pendingPhoneNumber = pendingPhoneNumber;
+
+        if (pendingPhoneNumber == null) {
+            this.phoneVerification = null;
+            return;
+        }
+
+        if (phoneVerification == null) {
+            this.phoneVerification =
+                    new PhoneVerification(this, pendingPhoneNumber);
+
+        } else if (!pendingPhoneNumber.equals(
+                phoneVerification.getPhoneNumber())) {
+
+            phoneVerification.setPhoneNumber(pendingPhoneNumber);
+        }
     }
 
     public String getPhoneVerificationCodeHash() {
-        return phoneVerificationCodeHash;
+
+        return phoneVerification == null
+                ? null
+                : phoneVerification.getCodeHash();
     }
 
     public void setPhoneVerificationCodeHash(String hash) {
-        this.phoneVerificationCodeHash = hash;
+
+        if (phoneVerification != null) {
+            phoneVerification.setCodeHash(hash);
+        }
     }
 
     public LocalDateTime getPhoneVerificationCodeExpiry() {
-        return phoneVerificationCodeExpiry;
+
+        return phoneVerification == null
+                ? null
+                : phoneVerification.getCodeExpiresAt();
     }
 
     public void setPhoneVerificationCodeExpiry(LocalDateTime expiry) {
-        this.phoneVerificationCodeExpiry = expiry;
+
+        if (phoneVerification != null) {
+            phoneVerification.setCodeExpiresAt(expiry);
+        }
     }
 
     public int getPhoneVerificationAttempts() {
-        return phoneVerificationAttempts;
+
+        return phoneVerification == null
+                ? 0
+                : phoneVerification.getCodeAttempts();
     }
 
     public void setPhoneVerificationAttempts(int attempts) {
-        this.phoneVerificationAttempts = attempts;
+
+        if (phoneVerification != null) {
+            phoneVerification.setCodeAttempts(attempts);
+        }
     }
 
     public LocalDateTime getPhoneVerificationLastSentAt() {
-        return phoneVerificationLastSentAt;
+
+        return phoneVerification == null
+                ? null
+                : phoneVerification.getCodeLastSentAt();
     }
 
     public void setPhoneVerificationLastSentAt(LocalDateTime sentAt) {
-        this.phoneVerificationLastSentAt = sentAt;
+
+        if (phoneVerification != null) {
+            phoneVerification.setCodeLastSentAt(sentAt);
+        }
     }
 
     public int getPhoneVerificationResendCount() {
-        return phoneVerificationResendCount;
+
+        return phoneVerification == null
+                ? 0
+                : phoneVerification.getCodeResendCount();
     }
 
     public void setPhoneVerificationResendCount(int resendCount) {
-        this.phoneVerificationResendCount = resendCount;
+
+        if (phoneVerification != null) {
+            phoneVerification.setCodeResendCount(resendCount);
+        }
     }
 }

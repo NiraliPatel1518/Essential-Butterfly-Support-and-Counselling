@@ -1,6 +1,6 @@
-
 package ca.sheridancollege.shtirthb.controller;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -138,8 +138,13 @@ public class AuthController {
 
         ClientUser user = userOptional.get();
 
-        return ResponseEntity.ok(
-                Map.of("fullName", user.getFullName())
-        );
+        // The details the client portal pre-fills into forms.
+        // phoneNumber is null until a phone number has been verified.
+        Map<String, String> profile = new LinkedHashMap<>();
+        profile.put("fullName", user.getFullName());
+        profile.put("email", user.getEmail());
+        profile.put("phoneNumber", user.getPhoneNumber());
+
+        return ResponseEntity.ok(profile);
     }
 }

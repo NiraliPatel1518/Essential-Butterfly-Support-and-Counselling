@@ -1,8 +1,8 @@
-
 package ca.sheridancollege.shtirthb.service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -72,7 +72,7 @@ public class IntakeSubmissionService {
                 clientUser,
                 request.getClientFullName(),
                 request.getParentGuardianName(),
-                request.getContactInfo(),
+                contactInfoFor(clientUser, request),
                 request.getPreferredContactMethod(),
                 request.getOverview(),
                 request.getSupportNeeds(),
@@ -82,6 +82,29 @@ public class IntakeSubmissionService {
         );
 
         intakeSubmissionRepository.save(submission);
+    }
+
+    /*
+     * The contact detail always comes from the account, never from what the
+     * browser sent: the signed-in email for "email", the verified phone
+     * number for "phone" or "text".
+     */
+    private String contactInfoFor(
+            ClientUser clientUser,
+            IntakeSubmissionRequest request) {
+
+        String method = request.getPreferredContactMethod() == null
+                ? ""
+                : request.getPreferredContactMethod()
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
+
+        return switch (method) {
+            case "email" -> clientUser.getEmail();
+            case "phone", "text" -> clientUser.getPhoneNumber();
+            default -> throw new AppExceptions.ValidationException(
+                    "Please choose email, phone or text as your preferred contact method.");
+        };
     }
 
     // Admin: retrieve all intake requests.

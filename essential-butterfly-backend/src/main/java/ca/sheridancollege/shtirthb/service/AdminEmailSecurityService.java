@@ -375,9 +375,17 @@ public class AdminEmailSecurityService {
         // Check again immediately before replacing the current email.
         ensureEmailAvailable(newEmail, admin);
 
-        admin.setEmail(newEmail);
-
+        /*
+         * The new address is currently stored as the pending change, and
+         * every address is globally unique. Remove the pending row and send
+         * that DELETE to the database first, then promote the address to
+         * the sign-in address. Both steps are in one transaction.
+         */
         clearEmailChange(admin);
+
+        admins.saveAndFlush(admin);
+
+        admin.setEmail(newEmail);
 
         admins.save(admin);
 
@@ -569,8 +577,17 @@ public class AdminEmailSecurityService {
             String email,
             AdminUser currentAdmin) {
 
-        if (admins.existsByEmail(email)
-                && !email.equals(currentAdmin.getEmail())) {
+        /*
+         * existsByEmail also sees PENDING changes, so an address that
+         * someone else is in the middle of verifying counts as taken.
+         * The administrator's own sign-in address and own pending
+         * address are not conflicts.
+         */
+        boolean ownAddress =
+                email.equals(currentAdmin.getEmail())
+                || email.equals(currentAdmin.getPendingEmail());
+
+        if (!ownAddress && admins.existsByEmail(email)) {
 
             throw new AppExceptions.ConflictException(
                     "An administrator account already uses this email address."

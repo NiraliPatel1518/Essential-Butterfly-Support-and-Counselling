@@ -1,7 +1,10 @@
-
 package ca.sheridancollege.shtirthb.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +22,8 @@ import ca.sheridancollege.shtirthb.repository.PasswordResetTokenRepository;
 @Service
 public class PasswordResetService {
 
+    private static final int TOKEN_MINUTES = 30;
+
     private final ClientUserRepository clientUserRepository;
     private final AdminUserRepository adminUserRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -30,7 +35,8 @@ public class PasswordResetService {
             AdminUserRepository adminUserRepository,
             PasswordResetTokenRepository passwordResetTokenRepository,
             PasswordEncoder passwordEncoder,
-            @Value("${app.frontend-base-url}") String frontendBaseUrl) {
+            @Value("${app.frontend-base-url:http://localhost:5173}")
+            String frontendBaseUrl) {
 
         this.clientUserRepository = clientUserRepository;
         this.adminUserRepository = adminUserRepository;
@@ -52,33 +58,56 @@ public class PasswordResetService {
                 .findByEmail(normalizedEmail)
                 .orElse(null);
 
+        // An address can no longer belong to both account types; if legacy
+        // data somehow does, do nothing rather than guess.
         if (client != null && admin != null) {
             return;
         }
 
         if (client != null) {
-            createResetToken("CLIENT", client.getId());
+            createResetToken(null, client);
 
         } else if (admin != null) {
-            createResetToken("ADMIN", admin.getId());
+            createResetToken(admin, null);
         }
     }
 
     private void createResetToken(
-            String userType,
-            Long userId) {
+            AdminUser admin,
+            ClientUser client) {
 
+        // The secret exists only in the link. Only its hash is stored.
         String token = UUID.randomUUID().toString();
 
-        LocalDateTime expiresAt =
-                LocalDateTime.now().plusMinutes(30);
+        LocalDateTime now = LocalDateTime.now();
 
-        PasswordResetToken resetToken = new PasswordResetToken(
-                token,
-                userType,
-                userId,
-                expiresAt
-        );
+        LocalDateTime expiresAt = now.plusMinutes(TOKEN_MINUTES);
+
+        String tokenHash = hash(token);
+
+        PasswordResetToken resetToken;
+
+        if (admin != null) {
+
+            // Only one unused token may exist per account.
+            passwordResetTokenRepository.revokeActiveForAdmin(admin, now);
+
+            resetToken = PasswordResetToken.forAdmin(
+                    tokenHash,
+                    admin,
+                    expiresAt
+            );
+
+        } else {
+
+            passwordResetTokenRepository.revokeActiveForClient(client, now);
+
+            resetToken = PasswordResetToken.forClient(
+                    tokenHash,
+                    client,
+                    expiresAt
+            );
+        }
 
         passwordResetTokenRepository.save(resetToken);
 
@@ -91,10 +120,9 @@ public class PasswordResetService {
         System.out.println();
         System.out.println("======================================");
         System.out.println("PASSWORD RESET REQUEST");
-        System.out.println("User type: " + userType);
-        System.out.println("Reset token: " + token);
+        System.out.println("User type: " + resetToken.getUserType());
         System.out.println("Reset link: " + resetLink);
-        System.out.println("Expires in: 30 minutes");
+        System.out.println("Expires in: " + TOKEN_MINUTES + " minutes");
         System.out.println("======================================");
         System.out.println();
     }
@@ -113,7 +141,7 @@ public class PasswordResetService {
         }
 
         PasswordResetToken resetToken = passwordResetTokenRepository
-                .findByToken(token)
+                .findByTokenHash(hash(token.trim()))
                 .orElse(null);
 
         if (resetToken == null || resetToken.isUsed()) {
@@ -127,28 +155,16 @@ public class PasswordResetService {
         String encodedPassword =
                 passwordEncoder.encode(newPassword);
 
-        if ("CLIENT".equals(resetToken.getUserType())) {
+        if (resetToken.getClientUser() != null) {
 
-            ClientUser user = clientUserRepository
-                    .findById(resetToken.getUserId())
-                    .orElse(null);
-
-            if (user == null) {
-                return false;
-            }
+            ClientUser user = resetToken.getClientUser();
 
             user.setPassword(encodedPassword);
             clientUserRepository.save(user);
 
-        } else if ("ADMIN".equals(resetToken.getUserType())) {
+        } else if (resetToken.getAdminUser() != null) {
 
-            AdminUser admin = adminUserRepository
-                    .findById(resetToken.getUserId())
-                    .orElse(null);
-
-            if (admin == null) {
-                return false;
-            }
+            AdminUser admin = resetToken.getAdminUser();
 
             admin.setPassword(encodedPassword);
             admin.setFailedLoginAttempts(0);
@@ -164,5 +180,26 @@ public class PasswordResetService {
         passwordResetTokenRepository.save(resetToken);
 
         return true;
+    }
+
+    // SHA-256 of the token, as 64 lower-case hex characters.
+    private static String hash(String token) {
+
+        try {
+
+            MessageDigest digest =
+                    MessageDigest.getInstance("SHA-256");
+
+            return HexFormat.of().formatHex(
+                    digest.digest(
+                            token.getBytes(StandardCharsets.UTF_8)
+                    )
+            );
+
+        } catch (NoSuchAlgorithmException ex) {
+
+            // Every Java platform is required to provide SHA-256.
+            throw new IllegalStateException(ex);
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import "./intake.css";
@@ -45,8 +45,20 @@ function Intake() {
 
   const [fullName, setFullName] = useState("");
   const [guardianName, setGuardianName] = useState("");
-  const [contactInfo, setContactInfo] = useState("");
   const [preferredContact, setPreferredContact] = useState("");
+
+  // Details from the signed-in account. Email and phone cannot be edited
+  // on this form; they are filled in from the account.
+  const [accountName, setAccountName] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountPhone, setAccountPhone] = useState("");
+
+  const contactInfo =
+    preferredContact === "email"
+      ? accountEmail
+      : preferredContact === "phone" || preferredContact === "text"
+        ? accountPhone
+        : "";
   const [overview, setOverview] = useState("");
   const [supportNeeds, setSupportNeeds] = useState("");
   const [respiteGoals, setRespiteGoals] = useState("");
@@ -56,6 +68,48 @@ function Intake() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+
+    if (!token) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadAccount = async () => {
+      try {
+        const response = await fetch(apiUrl("/api/auth/me"), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const account = (await response.json()) as {
+          fullName?: string | null;
+          email?: string | null;
+          phoneNumber?: string | null;
+        };
+
+        setAccountName(account.fullName ?? "");
+        setAccountEmail(account.email ?? "");
+        setAccountPhone(account.phoneNumber ?? "");
+
+        // The name is only a starting point and stays editable.
+        setFullName((current) => current || account.fullName || "");
+      } catch {
+        // The form still works; the contact field just stays empty.
+      }
+    };
+
+    void loadAccount();
+
+    return () => controller.abort();
+  }, []);
 
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>
@@ -122,9 +176,8 @@ function Intake() {
         "Your intake information has been submitted successfully."
       );
 
-      setFullName("");
+      setFullName(accountName);
       setGuardianName("");
-      setContactInfo("");
       setPreferredContact("");
       setOverview("");
       setSupportNeeds("");
@@ -331,7 +384,6 @@ function Intake() {
                       value={preferredContact}
                       onChange={(e) => {
                         setPreferredContact(e.target.value);
-                        setContactInfo("");
                       }}
                       required
                     >
@@ -363,48 +415,23 @@ function Intake() {
                           ? "email"
                           : "tel"
                       }
-                      inputMode={
-                        preferredContact === "email"
-                          ? "email"
-                          : "numeric"
-                      }
-                      autoComplete={
-                        preferredContact === "email"
-                          ? "email"
-                          : "tel"
-                      }
                       value={contactInfo}
-                      onChange={(e) => {
-                        const value = e.target.value;
-
-                        setContactInfo(
-                          preferredContact === "email"
-                            ? value
-                            : value.replace(/\D/g, "").slice(0, 10)
-                        );
-                      }}
+                      readOnly
+                      aria-readonly="true"
+                      aria-describedby="contactInfoHelp"
+                      className="intake-readonly-input"
                       placeholder={
-                        preferredContact === "email"
-                          ? "you@example.com"
-                          : "10-digit phone number"
-                      }
-                      pattern={
-                        preferredContact === "email"
-                          ? "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
-                          : "[0-9]{10}"
-                      }
-                      maxLength={
-                        preferredContact === "email"
-                          ? undefined
-                          : 10
-                      }
-                      title={
-                        preferredContact === "email"
-                          ? "Please enter an email address such as name@example.com"
-                          : "Please enter a 10-digit phone number"
+                        preferredContact
+                          ? "Not available on your account"
+                          : "Choose a contact method first"
                       }
                       required
                     />
+
+                    <small id="contactInfoHelp">
+                      Filled in from your verified account details.
+                      It can’t be edited here.
+                    </small>
                   </div>
                 </div>
               </fieldset>

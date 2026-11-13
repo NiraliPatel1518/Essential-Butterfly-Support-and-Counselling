@@ -11,26 +11,35 @@ public class ContactMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /*
+     * Optional link to a registered account. Null for public (guest)
+     * messages, and set to null by the database if the account is deleted.
+     */
     @ManyToOne
     @JoinColumn(name = "client_user_id", nullable = true)
     private ClientUser clientUser;
 
-    @Column(nullable = false)
+    /*
+     * Sender details, subject, text and time are a record of what was sent
+     * and are immutable (updatable = false here, enforced by a database
+     * trigger). Only the review status changes (NEW -> VIEWED).
+     */
+    @Column(nullable = false, updatable = false)
     private String fullName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private String subject;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT", updatable = false)
     private String message;
 
     @Column(nullable = false)
     private String status;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public ContactMessage() {

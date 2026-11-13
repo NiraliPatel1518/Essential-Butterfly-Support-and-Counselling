@@ -673,3 +673,21 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Fields filled in from the account (cannot be edited) */
+.intake-readonly-input {
+  background: #f3f0f7;
+  color: #4a3b61;
+  cursor: not-allowed;
+}
+
+.intake-readonly-input:focus {
+  outline: 2px solid #67358b;
+  outline-offset: 1px;
+}
+
+#contactInfoHelp {
+  display: block;
+  margin-top: 0.35rem;
+  color: #6b6178;
+}

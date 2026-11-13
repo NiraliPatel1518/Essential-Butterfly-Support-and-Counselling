@@ -1,4 +1,3 @@
-
 package ca.sheridancollege.shtirthb.service;
 
 import java.util.Locale;
@@ -44,7 +43,13 @@ public class AuthService {
 
         String email = normalizeEmail(request.getEmail());
 
-        if (clientUserRepository.existsByEmail(email)) {
+        /*
+         * One address can belong to only one account across the whole
+         * system: administrators, clients and pending e-mail changes all
+         * share a single uniqueness rule (account_emails.email).
+         */
+        if (clientUserRepository.existsByEmail(email)
+                || adminUserRepository.existsByEmail(email)) {
             throw new AppExceptions.DuplicateEmailException(email);
         }
 

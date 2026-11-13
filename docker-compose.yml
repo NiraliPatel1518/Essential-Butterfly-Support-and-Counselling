@@ -40,15 +40,21 @@ services:
       - jwt_secret
       - admin_email
       - admin_password
+      - twilio_account_sid
+      - twilio_auth_token
+      - twilio_verify_service_sid
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        export SPRING_DATASOURCE_PASSWORD="$$(cat /run/secrets/postgres_password)"
+        export SPRING_DATASOURCE_PASSWORD="$$(tr -d '\r\n' < /run/secrets/postgres_password)"
         export GMAIL_USERNAME="$$(cat /run/secrets/gmail_username)"
         export GMAIL_APP_PASSWORD="$$(cat /run/secrets/gmail_app_password)"
         export JWT_SECRET="$$(cat /run/secrets/jwt_secret)"
         export ADMIN_EMAIL="$$(cat /run/secrets/admin_email)"
         export ADMIN_PASSWORD="$$(cat /run/secrets/admin_password)"
+        export TWILIO_ACCOUNT_SID="$$(tr -d '\r\n' < /run/secrets/twilio_account_sid)"
+        export TWILIO_AUTH_TOKEN="$$(tr -d '\r\n' < /run/secrets/twilio_auth_token)"
+        export TWILIO_VERIFY_SERVICE_SID="$$(tr -d '\r\n' < /run/secrets/twilio_verify_service_sid)"
         exec java -jar app.jar
     ports:
       - "8080:8080"
@@ -92,3 +98,9 @@ secrets:
     file: ./secrets/admin_email.txt
   admin_password:
     file: ./secrets/admin_password.txt
+  twilio_account_sid:
+    file: ./secrets/twilio_account_sid.txt
+  twilio_auth_token:
+    file: ./secrets/twilio_auth_token.txt
+  twilio_verify_service_sid:
+    file: ./secrets/twilio_verify_service_sid.txt

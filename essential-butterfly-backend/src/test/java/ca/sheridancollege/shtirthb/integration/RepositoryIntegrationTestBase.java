@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
         "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
         "spring.datasource.username=test",
         "spring.datasource.password=test",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false",
         "app.jwt.secret=integration-test-secret-integration-test-secret-1234567890"
 })

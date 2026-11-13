@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "../api/api";
@@ -59,6 +60,7 @@ function Intake() {
       : preferredContact === "phone" || preferredContact === "text"
         ? accountPhone
         : "";
+
   const [overview, setOverview] = useState("");
   const [supportNeeds, setSupportNeeds] = useState("");
   const [respiteGoals, setRespiteGoals] = useState("");
@@ -111,14 +113,23 @@ function Intake() {
     return () => controller.abort();
   }, []);
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setMessage("");
     setError("");
     setIsSubmitting(true);
+
+    // Check authentication before performing form-specific validation.
+    const token = localStorage.getItem("authToken");
+
+    if (!token) {
+      navigate("/login?sessionExpired=true", {
+        replace: true,
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     const emailPattern =
       /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -130,16 +141,6 @@ function Intake() {
       setError(
         "Please enter a valid email address such as name@example.com."
       );
-      setIsSubmitting(false);
-      return;
-    }
-
-    const token = localStorage.getItem("authToken");
-
-    if (!token) {
-      navigate("/login?sessionExpired=true", {
-        replace: true,
-      });
       setIsSubmitting(false);
       return;
     }
@@ -176,6 +177,7 @@ function Intake() {
         "Your intake information has been submitted successfully."
       );
 
+      // Keep the account name as the starting value after submission.
       setFullName(accountName);
       setGuardianName("");
       setPreferredContact("");
@@ -196,20 +198,14 @@ function Intake() {
   return (
     <main className="intake-page">
       <div className="intake-shell">
-        <nav
-          className="intake-breadcrumb"
-          aria-label="Breadcrumb"
-        >
+        <nav className="intake-breadcrumb" aria-label="Breadcrumb">
           <Link to="/client-dashboard">
             <span aria-hidden="true">←</span>
             Back to dashboard
           </Link>
 
           <span className="intake-portal-label">
-            <span
-              className="intake-lock"
-              aria-hidden="true"
-            >
+            <span className="intake-lock" aria-hidden="true">
               ◆
             </span>
             CLIENT PORTAL
@@ -242,10 +238,7 @@ function Intake() {
             </div>
           </div>
 
-          <div
-            className="intake-hero-art"
-            aria-hidden="true"
-          >
+          <div className="intake-hero-art" aria-hidden="true">
             <span className="intake-art-ring intake-art-ring-one" />
             <span className="intake-art-ring intake-art-ring-two" />
             <span className="intake-art-butterfly">🦋</span>
@@ -261,10 +254,7 @@ function Intake() {
         <div className="intake-content-grid">
           <aside className="intake-guidance">
             <section className="intake-guidance-card">
-              <span
-                className="intake-guidance-icon"
-                aria-hidden="true"
-              >
+              <span className="intake-guidance-icon" aria-hidden="true">
                 ♡
               </span>
 
@@ -278,10 +268,7 @@ function Intake() {
             </section>
 
             <section className="intake-guidance-card intake-guidance-card-soft">
-              <span
-                className="intake-guidance-icon"
-                aria-hidden="true"
-              >
+              <span className="intake-guidance-icon" aria-hidden="true">
                 ✧
               </span>
 
@@ -306,9 +293,7 @@ function Intake() {
           >
             <div className="intake-form-heading">
               <div>
-                <p className="intake-form-kicker">
-                  INITIAL INTAKE
-                </p>
+                <p className="intake-form-kicker">INITIAL INTAKE</p>
 
                 <h2 id="intake-form-title">
                   Tell us about your needs
@@ -320,10 +305,7 @@ function Intake() {
                 </p>
               </div>
 
-              <span
-                className="intake-form-mark"
-                aria-hidden="true"
-              >
+              <span className="intake-form-mark" aria-hidden="true">
                 ✿
               </span>
             </div>
@@ -331,9 +313,7 @@ function Intake() {
             <form onSubmit={handleSubmit}>
               <fieldset className="intake-fieldset">
                 <legend>
-                  <span className="intake-section-number">
-                    01
-                  </span>
+                  <span className="intake-section-number">01</span>
                   About you
                 </legend>
 
@@ -349,9 +329,7 @@ function Intake() {
                       type="text"
                       autoComplete="name"
                       value={fullName}
-                      onChange={(e) =>
-                        setFullName(e.target.value)
-                      }
+                      onChange={(e) => setFullName(e.target.value)}
                       required
                     />
                   </div>
@@ -367,9 +345,7 @@ function Intake() {
                       type="text"
                       autoComplete="off"
                       value={guardianName}
-                      onChange={(e) =>
-                        setGuardianName(e.target.value)
-                      }
+                      onChange={(e) => setGuardianName(e.target.value)}
                     />
                   </div>
 
@@ -382,9 +358,7 @@ function Intake() {
                       id="preferredContact"
                       name="preferredContact"
                       value={preferredContact}
-                      onChange={(e) => {
-                        setPreferredContact(e.target.value);
-                      }}
+                      onChange={(e) => setPreferredContact(e.target.value)}
                       required
                     >
                       <option value="">
@@ -411,9 +385,7 @@ function Intake() {
                       id="contactInfo"
                       name="contactInfo"
                       type={
-                        preferredContact === "email"
-                          ? "email"
-                          : "tel"
+                        preferredContact === "email" ? "email" : "tel"
                       }
                       value={contactInfo}
                       readOnly
@@ -438,9 +410,7 @@ function Intake() {
 
               <fieldset className="intake-fieldset">
                 <legend>
-                  <span className="intake-section-number">
-                    02
-                  </span>
+                  <span className="intake-section-number">02</span>
                   Your situation and support needs
                 </legend>
 
@@ -453,9 +423,7 @@ function Intake() {
                     id="overview"
                     name="overview"
                     value={overview}
-                    onChange={(e) =>
-                      setOverview(e.target.value)
-                    }
+                    onChange={(e) => setOverview(e.target.value)}
                     placeholder="Tell us what has been happening and what prompted you to reach out."
                     required
                     rows={4}
@@ -472,9 +440,7 @@ function Intake() {
                     id="supportNeeds"
                     name="supportNeeds"
                     value={supportNeeds}
-                    onChange={(e) =>
-                      setSupportNeeds(e.target.value)
-                    }
+                    onChange={(e) => setSupportNeeds(e.target.value)}
                     placeholder="Share the areas where you or your family would appreciate support."
                     required
                     rows={4}
@@ -484,9 +450,7 @@ function Intake() {
 
               <fieldset className="intake-fieldset">
                 <legend>
-                  <span className="intake-section-number">
-                    03
-                  </span>
+                  <span className="intake-section-number">03</span>
                   A little more detail
                 </legend>
 
@@ -500,27 +464,21 @@ function Intake() {
                       id="respiteGoals"
                       name="respiteGoals"
                       value={respiteGoals}
-                      onChange={(e) =>
-                        setRespiteGoals(e.target.value)
-                      }
+                      onChange={(e) => setRespiteGoals(e.target.value)}
                       placeholder="What would you hope to gain from respite support?"
                       rows={3}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="subjectFocus">
-                      Subject Focus
-                    </label>
+                    <label htmlFor="subjectFocus">Subject Focus</label>
 
                     <input
                       id="subjectFocus"
                       name="subjectFocus"
                       type="text"
                       value={subjectFocus}
-                      onChange={(e) =>
-                        setSubjectFocus(e.target.value)
-                      }
+                      onChange={(e) => setSubjectFocus(e.target.value)}
                       placeholder="If relevant"
                     />
                   </div>
@@ -534,9 +492,7 @@ function Intake() {
                       id="additionalNotes"
                       name="additionalNotes"
                       value={additionalNotes}
-                      onChange={(e) =>
-                        setAdditionalNotes(e.target.value)
-                      }
+                      onChange={(e) => setAdditionalNotes(e.target.value)}
                       placeholder="Any additional context, questions, or details you would like to share."
                       rows={4}
                     />
@@ -578,10 +534,7 @@ function Intake() {
                   support request.
                 </p>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                >
+                <button type="submit" disabled={isSubmitting}>
                   {isSubmitting
                     ? "Submitting your request…"
                     : "Submit intake request"}

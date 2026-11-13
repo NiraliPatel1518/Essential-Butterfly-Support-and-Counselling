@@ -39,7 +39,7 @@ import ca.sheridancollege.shtirthb.service.JwtService;
         "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
         "spring.datasource.username=test",
         "spring.datasource.password=test",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false",
         "app.jwt.secret=integration-test-secret-integration-test-secret-1234567890"
 })
@@ -78,7 +78,10 @@ class IntakeFlowIntegrationTest {
     /** A client who can already log in. The phone is verified only when asked. */
     private String client(String email, boolean phoneVerified) {
         ClientUser user = new ClientUser("Jane Lee", email, encoder.encode("Password123"));
-        user.setPhoneVerified(phoneVerified);
+        if (phoneVerified) {
+            int suffix = Math.floorMod(email.hashCode(), 10_000_000);
+            user.setPhoneNumber("+1416" + String.format(java.util.Locale.ROOT, "%07d", suffix));
+        }
         clients.save(user);
         return jwt.generateToken(email, "CLIENT");
     }

@@ -32,7 +32,7 @@ import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
         "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
         "spring.datasource.username=test",
         "spring.datasource.password=test",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false",
         "app.jwt.secret=integration-test-secret-integration-test-secret-1234567890",
         "app.admin.email=admin@test.com",
@@ -88,9 +88,9 @@ class ApplicationStartupIntegrationTest {
 
     @Test
     void databaseRejectsTwoAdminsWithTheSameEmail() {
-        adminUsers.save(new AdminUser("First", "same@example.com", "hash-one"));
+        adminUsers.saveAndFlush(new AdminUser("First", "same@example.com", "hash-one"));
 
         assertThrows(DataIntegrityViolationException.class, () ->
-                adminUsers.save(new AdminUser("Second", "same@example.com", "hash-two")));
+                adminUsers.saveAndFlush(new AdminUser("Second", "same@example.com", "hash-two")));
     }
 }

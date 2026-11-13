@@ -148,7 +148,6 @@ class AdminEmailChangeServiceTest {
     void requestEmailChange_throwsError_whenACodeWasAlreadySentToThatAddress() {
         pendingChange();
         adminExists();
-        newEmailIsFree();
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
@@ -269,7 +268,7 @@ class AdminEmailChangeServiceTest {
         pendingChange();
         admin.setEmailChangeOtpAttempts(2);
         adminExists();
-        newEmailIsFree();
+        when(clients.existsByEmail(NEW)).thenReturn(false);
         when(encoder.matches("123456", "OH")).thenReturn(true);
 
         AdminUser result = service.verifyEmailChange(codeRequest("123456"), CURRENT);
@@ -288,7 +287,7 @@ class AdminEmailChangeServiceTest {
         pendingChange();
         adminExists();
         when(encoder.matches("123456", "OH")).thenReturn(true);
-        when(admins.existsByEmail(NEW)).thenReturn(true);
+        when(clients.existsByEmail(NEW)).thenReturn(true);
 
         assertThrows(AppExceptions.ConflictException.class,
                 () -> service.verifyEmailChange(codeRequest("123456"), CURRENT));

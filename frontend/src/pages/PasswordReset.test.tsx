@@ -164,7 +164,9 @@ describe("Reset Password page", () => {
     await submit("NewPassword1", "NewPassword1");
 
     // Assert: correct data sent and success message shown
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    ).toEqual({
       token: "abc123",
       newPassword: "NewPassword1",
       confirmPassword: "NewPassword1",

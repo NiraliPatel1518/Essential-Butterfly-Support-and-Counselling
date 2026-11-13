@@ -1,5 +1,9 @@
 package ca.sheridancollege.shtirthb.initializer;
 
+import java.util.Locale;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +15,8 @@ import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
 
 @Configuration
 public class AdminDataInitializer {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminDataInitializer.class);
 
     @Bean
     CommandLineRunner createDefaultAdmin(
@@ -24,15 +30,12 @@ public class AdminDataInitializer {
             // The admin email and password come from the environment.
             // They are never written in the code.
             if (adminEmail.isBlank() || adminPassword.isBlank()) {
-                System.out.println(
-                        "No admin account created. Set ADMIN_EMAIL and "
-                        + "ADMIN_PASSWORD to create one."
-                );
+                logger.info("No default admin account created because ADMIN_EMAIL or ADMIN_PASSWORD is not configured.");
                 return;
             }
 
             // Login lowercases the email, so we save it the same way.
-            String email = adminEmail.trim().toLowerCase();
+            String email = adminEmail.trim().toLowerCase(Locale.ROOT);
 
             /*
              * Only create the initial admin when the table is empty.
@@ -50,9 +53,7 @@ public class AdminDataInitializer {
 
                 adminUserRepository.save(admin);
 
-                System.out.println(
-                        "Admin account created: " + email
-                );
+                logger.info("Default administrator account created.");
             }
         };
     }

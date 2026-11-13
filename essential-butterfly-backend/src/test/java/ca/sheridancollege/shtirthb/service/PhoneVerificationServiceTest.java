@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.service;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,29 +22,32 @@ import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import ca.sheridancollege.shtirthb.model.ClientUser;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
 
-/*
- * Tests for PhoneVerificationService (6-digit code sent by text message).
- *
- * The service is created WITHOUT Twilio settings. That way no real text is
- * ever sent and no internet is needed. Sending a code then fails with
- * "Phone verification is not configured", which lets us test every rule
- * that is checked before a text would be sent.
- */
 @ExtendWith(MockitoExtension.class)
 class PhoneVerificationServiceTest {
 
     private static final String EMAIL = "jane@mail.com";
     private static final String PHONE = "+14165551234";
 
-    @Mock ClientUserRepository users;
-    @Mock PasswordEncoder encoder;
+    @Mock
+    ClientUserRepository users;
+
+    @Mock
+    PasswordEncoder encoder;
 
     private PhoneVerificationService service;
     private ClientUser user;
 
     @BeforeEach
     void setUp() {
-        service = new PhoneVerificationService(users, encoder, "", "", "");
+        service = new PhoneVerificationService(
+                users,
+                encoder,
+                "",
+                "",
+                "",
+                "https://api.twilio.com"
+        );
+
         user = new ClientUser("Jane Doe", EMAIL, "ENCODED");
     }
 
@@ -63,15 +67,17 @@ class PhoneVerificationServiceTest {
         return request;
     }
 
-    /** The user asked for a code for PHONE, and "HASH" is valid for 10 minutes. */
     private void pendingVerification() {
         user.setPendingPhoneNumber(PHONE);
         user.setPhoneVerificationCodeHash("HASH");
-        user.setPhoneVerificationCodeExpiry(LocalDateTime.now().plusMinutes(10));
+        user.setPhoneVerificationCodeExpiry(
+                LocalDateTime.now().plusMinutes(10));
         user.setPhoneVerificationLastSentAt(LocalDateTime.now());
     }
 
-    // ----------------------------------------------------------------- status
+    // ---------------------------------------------------------
+    // Status
+    // ---------------------------------------------------------
 
     @Test
     void getStatus_returnsTheVerifiedAndPendingNumbers() {
@@ -80,7 +86,8 @@ class PhoneVerificationServiceTest {
         user.setPendingPhoneNumber(PHONE);
         userExists();
 
-        PhoneVerificationStatusResponse status = service.getStatus(EMAIL);
+        PhoneVerificationStatusResponse status =
+                service.getStatus(EMAIL);
 
         assertTrue(status.phoneVerified());
         assertEquals("+14165550000", status.phoneNumber());
@@ -91,7 +98,8 @@ class PhoneVerificationServiceTest {
     void getStatus_ignoresCapitalLettersAndSpacesInTheEmail() {
         userExists();
 
-        PhoneVerificationStatusResponse status = service.getStatus("  Jane@Mail.COM ");
+        PhoneVerificationStatusResponse status =
+                service.getStatus("  Jane@Mail.COM ");
 
         assertFalse(status.phoneVerified());
     }
@@ -100,11 +108,15 @@ class PhoneVerificationServiceTest {
     void getStatus_throwsError_whenUserDoesNotExist() {
         when(users.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-        assertThrows(AppExceptions.ResourceNotFoundException.class,
-                () -> service.getStatus(EMAIL));
+        assertThrows(
+                AppExceptions.ResourceNotFoundException.class,
+                () -> service.getStatus(EMAIL)
+        );
     }
 
-    // ------------------------------------------------------ start verification
+    // ---------------------------------------------------------
+    // Start verification
+    // ---------------------------------------------------------
 
     @Test
     void startVerification_throwsError_whenThisNumberIsAlreadyVerified() {
@@ -112,8 +124,10 @@ class PhoneVerificationServiceTest {
         user.setPhoneVerified(true);
         userExists();
 
-        assertThrows(AppExceptions.BusinessRuleException.class,
-                () -> service.startVerification(phoneRequest(PHONE), EMAIL));
+        assertThrows(
+                AppExceptions.BusinessRuleException.class,
+                () -> service.startVerification(phoneRequest(PHONE), EMAIL)
+        );
     }
 
     @Test
@@ -123,7 +137,8 @@ class PhoneVerificationServiceTest {
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
-                () -> service.startVerification(phoneRequest(PHONE), EMAIL));
+                () -> service.startVerification(phoneRequest(PHONE), EMAIL)
+        );
 
         assertTrue(error.getMessage().contains("already been sent"));
     }
@@ -136,9 +151,11 @@ class PhoneVerificationServiceTest {
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
-                () -> service.startVerification(phoneRequest(PHONE), EMAIL));
+                () -> service.startVerification(phoneRequest(PHONE), EMAIL)
+        );
 
-        assertTrue(error.getMessage().contains("maximum number of incorrect attempts"));
+        assertTrue(error.getMessage().contains(
+                "maximum number of incorrect attempts"));
     }
 
     @Test
@@ -148,9 +165,11 @@ class PhoneVerificationServiceTest {
         user.setPhoneVerificationResendCount(2);
         userExists();
 
-        // Twilio is not configured here, so sending stops the flow after the reset
-        assertThrows(AppExceptions.ServiceUnavailableException.class,
-                () -> service.startVerification(phoneRequest("+1 (647) 555-9876"), EMAIL));
+        assertThrows(
+                AppExceptions.ServiceUnavailableException.class,
+                () -> service.startVerification(
+                        phoneRequest("+1 (647) 555-9876"), EMAIL)
+        );
 
         assertEquals("+16475559876", user.getPendingPhoneNumber());
         assertEquals(0, user.getPhoneVerificationAttempts());
@@ -166,8 +185,10 @@ class PhoneVerificationServiceTest {
         user.setPhoneVerified(true);
         userExists();
 
-        assertThrows(AppExceptions.ServiceUnavailableException.class,
-                () -> service.startVerification(phoneRequest(PHONE), EMAIL));
+        assertThrows(
+                AppExceptions.ServiceUnavailableException.class,
+                () -> service.startVerification(phoneRequest(PHONE), EMAIL)
+        );
 
         assertEquals("+14165550000", user.getPhoneNumber());
         assertTrue(user.isPhoneVerified());
@@ -180,13 +201,16 @@ class PhoneVerificationServiceTest {
 
         AppExceptions.ServiceUnavailableException error = assertThrows(
                 AppExceptions.ServiceUnavailableException.class,
-                () -> service.startVerification(phoneRequest(PHONE), EMAIL));
+                () -> service.startVerification(phoneRequest(PHONE), EMAIL)
+        );
 
         assertTrue(error.getMessage().contains("not configured"));
         verify(users, never()).save(any());
     }
 
-    // ----------------------------------------------------------------- verify
+    // ---------------------------------------------------------
+    // Verify
+    // ---------------------------------------------------------
 
     @Test
     void verify_throwsError_whenNoVerificationWasStarted() {
@@ -194,9 +218,11 @@ class PhoneVerificationServiceTest {
 
         AppExceptions.ValidationException error = assertThrows(
                 AppExceptions.ValidationException.class,
-                () -> service.verify(codeRequest("123456"), EMAIL));
+                () -> service.verify(codeRequest("123456"), EMAIL)
+        );
 
-        assertTrue(error.getMessage().contains("no active phone verification"));
+        assertTrue(error.getMessage().contains(
+                "no active phone verification"));
     }
 
     @Test
@@ -205,8 +231,10 @@ class PhoneVerificationServiceTest {
         user.setPhoneVerificationAttempts(5);
         userExists();
 
-        assertThrows(AppExceptions.ValidationException.class,
-                () -> service.verify(codeRequest("123456"), EMAIL));
+        assertThrows(
+                AppExceptions.ValidationException.class,
+                () -> service.verify(codeRequest("123456"), EMAIL)
+        );
 
         verifyNoInteractions(encoder);
     }
@@ -214,12 +242,14 @@ class PhoneVerificationServiceTest {
     @Test
     void verify_throwsError_whenTheCodeHasExpired() {
         pendingVerification();
-        user.setPhoneVerificationCodeExpiry(LocalDateTime.now().minusMinutes(1));
+        user.setPhoneVerificationCodeExpiry(
+                LocalDateTime.now().minusMinutes(1));
         userExists();
 
         AppExceptions.ValidationException error = assertThrows(
                 AppExceptions.ValidationException.class,
-                () -> service.verify(codeRequest("123456"), EMAIL));
+                () -> service.verify(codeRequest("123456"), EMAIL)
+        );
 
         assertTrue(error.getMessage().contains("expired"));
         verifyNoInteractions(encoder);
@@ -229,15 +259,18 @@ class PhoneVerificationServiceTest {
     void verify_countsTheWrongCodeAndSaysHowManyAttemptsAreLeft() {
         pendingVerification();
         userExists();
+
         when(encoder.matches("000000", "HASH")).thenReturn(false);
 
         AppExceptions.ValidationException error = assertThrows(
                 AppExceptions.ValidationException.class,
-                () -> service.verify(codeRequest("000000"), EMAIL));
+                () -> service.verify(codeRequest("000000"), EMAIL)
+        );
 
         assertTrue(error.getMessage().contains("4 attempt(s) remaining"));
         assertEquals(1, user.getPhoneVerificationAttempts());
         assertFalse(user.isPhoneVerified());
+
         verify(users).save(user);
     }
 
@@ -246,13 +279,17 @@ class PhoneVerificationServiceTest {
         pendingVerification();
         user.setPhoneVerificationAttempts(4);
         userExists();
+
         when(encoder.matches("000000", "HASH")).thenReturn(false);
 
         AppExceptions.ValidationException error = assertThrows(
                 AppExceptions.ValidationException.class,
-                () -> service.verify(codeRequest("000000"), EMAIL));
+                () -> service.verify(codeRequest("000000"), EMAIL)
+        );
 
-        assertTrue(error.getMessage().contains("maximum of five incorrect attempts"));
+        assertTrue(error.getMessage().contains(
+                "maximum of five incorrect attempts"));
+
         assertEquals(5, user.getPhoneVerificationAttempts());
         verify(users).save(user);
     }
@@ -263,6 +300,7 @@ class PhoneVerificationServiceTest {
         user.setPhoneVerificationAttempts(2);
         user.setPhoneVerificationResendCount(1);
         userExists();
+
         when(encoder.matches("123456", "HASH")).thenReturn(true);
 
         service.verify(codeRequest("123456"), EMAIL);
@@ -275,6 +313,7 @@ class PhoneVerificationServiceTest {
         assertNull(user.getPhoneVerificationLastSentAt());
         assertEquals(0, user.getPhoneVerificationAttempts());
         assertEquals(0, user.getPhoneVerificationResendCount());
+
         verify(users).save(user);
     }
 
@@ -284,6 +323,7 @@ class PhoneVerificationServiceTest {
         user.setPhoneVerified(true);
         pendingVerification();
         userExists();
+
         when(encoder.matches("123456", "HASH")).thenReturn(true);
 
         service.verify(codeRequest("123456"), EMAIL);
@@ -291,35 +331,43 @@ class PhoneVerificationServiceTest {
         assertEquals(PHONE, user.getPhoneNumber());
     }
 
-    // ----------------------------------------------------------------- resend
+    // ---------------------------------------------------------
+    // Resend
+    // ---------------------------------------------------------
 
     @Test
     void resend_throwsError_whenNoVerificationWasStarted() {
         userExists();
 
-        assertThrows(AppExceptions.BusinessRuleException.class,
-                () -> service.resend(EMAIL));
+        assertThrows(
+                AppExceptions.BusinessRuleException.class,
+                () -> service.resend(EMAIL)
+        );
     }
 
     @Test
     void resend_throwsError_whenNoCodeWasSentYet() {
-        user.setPendingPhoneNumber(PHONE); // lastSentAt is null
+        user.setPendingPhoneNumber(PHONE);
         userExists();
 
-        assertThrows(AppExceptions.BusinessRuleException.class,
-                () -> service.resend(EMAIL));
+        assertThrows(
+                AppExceptions.BusinessRuleException.class,
+                () -> service.resend(EMAIL)
+        );
     }
 
     @Test
     void resend_throwsError_whenFiveAttemptsWereAlreadyUsed() {
         pendingVerification();
         user.setPhoneVerificationAttempts(5);
-        user.setPhoneVerificationLastSentAt(LocalDateTime.now().minusHours(1));
+        user.setPhoneVerificationLastSentAt(
+                LocalDateTime.now().minusHours(1));
         userExists();
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
-                () -> service.resend(EMAIL));
+                () -> service.resend(EMAIL)
+        );
 
         assertTrue(error.getMessage().contains("incorrect attempts"));
     }
@@ -328,40 +376,46 @@ class PhoneVerificationServiceTest {
     void resend_throwsError_afterTheThirdResend() {
         pendingVerification();
         user.setPhoneVerificationResendCount(3);
-        user.setPhoneVerificationLastSentAt(LocalDateTime.now().minusHours(1));
+        user.setPhoneVerificationLastSentAt(
+                LocalDateTime.now().minusHours(1));
         userExists();
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
-                () -> service.resend(EMAIL));
+                () -> service.resend(EMAIL)
+        );
 
-        assertTrue(error.getMessage().contains("maximum number of resend requests"));
+        assertTrue(error.getMessage().contains(
+                "maximum number of resend requests"));
     }
 
     @Test
     void resend_throwsError_whenTheFirstWaitOf60SecondsIsNotOver() {
         pendingVerification();
-        user.setPhoneVerificationLastSentAt(LocalDateTime.now().minusSeconds(30));
+        user.setPhoneVerificationLastSentAt(
+                LocalDateTime.now().minusSeconds(30));
         userExists();
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
-                () -> service.resend(EMAIL));
+                () -> service.resend(EMAIL)
+        );
 
         assertTrue(error.getMessage().startsWith("Please wait"));
     }
 
     @Test
     void resend_waitsLongerForTheSecondResend() {
-        // after one resend the wait is 90 seconds, so 80 seconds is still too soon
         pendingVerification();
         user.setPhoneVerificationResendCount(1);
-        user.setPhoneVerificationLastSentAt(LocalDateTime.now().minusSeconds(80));
+        user.setPhoneVerificationLastSentAt(
+                LocalDateTime.now().minusSeconds(80));
         userExists();
 
         AppExceptions.BusinessRuleException error = assertThrows(
                 AppExceptions.BusinessRuleException.class,
-                () -> service.resend(EMAIL));
+                () -> service.resend(EMAIL)
+        );
 
         assertTrue(error.getMessage().startsWith("Please wait"));
     }
@@ -369,12 +423,14 @@ class PhoneVerificationServiceTest {
     @Test
     void resend_doesNotCountTheResend_whenTheTextCannotBeSent() {
         pendingVerification();
-        user.setPhoneVerificationLastSentAt(LocalDateTime.now().minusSeconds(61));
+        user.setPhoneVerificationLastSentAt(
+                LocalDateTime.now().minusSeconds(61));
         userExists();
 
-        // wait is over, but Twilio is not configured here
-        assertThrows(AppExceptions.ServiceUnavailableException.class,
-                () -> service.resend(EMAIL));
+        assertThrows(
+                AppExceptions.ServiceUnavailableException.class,
+                () -> service.resend(EMAIL)
+        );
 
         assertEquals(0, user.getPhoneVerificationResendCount());
         verify(users, never()).save(any());

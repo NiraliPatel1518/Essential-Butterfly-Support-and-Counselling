@@ -37,6 +37,7 @@ public class PhoneVerificationService {
     private final String accountSid;
     private final String authToken;
     private final String fromNumber;
+    private final String apiBaseUrl;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -49,13 +50,15 @@ public class PhoneVerificationService {
             PasswordEncoder passwordEncoder,
             @Value("${app.twilio.account-sid:}") String accountSid,
             @Value("${app.twilio.auth-token:}") String authToken,
-            @Value("${app.twilio.from-number:}") String fromNumber) {
+            @Value("${app.twilio.from-number:}") String fromNumber,
+            @Value("${app.twilio.api-base-url}") String apiBaseUrl) {
 
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.accountSid = accountSid;
         this.authToken = authToken;
         this.fromNumber = fromNumber;
+        this.apiBaseUrl = apiBaseUrl.replaceAll("/+$", "");
     }
 
     @Transactional(readOnly = true)
@@ -123,7 +126,7 @@ public class PhoneVerificationService {
     }
 
     @Transactional(
-        noRollbackFor = AppExceptions.ValidationException.class
+            noRollbackFor = AppExceptions.ValidationException.class
     )
     public void verify(
             VerifyPhoneRequest request,
@@ -322,7 +325,7 @@ public class PhoneVerificationService {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(
-                            "https://api.twilio.com/2010-04-01/Accounts/"
+                            apiBaseUrl + "/2010-04-01/Accounts/"
                             + accountSid + "/Messages.json"))
                     .timeout(Duration.ofSeconds(30))
                     .header(

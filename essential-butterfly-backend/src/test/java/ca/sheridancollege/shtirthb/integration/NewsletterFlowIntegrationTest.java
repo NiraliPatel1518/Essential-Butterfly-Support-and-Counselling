@@ -190,7 +190,8 @@ class NewsletterFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"featureKey\":\"NEWSLETTER\",\"enabled\":false},"
                                 + "{\"featureKey\":\"TESTIMONIALS\",\"enabled\":true},"
-                                + "{\"featureKey\":\"UPDATES\",\"enabled\":true}]"))
+                                + "{\"featureKey\":\"UPDATES\",\"enabled\":true},"
+                                + "{\"featureKey\":\"APPOINTMENTS\",\"enabled\":true}]"))
                 .andExpect(status().isOk());
 
         subscribe("fan@mail.com", true).andExpect(status().isNotFound());

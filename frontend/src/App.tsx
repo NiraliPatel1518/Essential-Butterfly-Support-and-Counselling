@@ -35,6 +35,8 @@ import NewsletterUnsubscribe from "./pages/NewsletterUnsubscribe";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAppointments from "./pages/AdminAppointments";
+import MemoryWall from "./pages/MemoryWall";
+import AdminMemoryWall from "./pages/AdminMemoryWall";
 import ClientDashboard from "./pages/ClientDashboard";
 import MyBookings from "./pages/MyBookings";
 
@@ -56,6 +58,7 @@ const pageTitles: Record<string, string> = {
   "/testimonials": "Testimonials",
   "/resources": "Resource Library",
   "/appointments": "Available Appointments",
+  "/memory-wall": "Memory Wall",
   "/updates": "Updates",
   "/newsletter/unsubscribe": "Newsletter Unsubscribe",
   "/intake": "Secure Intake",
@@ -65,6 +68,7 @@ const pageTitles: Record<string, string> = {
   "/reset-password": "Reset Password",
   "/admin-dashboard": "Admin Dashboard",
   "/admin-appointments": "Manage Appointments",
+  "/admin-memory-wall": "Manage Memory Wall",
   "/client-dashboard": "Client Dashboard",
   "/my-bookings": "My Bookings",
   "/privacy": "Privacy",
@@ -181,6 +185,16 @@ function AppLayout() {
           {/* Public Resource Library (published resources only) */}
           <Route path="/resources" element={<Resources />} />
 
+          {/* Public Memory Wall (published photos only) */}
+          <Route
+            path="/memory-wall"
+            element={
+              <PublicFeatureRoute feature="MEMORY_WALL">
+                <MemoryWall />
+              </PublicFeatureRoute>
+            }
+          />
+
           {/* Public appointment availability (open slots only) */}
           <Route
             path="/appointments"
@@ -279,6 +293,16 @@ function AppLayout() {
             element={
               <ProtectedRoute allowedRole="ADMIN">
                 <AdminAppointments />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Memory Wall management (admin portal only) */}
+          <Route
+            path="/admin-memory-wall"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <AdminMemoryWall />
               </ProtectedRoute>
             }
           />

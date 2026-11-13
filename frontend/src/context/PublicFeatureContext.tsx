@@ -19,7 +19,8 @@ export type FeatureKey =
   | "NEWSLETTER"
   | "TESTIMONIALS"
   | "UPDATES"
-  | "APPOINTMENTS";
+  | "APPOINTMENTS"
+  | "MEMORY_WALL";
 
 export type PublicFeature = {
   featureKey: FeatureKey;

@@ -94,7 +94,8 @@ public class AuditTrailService {
                         + "cast(a.details as text) "
                         + "from audit_log a "
                         + "where a.entity_type in "
-                        + "('website_content_pages', 'library_resources') "
+                        + "('website_content_pages', 'library_resources', "
+                        + "'memory_wall_photos') "
                         + "order by a.occurred_at desc, a.id desc "
                         + "limit :limit")
                 .setParameter("limit", limit)

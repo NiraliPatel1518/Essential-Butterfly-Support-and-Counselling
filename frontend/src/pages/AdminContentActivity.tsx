@@ -11,6 +11,11 @@ const ACTION_LABELS: Record<string, string> = {
   RESOURCE_PUBLISHED: "Resource published",
   RESOURCE_UNPUBLISHED: "Resource unpublished",
   RESOURCE_REMOVED: "Resource removed",
+  MEMORY_WALL_PHOTO_ADDED: "Memory Wall photo added",
+  MEMORY_WALL_PHOTO_PUBLISHED: "Memory Wall photo published",
+  MEMORY_WALL_PHOTO_UNPUBLISHED: "Memory Wall photo unpublished",
+  MEMORY_WALL_PHOTO_UPDATED: "Memory Wall photo description changed",
+  MEMORY_WALL_PHOTO_DELETED: "Memory Wall photo deleted",
   SECURITY_UNSAFE_FILE_REJECTED: "Unsafe file rejected",
   SECURITY_UNSAFE_LINK_REJECTED: "Unsafe link rejected",
 };

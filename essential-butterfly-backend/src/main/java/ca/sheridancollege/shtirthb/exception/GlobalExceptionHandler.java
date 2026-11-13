@@ -37,6 +37,9 @@ public class GlobalExceptionHandler {
     @Value("${app.content.max-file-size-bytes:10485760}")
     private long maxFileSizeBytes;
 
+    @Value("${app.memory-wall.max-file-size-bytes:5242880}")
+    private long memoryWallMaxFileSizeBytes;
+
     private ResponseEntity<ErrorResponse> buildResponse(
             HttpStatus status,
             String message,
@@ -177,7 +180,10 @@ public class GlobalExceptionHandler {
 
         return handleApplicationException(
                 new AppExceptions.PayloadTooLargeException(
-                        ResourceUploadValidator.sizeLimitMessage(maxFileSizeBytes)),
+                        ResourceUploadValidator.sizeLimitMessage(
+                                request.getRequestURI().startsWith("/api/admin/memory-wall")
+                                        ? memoryWallMaxFileSizeBytes
+                                        : maxFileSizeBytes)),
                 request
         );
     }

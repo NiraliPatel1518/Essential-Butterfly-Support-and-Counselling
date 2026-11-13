@@ -7,7 +7,8 @@ type FeatureKey =
   | "NEWSLETTER"
   | "TESTIMONIALS"
   | "UPDATES"
-  | "APPOINTMENTS";
+  | "APPOINTMENTS"
+  | "MEMORY_WALL";
 
 type PublicFeature = {
   featureKey: FeatureKey;
@@ -46,6 +47,13 @@ const SPRINT_FEATURES: {
     description:
       "Let clients see open times and request appointments on the public website.",
     icon: "◷",
+  },
+  {
+    featureKey: "MEMORY_WALL",
+    label: "Memory Wall",
+    description:
+      "Show the Memory Wall photo gallery on the public website. When off, visitors cannot see it or find it in the menu.",
+    icon: "▦",
   },
 ];
 
@@ -105,7 +113,7 @@ function FeatureVisibility() {
 
       const data = (await response.json()) as PublicFeature[];
 
-      // Only the four features included in this sprint are shown.
+      // Only the website features listed above are shown.
       const sprintFeatures = SPRINT_FEATURES.map((definition) => {
         const existing = data.find(
           (item) => item.featureKey === definition.featureKey

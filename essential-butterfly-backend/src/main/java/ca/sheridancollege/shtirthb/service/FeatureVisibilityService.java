@@ -22,7 +22,8 @@ public class FeatureVisibilityService {
             "NEWSLETTER", "Newsletter Signup",
             "TESTIMONIALS", "Testimonials",
             "UPDATES", "Updates",
-            "APPOINTMENTS", "Appointments"
+            "APPOINTMENTS", "Appointments",
+            "MEMORY_WALL", "Memory Wall"
     );
 
     private final FeatureVisibilityRepository repository;
@@ -58,7 +59,7 @@ public class FeatureVisibilityService {
 
         if (requests == null || requests.size() != FEATURES.size()) {
             throw new AppExceptions.ValidationException(
-                    "Submit exactly the four sprint features."
+                    "Submit exactly the five website features."
             );
         }
 
@@ -72,7 +73,7 @@ public class FeatureVisibilityService {
                 || !submittedKeys.equals(FEATURES.keySet())) {
 
             throw new AppExceptions.ValidationException(
-                    "Only Newsletter Signup, Testimonials, Updates and Appointments can be changed in this sprint."
+                    "Only Newsletter Signup, Testimonials, Updates, Appointments and Memory Wall can be changed."
             );
         }
 
@@ -114,7 +115,8 @@ public class FeatureVisibilityService {
                 "NEWSLETTER",
                 "TESTIMONIALS",
                 "UPDATES",
-                "APPOINTMENTS"
+                "APPOINTMENTS",
+                "MEMORY_WALL"
         };
 
         for (String key : keys) {
@@ -140,6 +142,7 @@ public class FeatureVisibilityService {
             case "TESTIMONIALS" -> 2;
             case "UPDATES" -> 3;
             case "APPOINTMENTS" -> 4;
+            case "MEMORY_WALL" -> 5;
             default -> 99;
         };
     }

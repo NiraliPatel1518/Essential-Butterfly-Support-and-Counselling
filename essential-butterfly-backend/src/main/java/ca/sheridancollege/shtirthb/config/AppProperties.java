@@ -15,6 +15,7 @@ public class AppProperties {
     private Content content = new Content();
     private Appointments appointments = new Appointments();
     private GoogleCalendar googleCalendar = new GoogleCalendar();
+    private MemoryWall memoryWall = new MemoryWall();
 
     private String frontendBaseUrl;
     private String publicBaseUrl;
@@ -67,6 +68,14 @@ public class AppProperties {
         this.googleCalendar = googleCalendar;
     }
 
+    public MemoryWall getMemoryWall() {
+        return memoryWall;
+    }
+
+    public void setMemoryWall(MemoryWall memoryWall) {
+        this.memoryWall = memoryWall;
+    }
+
     public String getFrontendBaseUrl() {
         return frontendBaseUrl;
     }
@@ -81,6 +90,78 @@ public class AppProperties {
 
     public void setPublicBaseUrl(String publicBaseUrl) {
         this.publicBaseUrl = publicBaseUrl;
+    }
+
+    /*
+     * Memory Wall (UC-12). The values come from application.properties
+     * (app.memory-wall.*), so no limit is written into the services.
+     */
+    public static class MemoryWall {
+
+        // Where the picture files are kept: "local" (a folder) or "s3".
+        private String storage = "local";
+
+        // Folder used when storage is "local".
+        private String storageDirectory = "data/memory-wall";
+
+        // At most this many photos can be uploaded in total.
+        private int maxPhotos = 150;
+
+        // At most this many photos can be shown on the public wall.
+        private int maxPublishedPhotos = 120;
+
+        private long maxFileSizeBytes = 5L * 1024 * 1024;
+
+        private List<String> allowedFileExtensions =
+                new ArrayList<>(List.of("jpg", "jpeg", "png", "webp"));
+
+        public String getStorage() {
+            return storage;
+        }
+
+        public void setStorage(String storage) {
+            this.storage = storage;
+        }
+
+        public String getStorageDirectory() {
+            return storageDirectory;
+        }
+
+        public void setStorageDirectory(String storageDirectory) {
+            this.storageDirectory = storageDirectory;
+        }
+
+        public int getMaxPhotos() {
+            return maxPhotos;
+        }
+
+        public void setMaxPhotos(int maxPhotos) {
+            this.maxPhotos = maxPhotos;
+        }
+
+        public int getMaxPublishedPhotos() {
+            return maxPublishedPhotos;
+        }
+
+        public void setMaxPublishedPhotos(int maxPublishedPhotos) {
+            this.maxPublishedPhotos = maxPublishedPhotos;
+        }
+
+        public long getMaxFileSizeBytes() {
+            return maxFileSizeBytes;
+        }
+
+        public void setMaxFileSizeBytes(long maxFileSizeBytes) {
+            this.maxFileSizeBytes = maxFileSizeBytes;
+        }
+
+        public List<String> getAllowedFileExtensions() {
+            return allowedFileExtensions;
+        }
+
+        public void setAllowedFileExtensions(List<String> allowedFileExtensions) {
+            this.allowedFileExtensions = allowedFileExtensions;
+        }
     }
 
     /*

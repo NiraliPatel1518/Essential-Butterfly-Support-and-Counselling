@@ -21,7 +21,8 @@ public class FeatureVisibilityService {
     private static final Map<String, String> FEATURES = Map.of(
             "NEWSLETTER", "Newsletter Signup",
             "TESTIMONIALS", "Testimonials",
-            "UPDATES", "Updates"
+            "UPDATES", "Updates",
+            "APPOINTMENTS", "Appointments"
     );
 
     private final FeatureVisibilityRepository repository;
@@ -57,7 +58,7 @@ public class FeatureVisibilityService {
 
         if (requests == null || requests.size() != FEATURES.size()) {
             throw new AppExceptions.ValidationException(
-                    "Submit exactly the three sprint features."
+                    "Submit exactly the four sprint features."
             );
         }
 
@@ -71,7 +72,7 @@ public class FeatureVisibilityService {
                 || !submittedKeys.equals(FEATURES.keySet())) {
 
             throw new AppExceptions.ValidationException(
-                    "Only Newsletter Signup, Testimonials and Updates can be changed in this sprint."
+                    "Only Newsletter Signup, Testimonials, Updates and Appointments can be changed in this sprint."
             );
         }
 
@@ -112,7 +113,8 @@ public class FeatureVisibilityService {
         String[] keys = {
                 "NEWSLETTER",
                 "TESTIMONIALS",
-                "UPDATES"
+                "UPDATES",
+                "APPOINTMENTS"
         };
 
         for (String key : keys) {
@@ -137,6 +139,7 @@ public class FeatureVisibilityService {
             case "NEWSLETTER" -> 1;
             case "TESTIMONIALS" -> 2;
             case "UPDATES" -> 3;
+            case "APPOINTMENTS" -> 4;
             default -> 99;
         };
     }

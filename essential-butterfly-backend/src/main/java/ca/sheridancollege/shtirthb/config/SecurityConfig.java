@@ -148,6 +148,17 @@ public class SecurityConfig {
                     "/api/resources/*/download"
                 ).permitAll()
 
+                // Public appointment availability (open slots only, no
+                // client or booking information)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/appointments/availability"
+                ).permitAll()
+
+                // Booking and viewing one's own appointments: clients only
+                .requestMatchers("/api/appointments/**")
+                    .hasRole("CLIENT")
+
                 // Public testimonials
                 .requestMatchers(
                     HttpMethod.GET,

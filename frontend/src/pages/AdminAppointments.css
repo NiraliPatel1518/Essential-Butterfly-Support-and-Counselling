@@ -1,0 +1,398 @@
+.appt-admin-page :focus-visible {
+  outline: 3px solid #54248f;
+  outline-offset: 2px;
+}
+
+.appt-admin-panel {
+  margin-bottom: 28px;
+  padding: 24px;
+  border: 1px solid #e3d8ee;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.appt-admin-panel h2 {
+  margin: 0 0 8px;
+  color: #392849;
+}
+
+.appt-admin-subhead {
+  margin: 28px 0 8px;
+}
+
+.appt-admin-muted {
+  color: #5f5568;
+  line-height: 1.5;
+}
+
+.appt-admin-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.appt-admin-form > div {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.appt-admin-form label,
+.appt-admin-section label {
+  font-weight: 700;
+}
+
+.appt-admin-form input,
+.appt-admin-form select,
+.appt-admin-section input,
+.appt-admin-section textarea {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #8a7a9c;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.appt-admin-section textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.appt-admin-section input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.appt-admin-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.appt-admin-primary,
+.appt-admin-secondary,
+.appt-admin-danger {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.appt-admin-primary {
+  border: 2px solid #54248f;
+  background: #54248f;
+  color: #fff;
+}
+
+.appt-admin-secondary {
+  border: 2px solid #54248f;
+  background: #fff;
+  color: #54248f;
+}
+
+.appt-admin-danger {
+  border: 2px solid #8a1f3d;
+  background: #fff;
+  color: #8a1f3d;
+}
+
+.appt-admin-primary:disabled,
+.appt-admin-secondary:disabled,
+.appt-admin-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.appt-admin-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.appt-admin-rules h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.appt-admin-rules ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appt-admin-rules li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e3d8ee;
+  border-radius: 10px;
+  background: #faf8fd;
+}
+
+.appt-admin-rule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.appt-admin-rule-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.appt-admin-list {
+  display: grid;
+  gap: 16px;
+}
+
+.appt-admin-card {
+  padding: 18px 20px;
+  border: 1px solid #ded3e9;
+  border-radius: 14px;
+  background: #faf8fd;
+}
+
+.appt-admin-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.appt-admin-card-head h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+}
+
+.appt-admin-card-head p {
+  margin: 0;
+}
+
+.appt-admin-status {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border: 2px solid #54248f;
+  border-radius: 999px;
+  background: #fff;
+  color: #3b1a63;
+  font-weight: 700;
+}
+
+.appt-status-DECLINED,
+.appt-status-CANCELLED {
+  border-style: dashed;
+  border-color: #8a1f3d;
+  color: #8a1f3d;
+}
+
+.appt-status-CONFIRMED,
+.appt-status-COMPLETED {
+  border-color: #1d6b3f;
+  color: #14502f;
+}
+
+.appt-admin-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 20px;
+  margin: 14px 0;
+}
+
+.appt-admin-details dt {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #5f5568;
+}
+
+.appt-admin-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.appt-admin-section {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #e3d8ee;
+}
+
+.appt-admin-section h4 {
+  margin: 0;
+}
+
+.appt-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.appt-admin-error {
+  margin: 4px 0 0;
+  color: #8a1f3d;
+  font-weight: 700;
+}
+
+.appt-admin-ok {
+  color: #14502f;
+  font-weight: 700;
+}
+
+.appt-admin-needed {
+  margin: 0;
+  padding: 8px 12px;
+  border: 2px solid #8a5a00;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #5c3c00;
+  font-weight: 700;
+}
+
+.appt-admin-banner {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 2px solid;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.appt-admin-banner-ok {
+  border-color: #1d6b3f;
+  background: #effaf3;
+  color: #14502f;
+}
+
+.appt-admin-banner-warn {
+  border-color: #8a5a00;
+  background: #fff8e6;
+  color: #5c3c00;
+}
+
+.appt-admin-banner-error {
+  border-color: #8a1f3d;
+  background: #fff3f6;
+  color: #5b1127;
+}
+
+@media (max-width: 600px) {
+  .appt-admin-panel {
+    padding: 16px;
+  }
+
+  .appt-admin-form > div {
+    min-width: 100%;
+  }
+
+  .appt-admin-primary,
+  .appt-admin-secondary,
+  .appt-admin-danger {
+    width: 100%;
+  }
+
+  .appt-admin-rule-actions button {
+    width: auto;
+  }
+}
+
+/* ---- booking card: horizontal boxes + link row + popups ---- */
+.appt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.appt-cell {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 120px;
+  padding: 8px 12px;
+  border: 1px solid #ded3e9;
+  border-radius: 10px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.appt-cell-wide {
+  flex: 1 1 220px;
+}
+
+.appt-cell h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.appt-cell-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5f5568;
+}
+
+.appt-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin-top: 12px;
+}
+
+.appt-link {
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: #54248f;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.appt-link:focus-visible {
+  outline: 3px solid #1a5fb4;
+  outline-offset: 2px;
+}
+
+.appt-link-danger {
+  color: #8a1f3d;
+}
+
+.appt-link-note {
+  color: #5f5568;
+  font-weight: 400;
+}
+
+.appt-popup {
+  width: min(92vw, 560px);
+  padding: 20px 22px;
+  border: 2px solid #54248f;
+  border-radius: 14px;
+}
+
+.appt-popup::backdrop {
+  background: rgba(30, 15, 50, 0.55);
+}
+
+.appt-popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.appt-popup-head h3 {
+  margin: 0;
+}

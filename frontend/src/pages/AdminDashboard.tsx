@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import FeatureVisibility from "./FeatureVisibility";
 import AdminUpdates from "./AdminUpdates";
@@ -398,19 +399,25 @@ function AdminDashboard() {
             </p>
           </div>
 
-          {section !== "features" &&
-            section !== "updates" &&
-            section !== "newsletter" &&
-            section !== "content" && (
-              <button
-                type="button"
-                className="dashboard-refresh"
-                onClick={() => void refreshCurrentSection()}
-                disabled={loading}
-              >
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-            )}
+          <div className="dashboard-header-actions">
+            <Link to="/admin-appointments" className="dashboard-refresh">
+              Manage Appointments
+            </Link>
+
+            {section !== "features" &&
+              section !== "updates" &&
+              section !== "newsletter" &&
+              section !== "content" && (
+                <button
+                  type="button"
+                  className="dashboard-refresh"
+                  onClick={() => void refreshCurrentSection()}
+                  disabled={loading}
+                >
+                  {loading ? "Refreshing..." : "Refresh"}
+                </button>
+              )}
+          </div>
         </header>
 
         <section

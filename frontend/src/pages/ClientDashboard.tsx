@@ -24,6 +24,7 @@ type PhoneVerificationStatus = {
 type DashboardSection =
   | "overview"
   | "requests"
+  | "bookings"
   | "testimonials"
   | "resources"
   | "updates"
@@ -63,6 +64,7 @@ const navigationItems: {
 }[] = [
   { id: "overview", label: "Overview", icon: "⌂" },
   { id: "requests", label: "My Requests", icon: "▤" },
+  { id: "bookings", label: "My Bookings", icon: "▦" },
   { id: "testimonials", label: "My Testimonials", icon: "❝" },
   { id: "resources", label: "Saved Resources", icon: "▱" },
   { id: "updates", label: "Updates", icon: "♧" },
@@ -291,6 +293,11 @@ function ClientDashboard() {
 
   const selectSection = (section: DashboardSection) => {
 
+    if (section === "bookings") {
+      navigate("/my-bookings");
+      return;
+    }
+
     setActiveSection(section);
 
     const target = document.getElementById(
@@ -459,7 +466,7 @@ function ClientDashboard() {
 
               <div key={item.id}>
 
-                {index === 6 && (
+                {index === navigationItems.length - 1 && (
                   <div className="client-sidebar-divider" />
                 )}
 

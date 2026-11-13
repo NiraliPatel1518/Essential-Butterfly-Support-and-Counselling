@@ -129,6 +129,18 @@ function Navbar() {
               </NavLink>
             ))}
 
+            {isEnabled("APPOINTMENTS") && (
+              <NavLink
+                to="/appointments"
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  `nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Appointments
+              </NavLink>
+            )}
+
             {isEnabled("UPDATES") && (
               <NavLink
                 to="/updates"

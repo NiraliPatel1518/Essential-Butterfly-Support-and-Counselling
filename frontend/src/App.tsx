@@ -22,13 +22,14 @@ import Home from "./pages/Home";
 import Services from "./pages/Services";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
-import Intake from "./pages/Intake";
+import IntakeAccessGuard from "./components/IntakeAccessGuard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Updates from "./pages/Updates";
 import Testimonials from "./pages/Testimonials";
+import Resources from "./pages/Resources";
 import NewsletterUnsubscribe from "./pages/NewsletterUnsubscribe";
 
 import AdminDashboard from "./pages/AdminDashboard";
@@ -50,6 +51,7 @@ const pageTitles: Record<string, string> = {
   "/services": "Services",
   "/contact": "Contact",
   "/testimonials": "Testimonials",
+  "/resources": "Resource Library",
   "/updates": "Updates",
   "/newsletter/unsubscribe": "Newsletter Unsubscribe",
   "/intake": "Secure Intake",
@@ -169,6 +171,9 @@ function AppLayout() {
             }
           />
 
+          {/* Public Resource Library (published resources only) */}
+          <Route path="/resources" element={<Resources />} />
+
           {/* Public website updates */}
           <Route
             path="/updates"
@@ -194,12 +199,12 @@ function AppLayout() {
             element={<NewsletterUnsubscribe />}
           />
 
-          {/* Client-only intake page */}
+          {/* Client-only intake with mandatory phone verification */}
           <Route
             path="/intake"
             element={
               <ProtectedRoute allowedRole="CLIENT">
-                <Intake />
+                <IntakeAccessGuard />
               </ProtectedRoute>
             }
           />

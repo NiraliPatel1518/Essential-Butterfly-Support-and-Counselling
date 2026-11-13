@@ -120,9 +120,11 @@ describe("Intake page", () => {
     const [url, options] = intakeCall!;
 
     expect(url).toBe("http://localhost:8080/api/intake");
-    expect(options.headers.Authorization).toBe("Bearer client.jwt");
-
-    const body = JSON.parse(options.body);
+    expect(
+      new Headers(options?.headers).get("Authorization")
+    ).toBe("Bearer client.jwt");
+    
+    const body = JSON.parse(String(options?.body));
 
     expect(body.clientFullName).toBe("Sam Lee");
     expect(body.contactInfo).toBe("alex@mail.com");

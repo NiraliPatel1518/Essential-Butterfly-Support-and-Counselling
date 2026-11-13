@@ -51,8 +51,8 @@ describe("Signup page", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe("http://localhost:8080/api/auth/signup");
-    expect(options.method).toBe("POST");
-    expect(JSON.parse(options.body)).toEqual({
+    expect(options?.method).toBe("POST");
+    expect(JSON.parse(String(options?.body))).toEqual({
       fullName: "Jane Doe",
       email: "jane@mail.com",
       password: "Password123",
@@ -104,7 +104,7 @@ describe("Signup page", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(/email has been verified/i);
     const [url, options] = fetchMock.mock.calls[1];
     expect(url).toBe("http://localhost:8080/api/auth/verify-email");
-    expect(JSON.parse(options.body)).toEqual({
+    expect(JSON.parse(String(options?.body))).toEqual({
       email: "jane@mail.com",
       code: "123456",
     });

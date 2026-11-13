@@ -44,6 +44,16 @@ public class AuditTrailService {
                 .getSingleResult();
     }
 
+    // The same for an action taken by a client ("CLIENT:42").
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void actAsClient(Long clientId) {
+
+        entityManager
+                .createNativeQuery("select set_config('app.actor', :actor, true)")
+                .setParameter("actor", limit("CLIENT:" + clientId, ACTOR_MAX_LENGTH))
+                .getSingleResult();
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordSecurityEvent(
             String adminEmail,

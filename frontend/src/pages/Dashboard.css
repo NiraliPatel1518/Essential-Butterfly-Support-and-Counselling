@@ -54,6 +54,17 @@
   cursor: pointer;
 }
 
+.dashboard-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+a.dashboard-refresh {
+  display: inline-block;
+  text-decoration: none;
+}
+
 .dashboard-refresh:hover,
 .dashboard-close:hover,
 .dashboard-secondary-button:hover {

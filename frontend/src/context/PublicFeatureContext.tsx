@@ -18,7 +18,8 @@ export type FeatureKey =
   | "INTAKE"
   | "NEWSLETTER"
   | "TESTIMONIALS"
-  | "UPDATES";
+  | "UPDATES"
+  | "APPOINTMENTS";
 
 export type PublicFeature = {
   featureKey: FeatureKey;

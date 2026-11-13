@@ -1,0 +1,229 @@
+.appt-page {
+  width: min(960px, calc(100% - 32px));
+  min-height: 55vh;
+  margin: 0 auto;
+  padding: clamp(40px, 7vw, 88px) 0;
+  color: #302044;
+}
+
+.appt-eyebrow {
+  margin: 0 0 8px;
+  color: #6b4a8a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.appt-header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2.1rem, 5vw, 3.4rem);
+}
+
+.appt-header p:not(.appt-eyebrow) {
+  max-width: 64ch;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.appt-days {
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.appt-day {
+  padding: 18px 20px 20px;
+  border: 1px solid #ded3e9;
+  border-radius: 14px;
+  background: #faf8fd;
+}
+
+.appt-day h2 {
+  margin: 0 0 14px;
+  font-size: 1.2rem;
+}
+
+.appt-slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appt-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 132px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border: 2px solid #54248f;
+  border-radius: 10px;
+  background: #fff;
+  color: #3b1a63;
+  font: inherit;
+  cursor: pointer;
+}
+
+.appt-slot:hover {
+  background: #f1eaf8;
+}
+
+.appt-slot-time {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.appt-slot-length {
+  font-size: 0.88rem;
+}
+
+.appt-page :focus-visible,
+.appt-dialog :focus-visible {
+  outline: 3px solid #54248f;
+  outline-offset: 2px;
+}
+
+.appt-loading {
+  margin-top: 28px;
+  font-weight: 600;
+}
+
+.appt-empty {
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid #ded3e9;
+  border-radius: 14px;
+  background: #faf8fd;
+}
+
+.appt-empty h2 {
+  margin: 0 0 8px;
+}
+
+.appt-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 12px 16px;
+  border: 2px solid #8a1f3d;
+  border-radius: 10px;
+  background: #fff3f6;
+  color: #5b1127;
+}
+
+.appt-message button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #5b1127;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.appt-dialog {
+  width: min(520px, calc(100% - 32px));
+  padding: 24px;
+  border: 0;
+  border-radius: 16px;
+  color: #302044;
+  box-shadow: 0 24px 60px rgba(40, 14, 70, 0.35);
+}
+
+.appt-dialog::backdrop {
+  background: rgba(30, 10, 50, 0.55);
+}
+
+.appt-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+}
+
+.appt-dialog-note {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.appt-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.appt-fields label {
+  display: grid;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.appt-fields input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #8a7a9c;
+  border-radius: 8px;
+  background: #f4f0f8;
+  color: #302044;
+  font: inherit;
+  font-weight: 400;
+}
+
+.appt-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.appt-primary,
+.appt-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.appt-primary {
+  border: 2px solid #54248f;
+  background: #54248f;
+  color: #fff;
+}
+
+.appt-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.appt-secondary {
+  border: 2px solid #54248f;
+  background: #fff;
+  color: #54248f;
+}
+
+.appt-link {
+  text-decoration: none;
+}
+
+@media (max-width: 520px) {
+  .appt-slot {
+    min-width: calc(50% - 6px);
+  }
+
+  .appt-slot-list li {
+    flex: 1 1 calc(50% - 12px);
+  }
+
+  .appt-slot {
+    width: 100%;
+  }
+}

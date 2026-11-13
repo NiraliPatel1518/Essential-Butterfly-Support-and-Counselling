@@ -11,6 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import ca.sheridancollege.shtirthb.model.AdminUser;
 import ca.sheridancollege.shtirthb.model.ClientUser;
@@ -50,7 +59,7 @@ import jakarta.mail.internet.MimeMessage;
         "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
         "spring.datasource.username=test",
         "spring.datasource.password=test",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false",
         "app.jwt.secret=integration-test-secret-integration-test-secret-1234567890",
         "app.admin.email=admin@test.com",
@@ -109,10 +118,33 @@ class PasswordResetFlowIntegrationTest {
         return all.get(0);
     }
 
-    /** Asks for a reset as the client and returns the token that was created. */
+    /** Captures the development reset link; the database stores only its SHA-256 hash. */
     private String requestedClientToken() throws Exception {
-        forgot(EMAIL).andExpect(status().isOk());
-        return onlyToken().getToken();
+        return requestedToken(EMAIL);
+    }
+
+    private String requestedToken(String email) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream original = System.out;
+        try {
+            System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+            forgot(email).andExpect(status().isOk());
+        } finally {
+            System.setOut(original);
+        }
+        Matcher matcher = Pattern.compile("Reset link: .*?/reset-password\\?token=([a-f0-9-]+)")
+                .matcher(output.toString(StandardCharsets.UTF_8));
+        if (!matcher.find()) throw new AssertionError("Reset link was not printed by PasswordResetService");
+        return matcher.group(1);
+    }
+
+    private static String hash(String value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private boolean clientPasswordIs(String password) {
@@ -130,7 +162,8 @@ class PasswordResetFlowIntegrationTest {
         PasswordResetToken token = onlyToken();
         Long clientId = clients.findByEmail(EMAIL).orElseThrow().getId();
         assertEquals("CLIENT", token.getUserType());
-        assertEquals(clientId, token.getUserId());
+        assertEquals(clientId, token.getClientUser().getId());
+        assertEquals(64, token.getTokenHash().length());
         assertFalse(token.isUsed());
         assertTrue(token.getExpiresAt().isAfter(LocalDateTime.now().plusMinutes(29)));
         assertTrue(token.getExpiresAt().isBefore(LocalDateTime.now().plusMinutes(31)));
@@ -168,7 +201,7 @@ class PasswordResetFlowIntegrationTest {
 
         PasswordResetToken token = onlyToken();
         assertEquals("ADMIN", token.getUserType());
-        assertEquals(admin.getId(), token.getUserId());
+        assertEquals(admin.getId(), token.getAdminUser().getId());
     }
 
     // --------------------------------------------------------- setting the new one
@@ -226,16 +259,32 @@ class PasswordResetFlowIntegrationTest {
 
     @Test
     void anExpiredToken_isRejected() throws Exception {
-        Long clientId = clients.findByEmail(EMAIL).orElseThrow().getId();
-        tokens.save(new PasswordResetToken(
-                "expired-token", "CLIENT", clientId, LocalDateTime.now().minusMinutes(1)));
+        ClientUser client = clients.findByEmail(EMAIL).orElseThrow();
+
+        LocalDateTime now = LocalDateTime.now();
+
+        PasswordResetToken expiredToken = PasswordResetToken.forClient(
+            hash("expired-token"),
+            client,
+            now.minusMinutes(1)
+    );
+
+        // The expiry must be after creation, even though both are in the past.
+        ReflectionTestUtils.setField(
+            expiredToken,
+            "createdAt",
+            now.minusHours(1)
+    );
+
+        tokens.saveAndFlush(expiredToken);
 
         reset("expired-token", NEW_PASSWORD, NEW_PASSWORD)
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Invalid, expired, or already used reset token."));
+            .andExpect(status().isBadRequest())
+            .andExpect(content().string(
+                    "Invalid, expired, or already used reset token."));
 
-        assertTrue(clientPasswordIs(OLD_PASSWORD));
-    }
+    assertTrue(clientPasswordIs(OLD_PASSWORD));
+}
 
     @Test
     void passwordsThatDoNotMatch_changeNothingAndKeepTheTokenUsable() throws Exception {
@@ -279,8 +328,7 @@ class PasswordResetFlowIntegrationTest {
         admin.setLockedUntil(LocalDateTime.now().plusMinutes(15));
         admins.save(admin);
 
-        forgot("admin@test.com").andExpect(status().isOk());
-        String token = onlyToken().getToken();
+        String token = requestedToken("admin@test.com");
         reset(token, NEW_PASSWORD, NEW_PASSWORD).andExpect(status().isOk());
 
         AdminUser after = admins.findByEmail("admin@test.com").orElseThrow();

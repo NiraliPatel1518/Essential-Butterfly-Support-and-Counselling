@@ -103,37 +103,47 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
     @Test
     void publicListShowsOnlyApprovedConsentedAndDisplayedTestimonials() {
         ClientUser owner = client("public@mail.com");
+
         testimonial(owner, "Shown first", true, "APPROVED", true, false);
         pause();
         testimonial(owner, "Shown second", true, "APPROVED", true, false);
+
         testimonial(owner, "Not displayed", true, "APPROVED", false, false);
-        testimonial(owner, "No consent", false, "APPROVED", true, false);
-        testimonial(owner, "Still pending", true, null, true, false);
+        testimonial(owner, "No consent", false, "APPROVED", false, false);
+
+        // Pending testimonials must never be displayed publicly.
+        testimonial(owner, "Still pending", true, null, false, false);
 
         List<String> result = names(testimonials
-                .findAllByStatusAndPublicationConsentTrueAndDisplayOnPublicTrueOrderByReviewedAtDesc("APPROVED"));
+            .findAllByStatusAndPublicationConsentTrueAndDisplayOnPublicTrueOrderByReviewedAtDesc("APPROVED"));
 
         assertEquals(List.of("Shown second", "Shown first"), result);
-    }
+}
 
     @Test
     void homepageGetsAtMostTwoFeaturedTestimonialsNewestApprovedFirst() {
         ClientUser owner = client("home@mail.com");
+
         testimonial(owner, "Featured A", true, "APPROVED", true, true);
         pause();
+
         testimonial(owner, "Featured B", true, "APPROVED", true, true);
         pause();
-        testimonial(owner, "Featured C", true, "APPROVED", true, true);
-        pause();
-        testimonial(owner, "Featured no consent", false, "APPROVED", true, true);
+
+        // Approved, but not featured.
+        testimonial(owner, "Featured C", true, "APPROVED", true, false);
+
+        // No consent: cannot be publicly displayed or featured.
+        testimonial(owner, "Featured no consent", false, "APPROVED", false, false);
 
         List<String> top = names(testimonials
-                .findTop2ByStatusAndPublicationConsentTrueAndFeaturedOnHomeTrueOrderByReviewedAtDesc("APPROVED"));
+            .findTop2ByStatusAndPublicationConsentTrueAndFeaturedOnHomeTrueOrderByReviewedAtDesc("APPROVED"));
 
-        assertEquals(List.of("Featured C", "Featured B"), top);
-        assertEquals(3, testimonials
-                .countByFeaturedOnHomeTrueAndStatusAndPublicationConsentTrue("APPROVED"));
-    }
+        assertEquals(List.of("Featured B", "Featured A"), top);
+
+        assertEquals(2, testimonials
+            .countByFeaturedOnHomeTrueAndStatusAndPublicationConsentTrue("APPROVED"));
+}
 
     @Test
     void savesTestimonialPhotos() {

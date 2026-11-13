@@ -52,8 +52,15 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         IntakeSubmission intake = new IntakeSubmission(
                 owner, name, "Parent", "contact", "Email",
                 "overview", "needs", "goals", "focus", "notes");
+    
         intake.setStatus(status);
+    
+        if ("REJECTED".equals(status)) {
+            intake.setRejectionReason("The request was not approved.");
+        }
+    
         intake.setCreatedAt(createdAt);
+    
         return intakes.save(intake);
     }
 

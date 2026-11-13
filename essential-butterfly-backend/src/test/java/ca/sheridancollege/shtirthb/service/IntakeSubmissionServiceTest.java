@@ -35,10 +35,11 @@ class IntakeSubmissionServiceTest {
 
     private final List<String> pendingStatuses =
             List.of("NEW", "SUBMITTED", "IN_PROGRESS");
-        // The service now requires a verified phone number before an intake can be submitted.
+
+    // The service now requires a verified phone number before an intake can be submitted.
     private ClientUser verifiedClient() {
         ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");
-        user.setPhoneVerified(true);
+        user.setPhoneNumber("+14165551234");
         return user;
     }
 
@@ -58,8 +59,7 @@ class IntakeSubmissionServiceTest {
 
     @Test
     void submitIntake_savesSubmission_linkedToLoggedInUser() {
-        ClientUser user =
-                verifiedClient();
+        ClientUser user = verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -67,8 +67,7 @@ class IntakeSubmissionServiceTest {
         when(intakeSubmissionRepository.existsByClientUserAndStatusIn(
                 user, pendingStatuses)).thenReturn(false);
 
-        intakeSubmissionService.submitIntake(
-                validRequest(), "alex@mail.com");
+        intakeSubmissionService.submitIntake(validRequest(), "alex@mail.com");
 
         ArgumentCaptor<IntakeSubmission> captor =
                 ArgumentCaptor.forClass(IntakeSubmission.class);
@@ -107,8 +106,7 @@ class IntakeSubmissionServiceTest {
 
     @Test
     void submitIntake_throwsError_whenPendingIntakeAlreadyExists() {
-        ClientUser user =
-                verifiedClient();
+        ClientUser user = verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -131,8 +129,7 @@ class IntakeSubmissionServiceTest {
 
     @Test
     void submitIntake_checksAllPendingStatusesBeforeSaving() {
-        ClientUser user =
-                verifiedClient();
+        ClientUser user = verifiedClient();
 
         when(clientUserRepository.findByEmail("alex@mail.com"))
                 .thenReturn(Optional.of(user));
@@ -140,17 +137,15 @@ class IntakeSubmissionServiceTest {
         when(intakeSubmissionRepository.existsByClientUserAndStatusIn(
                 user, pendingStatuses)).thenReturn(false);
 
-        intakeSubmissionService.submitIntake(
-                validRequest(), "alex@mail.com");
+        intakeSubmissionService.submitIntake(validRequest(), "alex@mail.com");
 
         verify(intakeSubmissionRepository)
                 .existsByClientUserAndStatusIn(user, pendingStatuses);
 
         verify(intakeSubmissionRepository)
                 .save(any(IntakeSubmission.class));
-
     }
-    
+
     @Test
     void submitIntake_throwsError_whenPhoneNumberIsNotVerified() {
         ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");

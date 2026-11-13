@@ -115,7 +115,7 @@ async function readServerMessage(response: Response): Promise<string> {
   }
 }
 
-async function toApiError(response: Response): Promise<ApiError> {
+export async function toApiError(response: Response): Promise<ApiError> {
   if (response.status === 401) {
     return new ApiError(SESSION_EXPIRED_MESSAGE, 401);
   }
@@ -136,7 +136,7 @@ function adminHeaders(extra: Record<string, string> = {}) {
   };
 }
 
-async function send(path: string, init?: RequestInit): Promise<Response> {
+export async function send(path: string, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(apiUrl(path), init);
   } catch {
@@ -145,7 +145,7 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await send(path, init);
 
   if (!response.ok) {

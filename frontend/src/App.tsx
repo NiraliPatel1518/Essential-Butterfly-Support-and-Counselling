@@ -30,10 +30,13 @@ import ResetPassword from "./pages/ResetPassword";
 import Updates from "./pages/Updates";
 import Testimonials from "./pages/Testimonials";
 import Resources from "./pages/Resources";
+import Appointments from "./pages/Appointments";
 import NewsletterUnsubscribe from "./pages/NewsletterUnsubscribe";
 
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAppointments from "./pages/AdminAppointments";
 import ClientDashboard from "./pages/ClientDashboard";
+import MyBookings from "./pages/MyBookings";
 
 import {
   Accessibility,
@@ -52,6 +55,7 @@ const pageTitles: Record<string, string> = {
   "/contact": "Contact",
   "/testimonials": "Testimonials",
   "/resources": "Resource Library",
+  "/appointments": "Available Appointments",
   "/updates": "Updates",
   "/newsletter/unsubscribe": "Newsletter Unsubscribe",
   "/intake": "Secure Intake",
@@ -60,7 +64,9 @@ const pageTitles: Record<string, string> = {
   "/forgot-password": "Forgot Password",
   "/reset-password": "Reset Password",
   "/admin-dashboard": "Admin Dashboard",
+  "/admin-appointments": "Manage Appointments",
   "/client-dashboard": "Client Dashboard",
+  "/my-bookings": "My Bookings",
   "/privacy": "Privacy",
   "/accessibility": "Accessibility",
   "/sitemap": "Site Map",
@@ -141,6 +147,7 @@ function AppLayout() {
 
   const isClientArea =
     location.pathname === "/client-dashboard" ||
+    location.pathname === "/my-bookings" ||
     location.pathname === "/intake";
 
   return (
@@ -173,6 +180,16 @@ function AppLayout() {
 
           {/* Public Resource Library (published resources only) */}
           <Route path="/resources" element={<Resources />} />
+
+          {/* Public appointment availability (open slots only) */}
+          <Route
+            path="/appointments"
+            element={
+              <PublicFeatureRoute feature="APPOINTMENTS">
+                <Appointments />
+              </PublicFeatureRoute>
+            }
+          />
 
           {/* Public website updates */}
           <Route
@@ -256,12 +273,32 @@ function AppLayout() {
             }
           />
 
+          {/* Protected admin appointment management (admin portal only) */}
+          <Route
+            path="/admin-appointments"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <AdminAppointments />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Protected client dashboard */}
           <Route
             path="/client-dashboard"
             element={
               <ProtectedRoute allowedRole="CLIENT">
                 <ClientDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Client bookings: reached from the client dashboard */}
+          <Route
+            path="/my-bookings"
+            element={
+              <ProtectedRoute allowedRole="CLIENT">
+                <MyBookings />
               </ProtectedRoute>
             }
           />

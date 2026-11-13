@@ -13,6 +13,8 @@ public class AppProperties {
     private Jwt jwt = new Jwt();
     private Mail mail = new Mail();
     private Content content = new Content();
+    private Appointments appointments = new Appointments();
+    private GoogleCalendar googleCalendar = new GoogleCalendar();
 
     private String frontendBaseUrl;
     private String publicBaseUrl;
@@ -49,6 +51,22 @@ public class AppProperties {
         this.content = content;
     }
 
+    public Appointments getAppointments() {
+        return appointments;
+    }
+
+    public void setAppointments(Appointments appointments) {
+        this.appointments = appointments;
+    }
+
+    public GoogleCalendar getGoogleCalendar() {
+        return googleCalendar;
+    }
+
+    public void setGoogleCalendar(GoogleCalendar googleCalendar) {
+        this.googleCalendar = googleCalendar;
+    }
+
     public String getFrontendBaseUrl() {
         return frontendBaseUrl;
     }
@@ -63,6 +81,104 @@ public class AppProperties {
 
     public void setPublicBaseUrl(String publicBaseUrl) {
         this.publicBaseUrl = publicBaseUrl;
+    }
+
+    /*
+     * Appointment scheduling rules (UC-11). The values come from
+     * application.properties (app.appointments.*).
+     */
+    public static class Appointments {
+
+        // The clinic's local time zone: slots, "now" and calendar events.
+        private String timeZone = "America/Toronto";
+
+        // Availability is published for this many calendar days, including today.
+        private int bookingWindowDays = 7;
+
+        public String getTimeZone() {
+            return timeZone;
+        }
+
+        public void setTimeZone(String timeZone) {
+            this.timeZone = timeZone;
+        }
+
+        public int getBookingWindowDays() {
+            return bookingWindowDays;
+        }
+
+        public void setBookingWindowDays(int bookingWindowDays) {
+            this.bookingWindowDays = bookingWindowDays;
+        }
+    }
+
+    /*
+     * Google Calendar connection (UC-11). Credentials come from environment
+     * variables (Docker secrets); when they are empty the calendar step is
+     * skipped and the administrator is told.
+     */
+    public static class GoogleCalendar {
+
+        private String clientId = "";
+        private String clientSecret = "";
+        private String refreshToken = "";
+        private String calendarId = "primary";
+        private String tokenUrl = "https://oauth2.googleapis.com/token";
+        private String apiBaseUrl = "https://www.googleapis.com/calendar/v3";
+
+        public boolean isConfigured() {
+            return clientId != null && !clientId.isBlank()
+                    && clientSecret != null && !clientSecret.isBlank()
+                    && refreshToken != null && !refreshToken.isBlank();
+        }
+
+        public String getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
+        }
+
+        public String getClientSecret() {
+            return clientSecret;
+        }
+
+        public void setClientSecret(String clientSecret) {
+            this.clientSecret = clientSecret;
+        }
+
+        public String getRefreshToken() {
+            return refreshToken;
+        }
+
+        public void setRefreshToken(String refreshToken) {
+            this.refreshToken = refreshToken;
+        }
+
+        public String getCalendarId() {
+            return calendarId;
+        }
+
+        public void setCalendarId(String calendarId) {
+            this.calendarId = calendarId;
+        }
+
+        public String getTokenUrl() {
+            return tokenUrl;
+        }
+
+        public void setTokenUrl(String tokenUrl) {
+            this.tokenUrl = tokenUrl;
+        }
+
+        public String getApiBaseUrl() {
+            return apiBaseUrl;
+        }
+
+        public void setApiBaseUrl(String apiBaseUrl) {
+            this.apiBaseUrl = apiBaseUrl;
+        }
     }
 
     public static class Cors {

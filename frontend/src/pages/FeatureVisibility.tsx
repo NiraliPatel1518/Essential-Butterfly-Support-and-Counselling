@@ -3,7 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiUrl } from "../api/api";
 import "./FeatureVisibility.css";
 
-type FeatureKey = "NEWSLETTER" | "TESTIMONIALS" | "UPDATES";
+type FeatureKey =
+  | "NEWSLETTER"
+  | "TESTIMONIALS"
+  | "UPDATES"
+  | "APPOINTMENTS";
 
 type PublicFeature = {
   featureKey: FeatureKey;
@@ -35,6 +39,13 @@ const SPRINT_FEATURES: {
     label: "Updates",
     description: "Show the latest news and announcements to visitors.",
     icon: "↗",
+  },
+  {
+    featureKey: "APPOINTMENTS",
+    label: "Appointments",
+    description:
+      "Let clients see open times and request appointments on the public website.",
+    icon: "◷",
   },
 ];
 
@@ -94,7 +105,7 @@ function FeatureVisibility() {
 
       const data = (await response.json()) as PublicFeature[];
 
-      // Only the three features included in this sprint are shown.
+      // Only the four features included in this sprint are shown.
       const sprintFeatures = SPRINT_FEATURES.map((definition) => {
         const existing = data.find(
           (item) => item.featureKey === definition.featureKey
@@ -256,7 +267,7 @@ function FeatureVisibility() {
       <div className="feature-overview">
         <div>
           <span className="feature-overview-number">
-            {visibleCount} <span>/ 3</span>
+            {visibleCount} <span>/ {SPRINT_FEATURES.length}</span>
           </span>
           <span className="feature-overview-label">Features currently visible</span>
         </div>

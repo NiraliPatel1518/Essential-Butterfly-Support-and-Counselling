@@ -191,7 +191,8 @@ class NewsletterFlowIntegrationTest {
                         .content("[{\"featureKey\":\"NEWSLETTER\",\"enabled\":false},"
                                 + "{\"featureKey\":\"TESTIMONIALS\",\"enabled\":true},"
                                 + "{\"featureKey\":\"UPDATES\",\"enabled\":true},"
-                                + "{\"featureKey\":\"APPOINTMENTS\",\"enabled\":true}]"))
+                                + "{\"featureKey\":\"APPOINTMENTS\",\"enabled\":true},"
+                                + "{\"featureKey\":\"MEMORY_WALL\",\"enabled\":true}]"))
                 .andExpect(status().isOk());
 
         subscribe("fan@mail.com", true).andExpect(status().isNotFound());

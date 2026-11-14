@@ -397,7 +397,8 @@ class WebsiteUpdateFlowIntegrationTest {
                         .content("[{\"featureKey\":\"NEWSLETTER\",\"enabled\":true},"
                                 + "{\"featureKey\":\"TESTIMONIALS\",\"enabled\":true},"
                                 + "{\"featureKey\":\"UPDATES\",\"enabled\":false},"
-                                + "{\"featureKey\":\"APPOINTMENTS\",\"enabled\":true}]"))
+                                + "{\"featureKey\":\"APPOINTMENTS\",\"enabled\":true},"
+                                + "{\"featureKey\":\"MEMORY_WALL\",\"enabled\":true}]"))
                 .andExpect(status().isOk());
 
         publicList().andExpect(jsonPath("$.length()").value(0));

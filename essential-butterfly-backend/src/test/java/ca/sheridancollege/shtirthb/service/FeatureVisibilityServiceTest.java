@@ -20,11 +20,11 @@ class FeatureVisibilityServiceTest {
     FeatureVisibilityService service;
     @BeforeEach void setUp() { service = new FeatureVisibilityService(repository); }
 
-    @Test void getFeaturesSeedsAllFourSprintFeatureDefaults() {
+    @Test void getFeaturesSeedsAllFiveFeatureDefaults() {
         when(repository.findByFeatureKey(anyString())).thenReturn(Optional.empty());
         when(repository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of());
         assertTrue(service.getFeatures().isEmpty());
-        verify(repository, times(4)).save(any(FeatureVisibility.class));
+        verify(repository, times(5)).save(any(FeatureVisibility.class));
     }
 
     @Test void updateRejectsMissingOrIncompleteFeatureSet() {
@@ -37,7 +37,8 @@ class FeatureVisibilityServiceTest {
     @Test void updateRejectsUnknownFeatureKey() {
         List<FeatureVisibilityRequest> requests = List.of(
             request("NEWSLETTER", true), request("TESTIMONIALS", true),
-            request("UPDATES", true), request("OTHER", true));
+            request("UPDATES", true), request("APPOINTMENTS", true),
+            request("OTHER", true));
         assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(requests));
         verifyNoInteractions(repository);
     }
@@ -45,7 +46,8 @@ class FeatureVisibilityServiceTest {
     @Test void updateRejectsNullVisibility() {
         List<FeatureVisibilityRequest> requests = List.of(
             request("NEWSLETTER", true), request("TESTIMONIALS", true),
-            request("UPDATES", true), request("APPOINTMENTS", null));
+            request("UPDATES", true), request("APPOINTMENTS", true),
+            request("MEMORY_WALL", null));
         assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(requests));
         verifyNoInteractions(repository);
     }

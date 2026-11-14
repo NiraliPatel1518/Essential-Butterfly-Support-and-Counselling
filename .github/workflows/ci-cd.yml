@@ -69,15 +69,30 @@ jobs:
       - name: Create CI secret files
         run: |
           mkdir -p secrets
+
+          # PostgreSQL
           printf '%s' 'ci-only-postgres-password' > secrets/postgres_password.txt
+
+          # Gmail
           printf '%s' 'ci@example.com' > secrets/gmail_username.txt
           printf '%s' 'ci-placeholder-gmail-password' > secrets/gmail_app_password.txt
+
+          # JWT
           printf '%s' 'ci-only-jwt-secret-ci-only-jwt-secret-ci-only-jwt-secret' > secrets/jwt_secret.txt
+
+          # Admin account
           printf '%s' 'ci-admin@example.com' > secrets/admin_email.txt
           printf '%s' 'ci-only-admin-password' > secrets/admin_password.txt
+
+          # Twilio
           printf '%s' 'AC00000000000000000000000000000000' > secrets/twilio_account_sid.txt
           printf '%s' 'ci-placeholder-twilio-auth-token' > secrets/twilio_auth_token.txt
           printf '%s' 'VA00000000000000000000000000000000' > secrets/twilio_verify_service_sid.txt
+
+          # Google Calendar (disabled during CI)
+          touch secrets/google_calendar_client_id.txt
+          touch secrets/google_calendar_client_secret.txt
+          touch secrets/google_calendar_refresh_token.txt
 
       - name: Validate Docker Compose
         run: docker compose -f docker-compose.yml config --quiet

@@ -9,15 +9,15 @@ It lists our testing tools, how to run the tests, what each group of tests cover
 
 | Area | Tool | Number of tests | Result |
 |---|---|---|---|
-| Frontend (pages, components, routing, API address) | Vitest + React Testing Library | 229 (in 32 files) | 229 pass |
-| Backend unit tests (services) | JUnit 5 + Mockito | 155 | 155 pass |
-| Backend API tests (controllers) | JUnit 5 + MockMvc | 73 | 73 pass |
+| Frontend (pages, components, routing, API address) | Vitest + React Testing Library | 854 (in 62 files) | 854 pass |
+| Backend unit tests (services) | JUnit 5 + Mockito | 608 | 608 pass |
+| Backend API tests (controllers) | JUnit 5 + Mockito + MockMvc | 126 | 126 pass |
 | Backend config, security rules, error handling, admin setup | JUnit 5 + Mockito | 60 | 60 pass |
-| Backend integration tests (real database) | Spring Boot Test + Testcontainers + PostgreSQL | 211 | 211 pass |
-| **Total automated tests** | | **728** | **728 pass, 0 skipped** |
+| Backend integration tests (real database) | Spring Boot Test + Testcontainers + PostgreSQL | 325 | 325 pass |
+| **Total automated tests** | | **1,973** | **1,973 pass, 0 skipped** |
 | Mobile layout (manual) | Chrome DevTools + Playwright screenshots | 12 pages x 3 screen sizes | See "Manual testing" |
 
-The backend total is 499 tests (155 + 73 + 60 + 211). Last full run: 12 November 2026.
+The backend total is 1,119 tests (608 + 126 + 60 + 325). Every service, controller and page in the project has its own tests. Last full run: 14 November 2026. Frontend line coverage is 91.7% (see "Test coverage").
 
 ## Testing tools
 
@@ -98,8 +98,8 @@ Tests run automatically on GitHub every time someone pushes code or opens a pull
 
 | Workflow | Job | What it runs |
 |---|---|---|
-| **Tests** (`.github/workflows/tests.yml`) | Frontend tests (Vitest) | `npm run build`, then all 229 frontend tests |
-| **CI/CD Pipeline** (`.github/workflows/ci-cd.yml`) | Build Backend | `mvn clean package`, which builds the backend and runs all 499 backend tests (GitHub provides Docker for the integration tests) |
+| **Tests** (`.github/workflows/tests.yml`) | Frontend tests (Vitest) | `npm run build`, then all 854 frontend tests |
+| **CI/CD Pipeline** (`.github/workflows/ci-cd.yml`) | Build Backend | `mvn clean package`, which builds the backend and runs all 1,119 backend tests (GitHub provides Docker for the integration tests) |
 | | Build and Test Frontend | `npm run build` and the frontend tests |
 | | Docker Build and Integration Tests | Builds the containers, starts them and checks the database, backend and frontend |
 
@@ -113,7 +113,7 @@ Tests run automatically on GitHub every time someone pushes code or opens a pull
 
 The badge at the top of this file shows the result of the latest **Tests** run.
 
-## Backend integration test flows (211 tests)
+## Backend integration test flows (325 tests)
 
 Each flow is one file in `essential-butterfly-backend/src/test/java/ca/sheridancollege/shtirthb/integration/`.
 
@@ -128,9 +128,12 @@ Each flow is one file in `essential-butterfly-backend/src/test/java/ca/sheridanc
 | Website updates | `WebsiteUpdateFlowIntegrationTest` | 24 | Admin creates, edits, publishes, unpublishes, deletes; photo and link rules; visitors see a preview, logged-in users see the full text; drafts stay hidden; website switch |
 | Phone verification | `PhoneVerificationFlowIntegrationTest` | 19 | Phone format; code entry; wrong, expired and 5 wrong codes; new number replaces the old one only after its code works; resend limits. No SMS is sent |
 | Admin account | `AdminAccountFlowIntegrationTest` | 20 | Admin profile; changing the login email with a code sent to the new address; wrong codes; the old token stops working; resend limits |
+| Website pages and Resource Library | `ContentAndResourcesFlowIntegrationTest` | 26 | Admin edits and publishes the Services, About and Privacy pages; drafts stay hidden from visitors; resources with links or files are added, changed, published, hidden and removed; unsafe files and links are refused and recorded; the recent-changes log; website switch |
+| Memory Wall | `MemoryWallFlowIntegrationTest` | 31 | Admin uploads photos (they start as pending); photo and size limits; admin selects which photos are public; testimonial photos need an approved testimonial; delete removes the photo; visitors see only published photos, grouped by month; website switch turns the wall off |
+| Appointments | `AppointmentsFlowIntegrationTest` | 57 | Weekly availability and open times; client requests a time; admin confirms, declines or cancels with a reason; calendar and invitation email; session feedback; clients see only their own bookings; clients cannot use admin pages |
 | Startup and database | `ApplicationStartupIntegrationTest` and 3 repository test files | 35 | The whole app starts on PostgreSQL; all tables are created; admin account is created from the settings; database rules (for example, two accounts cannot share an email) |
 
-## Frontend tests (229 tests)
+## Frontend tests (854 tests)
 
 Each test file sits next to the page or component it tests.
 
@@ -138,36 +141,81 @@ Each test file sits next to the page or component it tests.
 |---|---|
 | `src/App.test.tsx` | 14 |
 | `src/api/api.test.ts` | 5 |
+| `src/api/appointmentApi.test.ts` | 43 |
+| `src/api/contentApi.test.ts` | 28 |
+| `src/api/memoryWallApi.test.ts` | 19 |
 | `src/components/AdminAccountSettings.test.tsx` | 13 |
 | `src/components/AdminLoginOtpModal.test.tsx` | 11 |
 | `src/components/Footer.test.tsx` | 1 |
+| `src/components/IntakeAccessGuard.test.tsx` | 12 |
 | `src/components/Navbar.test.tsx` | 5 |
 | `src/components/NewsletterSignup.test.tsx` | 3 |
 | `src/components/PhoneVerificationModal.test.tsx` | 15 |
 | `src/components/ProtectedRoute.test.tsx` | 9 |
 | `src/components/PublicFeatureRoute.test.tsx` | 4 |
 | `src/components/SessionTimeout.test.tsx` | 7 |
+| `src/content/pageLayouts.test.ts` | 29 |
 | `src/context/PublicFeatureContext.test.tsx` | 5 |
+| `src/hooks/useAdminSession.test.tsx` | 7 |
+| `src/hooks/usePageContent.test.tsx` | 5 |
+| `src/hooks/usePublishedContent.test.tsx` | 7 |
+| `src/pages/About.test.tsx` | 8 |
+| `src/pages/AdminAppointmentCard.test.tsx` | 49 |
+| `src/pages/AdminAppointments.test.tsx` | 45 |
+| `src/pages/AdminContent.test.tsx` | 5 |
+| `src/pages/AdminContentActivity.test.tsx` | 27 |
+| `src/pages/AdminContentPages.test.tsx` | 40 |
 | `src/pages/AdminDashboard.test.tsx` | 8 |
+| `src/pages/AdminDashboardOverview.test.tsx` | 3 |
+| `src/pages/AdminMemoryWall.test.tsx` | 52 |
 | `src/pages/AdminNewsletter.test.tsx` | 13 |
+| `src/pages/AdminResources.test.tsx` | 57 |
 | `src/pages/AdminTestimonials.test.tsx` | 6 |
 | `src/pages/AdminUpdates.test.tsx` | 17 |
+| `src/pages/Appointments.test.tsx` | 27 |
 | `src/pages/ClientDashboard.test.tsx` | 8 |
+| `src/pages/ClientFeedbackContent.test.tsx` | 12 |
 | `src/pages/ClientTestimonials.test.tsx` | 11 |
 | `src/pages/Contact.test.tsx` | 5 |
 | `src/pages/FeatureVisibility.test.tsx` | 10 |
 | `src/pages/ForgotPassword.test.tsx` | 3 |
+| `src/pages/ForgotPasswordErrors.test.tsx` | 5 |
 | `src/pages/FormValidation.test.tsx` | 8 |
+| `src/pages/Home.test.tsx` | 18 |
 | `src/pages/InformationPages.test.tsx` | 3 |
 | `src/pages/Intake.test.tsx` | 4 |
+| `src/pages/IntakeErrors.test.tsx` | 8 |
 | `src/pages/Login.test.tsx` | 11 |
+| `src/pages/MemoryWall.test.tsx` | 14 |
+| `src/pages/MyBookings.test.tsx` | 21 |
 | `src/pages/NewsletterUnsubscribe.test.tsx` | 5 |
 | `src/pages/PasswordReset.test.tsx` | 7 |
 | `src/pages/PublicPages.test.tsx` | 3 |
+| `src/pages/PublishedContentPages.test.tsx` | 17 |
 | `src/pages/ResetPassword.test.tsx` | 4 |
+| `src/pages/Resources.test.tsx` | 28 |
+| `src/pages/Services.test.tsx` | 9 |
 | `src/pages/Signup.test.tsx` | 7 |
 | `src/pages/Testimonials.test.tsx` | 2 |
 | `src/pages/Updates.test.tsx` | 2 |
+| `src/utils/appointmentFormat.test.ts` | 18 |
+| `src/utils/contentFormat.test.ts` | 4 |
+| `src/utils/draftStorage.test.ts` | 8 |
+
+## Test coverage (frontend)
+
+Coverage shows how much of the code the tests run. It was measured with Vitest and the V8 coverage tool on 14 November 2026.
+
+| Measure | Coverage |
+|---|---|
+| Lines | 91.7% (2,909 of 3,171) |
+| Statements | 90.2% (3,051 of 3,381) |
+| Functions | 88.6% (743 of 839) |
+| Branches | 81.5% (1,975 of 2,423) |
+
+The files with the lowest coverage are older Sprint 1 pages: `Updates` (51%), `Signup` (61%), `Testimonials` (69%), `Navbar` (70%), `AdminTestimonials` (73%) and `ClientDashboard` (74%). All other files are above 84%.
+
+To measure it again: `cd frontend`, then `npx vitest run --coverage` (this needs the `@vitest/coverage-v8` package, which is not saved in the project). Backend coverage is not measured yet.
 
 ## Sprint 1 test cases (original list)
 
@@ -359,8 +407,16 @@ No page scrolls sideways on any screen size.
 |---|---|---|
 | Login token used the email exactly as typed, but the database stores it in lowercase. | Test `API-AUTH-09` (Sprint 1) | Fixed. The test is no longer skipped and passes. |
 | Navigation links are hidden on phones and there is no menu button. | Mobile testing (Sprint 1) | Check again after the client design changes. |
+| If the Resource Library list cannot be loaded, the admin sees an empty list and no error message. The page clears the error right after it is set. | Frontend tests for `AdminResources` (Sprint 2) | Open. To be passed to the developer. The test describes the current behaviour. |
+| If Google cannot be reached at all when a booking is confirmed, the warning says "Google said: null". | Backend tests for `GoogleCalendarService` (Sprint 2) | Open. To be passed to the developer. The booking itself is saved correctly. |
 
 ## Not tested yet
 
-- Home, About and Services page tests will be updated after the client design changes are merged, so the tests match the new design.
-- Full end-to-end tests in a real browser (frontend and backend together).
+- **End-to-end tests in a real browser** (frontend and backend running together). Our frontend tests use a fake `fetch`, and our backend tests run on their own.
+- **Backend coverage report.** It needs the JaCoCo plugin in `pom.xml`, which is a build change for the backend developer.
+- **Automated accessibility scan** (for example axe). The tests check roles and labels, but no scanning tool has been run.
+- **Performance and load testing.**
+- **Other browsers** (Firefox, Safari). The tests run in a fake browser and the manual checks used Chrome.
+- **Real outside services** (Twilio, Gmail, Google Calendar with a real account). This is on purpose, so no real messages are sent and the free limits are kept for the demo.
+- **Manual mobile checks for the Sprint 2 pages** (Appointments, My Bookings, Memory Wall and the admin content screens).
+- The Home, About and Services tests will need small updates if the client design changes again.

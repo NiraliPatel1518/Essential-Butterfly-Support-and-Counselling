@@ -1,3 +1,4 @@
+
 package ca.sheridancollege.shtirthb.service;
 
 import java.net.URI;
@@ -138,7 +139,14 @@ public class GoogleCalendarService {
         } catch (Exception ex) {
 
             log.error("Google Calendar could not be reached.", ex);
-            return new CalendarResult(null, ex.getMessage());
+
+            String message = ex.getMessage();
+
+            if (message == null || message.isBlank()) {
+                message = "Google Calendar could not be reached. Please try again later.";
+            }
+
+            return new CalendarResult(null, message);
         }
     }
 

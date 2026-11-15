@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
@@ -215,6 +216,9 @@ function AdminResources() {
     const start = async () => {
       setLoading(true);
 
+      // Initialise the form before loading resources. loadResources() may set
+      // an error message, so do not clear it afterwards with openForm(null).
+      openForm(null);
       await loadResources();
 
       // The upload rules only help the form; the server enforces them anyway.
@@ -224,7 +228,6 @@ function AdminResources() {
         setRules(null);
       }
 
-      openForm(null);
       setLoading(false);
     };
 

@@ -734,3 +734,15 @@ describe("AdminResources: unsaved details", () => {
     expect(sessionStorage.getItem("essential-butterfly:draft:resource:1")).toBeNull();
   });
 });
+
+describe("AdminResources when the list cannot be loaded", () => {
+  it("shows an error message instead of an empty list with no explanation", async () => {
+    await show({
+      fail: {
+        "GET /api/admin/resources": () => jsonResponse({ message: "The resource list is unavailable." }, false, 500),
+      },
+    });
+
+    expect((await screen.findAllByRole("alert")).some((box) => /could not complete that right now/i.test(box.textContent ?? ""))).toBe(true);
+  });
+});

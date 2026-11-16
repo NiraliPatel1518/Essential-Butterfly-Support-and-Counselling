@@ -17,6 +17,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicFeatureRoute from "./components/PublicFeatureRoute";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -49,6 +50,7 @@ import {
 import { PublicFeatureProvider } from "./context/PublicFeatureContext";
 
 import "./AccessibilityOverrides.css";
+import "./components/ErrorStates.css";
 
 const pageTitles: Record<string, string> = {
   "/": "Home",
@@ -143,6 +145,28 @@ function RouteFocus() {
       aria-live="polite"
       aria-atomic="true"
     />
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <main className="not-found-page">
+      <img
+        src="/images/butterfly-mark.png"
+        alt=""
+        className="not-found-mark"
+      />
+      <p className="not-found-eyebrow">PAGE NOT FOUND</p>
+      <h1>Let’s help you find your way</h1>
+      <p>
+        The page may have moved or the address may be incorrect. You can return
+        home or contact Casey if you need support.
+      </p>
+      <div className="not-found-actions">
+        <Link to="/">Return home</Link>
+        <Link to="/contact">Contact support</Link>
+      </div>
+    </main>
   );
 }
 
@@ -334,13 +358,7 @@ function AppLayout() {
 
           <Route
             path="*"
-            element={
-              <main className="information-page">
-                <h1>Page not found</h1>
-                <p>The page you requested is unavailable or may have moved.</p>
-                <Link to="/">Return to the home page</Link>
-              </main>
-            }
+            element={<NotFoundPage />}
           />
         </Routes>
       </div>
@@ -353,9 +371,11 @@ function AppLayout() {
 function App() {
   return (
     <BrowserRouter>
-      <PublicFeatureProvider>
-        <AppLayout />
-      </PublicFeatureProvider>
+      <AppErrorBoundary>
+        <PublicFeatureProvider>
+          <AppLayout />
+        </PublicFeatureProvider>
+      </AppErrorBoundary>
     </BrowserRouter>
   );
 }

@@ -63,8 +63,10 @@
 }
 
 /* WCAG 2.1 AA / AODA-oriented baseline enhancements. */
-body { line-height: 1.6; overflow-wrap: anywhere; }
-
+body {
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
 main, section, article, aside, nav, header, footer { min-width: 0; }
 
 button,
@@ -155,6 +157,11 @@ button:disabled,
   .information-page { padding-left: 1rem; padding-right: 1rem; }
 
   .updates-modal { max-height: 94vh; }
+
+  .client-quick-text strong,
+  .client-panel-title h2,
+  .client-account-button,
+  .client-sidebar-link { font-size: 1rem !important; }
 }
 
 @media (prefers-contrast: more) {

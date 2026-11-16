@@ -221,3 +221,155 @@
     clip: rect(0,0,0,0);
   }
 }
+/* Prevent global wrapping rules from collapsing the brand vertically. */
+.brand {
+  flex: 0 0 auto;
+  min-width: max-content;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.brand-text,
+.brand-name,
+.brand-subtitle {
+  min-width: max-content;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.brand-butterfly {
+  flex: 0 0 auto;
+}
+
+.navigation-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.navbar-account-actions {
+  flex: 0 0 auto;
+}
+
+/* Switch to the menu before numerous admin links become compressed. */
+@media (max-width: 980px) {
+  .navbar-container {
+    width: min(100% - 32px, 1320px);
+    min-height: 72px;
+  }
+
+  .menu-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 8px 13px;
+    border: 2px solid #4b0082;
+    border-radius: 10px;
+    color: #32145f;
+    background: #fff;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .menu-button span:first-child {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .navigation-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - 72px);
+    overflow-y: auto;
+    padding: 18px 24px 24px;
+    background: #fff;
+    border-bottom: 2px solid #d9c4e6;
+    box-shadow: 0 14px 24px rgba(50, 20, 95, 0.12);
+  }
+
+  .navigation-panel.open {
+    display: block;
+  }
+
+  .site-navbar nav {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .nav-link {
+    width: 100%;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+
+  .navbar-account-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .navbar-account-actions .login-button {
+    width: 100%;
+    margin-top: 10px;
+    text-align: center;
+  }
+}
+/*
+ * Intermediate desktop/tablet layout:
+ * preserve visible navigation without overlap or undersized text.
+ */
+@media (min-width: 981px) and (max-width: 1450px) {
+  .navbar-container {
+    width: min(100% - 32px, 1320px);
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 10px 20px;
+    padding: 12px 0;
+  }
+
+  .brand {
+    margin-right: auto;
+  }
+
+  .navigation-panel {
+    order: 3;
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #e6dced;
+  }
+
+  .site-navbar nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+  }
+
+  .navbar-account-actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .navbar-account-actions .login-button {
+    margin-top: 0;
+  }
+}

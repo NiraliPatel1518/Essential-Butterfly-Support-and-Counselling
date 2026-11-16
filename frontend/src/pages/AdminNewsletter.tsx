@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "../api/api";
+import { readFriendlyError } from "../api/errors";
 import "./AdminNewsletter.css";
 
 type Campaign = {
@@ -33,15 +34,11 @@ type PreviewResponse = {
 };
 
 async function readResponse(response: Response) {
-  const data = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    throw new Error(
-      data.message || `Request failed (${response.status}).`
-    );
+    throw new Error(await readFriendlyError(response));
   }
 
-  return data;
+  return response.json().catch(() => ({}));
 }
 
 export default function AdminNewsletter() {

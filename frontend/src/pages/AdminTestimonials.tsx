@@ -1,9 +1,10 @@
 import { useCallback,useEffect,useState } from "react";
 import { apiUrl } from "../api/api";
+import { readFriendlyError } from "../api/errors";
 import "./TestimonialCards.css";
 type Item={id:number;displayName:string;content:string;photos:string[];status:string;publicationConsent:boolean;displayOnPublic:boolean;featuredOnHome:boolean;createdAt:string;ownerEmail:string|null};
 const token=()=>localStorage.getItem("adminToken")||"";
-async function request(path:string,init:RequestInit={}){const r=await fetch(apiUrl(path),{...init,headers:{Authorization:`Bearer ${token()}`,"Content-Type":"application/json",...(init.headers||{})}});if(!r.ok)throw new Error((await r.text())||`Request failed (${r.status})`);return r.status===204?null:r.json();}
+async function request(path:string,init:RequestInit={}){const r=await fetch(apiUrl(path),{...init,headers:{Authorization:`Bearer ${token()}`,"Content-Type":"application/json",...(init.headers||{})}});if(!r.ok)throw new Error(await readFriendlyError(r));return r.status===204?null:r.json();}
 export default function AdminTestimonials(){
  const [items,setItems]=useState<Item[]>([]),[error,setError]=useState(""),[busy,setBusy]=useState(false);
  const load=useCallback(async()=>{try{setError("");setItems(await request("/api/admin/testimonials"));}catch(e){setError(e instanceof Error?e.message:"Could not load testimonials.");}},[]);

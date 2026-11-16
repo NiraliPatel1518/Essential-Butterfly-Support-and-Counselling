@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiUrl } from "../api/api";
+import { readFriendlyError } from "../api/errors";
 import "./FeatureVisibility.css";
 
 type FeatureKey =
@@ -58,16 +59,7 @@ const SPRINT_FEATURES: {
 ];
 
 async function readError(response: Response): Promise<string> {
-  const body = await response.text();
-
-  if (!body) return `Request failed (${response.status}).`;
-
-  try {
-    const parsed = JSON.parse(body);
-    return parsed.message || parsed.error || body;
-  } catch {
-    return body;
-  }
+  return readFriendlyError(response);
 }
 
 function FeatureVisibility() {

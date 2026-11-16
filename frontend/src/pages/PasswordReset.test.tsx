@@ -63,7 +63,7 @@ describe("Forgot Password page", () => {
 
     // Assert: correct URL and message
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "http://localhost:8080/api/password/forgot?email=jane%2B1%40mail.com"
+      "/api/password/forgot?email=jane%2B1%40mail.com"
     );
     expect(
       await screen.findByText(/if an account exists with this email/i)

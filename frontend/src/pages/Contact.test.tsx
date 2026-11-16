@@ -50,7 +50,7 @@ describe("Contact page", () => {
 
     // Assert: correct URL, method and data
     const [url, options] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://localhost:8080/api/contact");
+    expect(url).toBe("/api/contact");
     expect(options?.method).toBe("POST");
     expect(JSON.parse(String(options?.body))).toEqual({
       fullName: "Jane Doe",

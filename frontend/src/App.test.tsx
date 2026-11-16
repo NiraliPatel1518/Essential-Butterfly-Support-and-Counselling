@@ -55,11 +55,10 @@ describe("App", () => {
   test("shows 'Page not found' for an unknown address", () => {
     openApp("/this-page-does-not-exist");
 
-    expect(screen.getByRole("heading", { name: "Page not found" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Return to the home page" })).toHaveAttribute(
-      "href",
-      "/"
-    );
+    expect(screen.getByRole("heading", { name: /Let.s help you find your way/ })).toBeInTheDocument();
+    expect(screen.getByText("PAGE NOT FOUND")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Return home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/contact");
     expect(document.title).toBe("Page Not Found | Essential Butterfly");
   });
 

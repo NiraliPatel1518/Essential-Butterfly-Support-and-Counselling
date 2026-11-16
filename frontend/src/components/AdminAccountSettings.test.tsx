@@ -92,7 +92,7 @@ describe("AdminAccountSettings", () => {
 
     expect(await screen.findByText("admin@test.com")).toBeInTheDocument();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://localhost:8080/api/admin-account/profile");
+    expect(url).toBe("/api/admin-account/profile");
     expect(init?.headers).toEqual({ Authorization: `Bearer ${OLD_TOKEN}` });
   });
 

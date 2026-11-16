@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { apiUrl } from "../api/api";
+import { readFriendlyError } from "../api/errors";
 import "./AdminSecurityModals.css";
 
 interface Profile {
@@ -11,25 +12,7 @@ interface Profile {
 type Stage = "email" | "otp";
 
 async function readMessage(response: Response): Promise<string> {
-
-  const body = await response.text();
-
-  if (!body) {
-    return `Request failed (${response.status}).`;
-  }
-
-  try {
-
-    const parsed = JSON.parse(body) as {
-      message?: string;
-      error?: string;
-    };
-
-    return parsed.message || parsed.error || body;
-
-  } catch {
-    return body;
-  }
+  return readFriendlyError(response);
 }
 
 export default function AdminAccountSettings() {

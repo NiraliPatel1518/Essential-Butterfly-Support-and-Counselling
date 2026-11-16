@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "../api/api";
+import { networkErrorMessage, readFriendlyError } from "../api/errors";
 import "./ClientDashboard.css";
 import ClientTestimonials from "./ClientTestimonials";
 import PhoneVerificationModal from "../components/PhoneVerificationModal";
@@ -19,6 +20,14 @@ type PhoneVerificationStatus = {
   phoneVerified: boolean;
   phoneNumber: string | null;
   pendingPhoneNumber: string | null;
+};
+
+type ClientNotification = {
+  id: string;
+  title: string;
+  description: string;
+  section?: DashboardSection;
+  action?: "verify-phone";
 };
 
 type DashboardSection =
@@ -97,6 +106,9 @@ function ClientDashboard() {
   const [phoneModalOpen, setPhoneModalOpen] =
     useState(false);
 
+  const [notificationsOpen, setNotificationsOpen] =
+    useState(false);
+
   const loadStatus = async () => {
 
     setLoading(true);
@@ -141,12 +153,10 @@ function ClientDashboard() {
       }
 
       if (!response.ok) {
-
-        const message = await response.text();
-
-        throw new Error(
-          message || "Unable to retrieve your intake status."
-        );
+        throw new Error(await readFriendlyError(
+          response,
+          "Unable to retrieve your intake status."
+        ));
       }
 
       const data =
@@ -157,9 +167,7 @@ function ClientDashboard() {
     } catch (requestError) {
 
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to load your intake status."
+        networkErrorMessage(requestError)
       );
 
     } finally {
@@ -291,6 +299,26 @@ function ClientDashboard() {
     ? statusInformation[intakeStatus.status]
     : null;
 
+  const notifications: ClientNotification[] = [];
+
+  if (phoneStatus && !phoneStatus.phoneVerified) {
+    notifications.push({
+      id: "phone-verification",
+      title: "Verify your phone number",
+      description: "Phone verification is required before submitting a secure intake request.",
+      action: "verify-phone",
+    });
+  }
+
+  if (intakeStatus && currentStatus) {
+    notifications.push({
+      id: `intake-${intakeStatus.status}`,
+      title: `Intake request: ${currentStatus.label}`,
+      description: currentStatus.description,
+      section: "requests",
+    });
+  }
+
   const selectSection = (section: DashboardSection) => {
 
     if (section === "bookings") {
@@ -362,13 +390,71 @@ function ClientDashboard() {
           <button
             type="button"
             className="client-notification-button"
-            aria-label="Notifications"
+            aria-label={`Notifications${notifications.length ? `, ${notifications.length} new` : ""}`}
+            aria-expanded={notificationsOpen}
+            aria-controls="client-notification-panel"
             title="Notifications"
-            disabled
+            onClick={() => setNotificationsOpen((open) => !open)}
           >
-            ♧
-            <span className="client-notification-dot" />
+            <span aria-hidden="true">♧</span>
+            {notifications.length > 0 && (
+              <span className="client-notification-count" aria-hidden="true">
+                {notifications.length > 9 ? "9+" : notifications.length}
+              </span>
+            )}
           </button>
+
+          {notificationsOpen && (
+            <section
+              id="client-notification-panel"
+              className="client-notification-panel"
+              aria-labelledby="client-notification-title"
+            >
+              <div className="client-notification-heading">
+                <h2 id="client-notification-title">Notifications</h2>
+                <button
+                  type="button"
+                  onClick={() => setNotificationsOpen(false)}
+                  aria-label="Close notifications"
+                >
+                  ×
+                </button>
+              </div>
+
+              {notifications.length === 0 ? (
+                <p className="client-notification-empty" role="status">
+                  You’re all caught up. There are no new notifications.
+                </p>
+              ) : (
+                <ul className="client-notification-list">
+                  {notifications.map((notification) => (
+                    <li key={notification.id}>
+                      <span className="client-notification-list-dot" aria-hidden="true" />
+                      <div>
+                        <strong>{notification.title}</strong>
+                        <p>{notification.description}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotificationsOpen(false);
+                            if (notification.action === "verify-phone") {
+                              setPhoneModalOpen(true);
+                            } else if (notification.section) {
+                              selectSection(notification.section);
+                            }
+                          }}
+                        >
+                          {notification.action === "verify-phone"
+                            ? "Verify phone"
+                            : "View request"}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
           <button
             type="button"

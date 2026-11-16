@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "../api/api";
+import { readFriendlyError } from "../api/errors";
 import "./AdminUpdates.css";
 
 type WebsiteUpdate = {
@@ -14,14 +15,7 @@ type WebsiteUpdate = {
 };
 
 async function readError(response: Response) {
-  const body = await response.text();
-
-  try {
-    const parsed = JSON.parse(body);
-    return parsed.message || parsed.error || body;
-  } catch {
-    return body || `Request failed (${response.status})`;
-  }
+  return readFriendlyError(response);
 }
 
 function AdminUpdates() {

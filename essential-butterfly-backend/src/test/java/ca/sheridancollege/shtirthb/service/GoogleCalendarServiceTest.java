@@ -258,6 +258,16 @@ class GoogleCalendarServiceTest {
         assertNull(result.eventId());
     }
 
+    @Test void explainsInWordsWhenGoogleCannotBeReached() {
+        server.stop(0);
+
+        var result = service().createEvent("T", "D", START, END);
+
+        assertNotNull(result.problem());
+        assertFalse(result.problem().isBlank());
+        assertFalse(result.problem().contains("null"));
+    }
+
     @Test void theResultSaysAddedOnlyWhenThereIsAnEventId() {
         assertTrue(new GoogleCalendarService.CalendarResult("id", null).added());
         assertFalse(new GoogleCalendarService.CalendarResult(null, "problem").added());

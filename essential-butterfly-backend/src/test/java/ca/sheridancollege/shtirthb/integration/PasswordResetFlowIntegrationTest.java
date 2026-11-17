@@ -4,6 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -23,10 +28,12 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -41,6 +48,9 @@ import ca.sheridancollege.shtirthb.model.PasswordResetToken;
 import ca.sheridancollege.shtirthb.repository.AdminUserRepository;
 import ca.sheridancollege.shtirthb.repository.ClientUserRepository;
 import ca.sheridancollege.shtirthb.repository.PasswordResetTokenRepository;
+import jakarta.mail.Message;
+import jakarta.mail.Multipart;
+import jakarta.mail.Part;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 
@@ -50,8 +60,8 @@ import jakarta.mail.internet.MimeMessage;
  *   password with the token -> the old password stops working.
  *
  * Real application, real PostgreSQL (Testcontainers), real security rules.
- * The reset token is read straight from the database, so these tests keep
- * working when the link is sent by email instead of being printed.
+ * The reset link is read from the email. The mail sender is a mock, so no
+ * real email is sent.
  * Every test is rolled back at the end.
  */
 @SpringBootTest(properties = {
@@ -118,24 +128,50 @@ class PasswordResetFlowIntegrationTest {
         return all.get(0);
     }
 
-    /** Captures the development reset link; the database stores only its SHA-256 hash. */
+    /** Reads the reset link from the email that was sent; the database stores only its SHA-256 hash. */
     private String requestedClientToken() throws Exception {
         return requestedToken(EMAIL);
     }
 
     private String requestedToken(String email) throws Exception {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        PrintStream original = System.out;
-        try {
-            System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
-            forgot(email).andExpect(status().isOk());
-        } finally {
-            System.setOut(original);
-        }
-        Matcher matcher = Pattern.compile("Reset link: .*?/reset-password\\?token=([a-f0-9-]+)")
-                .matcher(output.toString(StandardCharsets.UTF_8));
-        if (!matcher.find()) throw new AssertionError("Reset link was not printed by PasswordResetService");
+        forgot(email).andExpect(status().isOk());
+        Matcher matcher = Pattern.compile("/reset-password\\?token=([a-f0-9-]+)")
+                .matcher(textOf(resetMail()));
+        if (!matcher.find()) throw new AssertionError("The reset link was not in the email");
         return matcher.group(1);
+    }
+
+    /** The most recent email that contains a reset link. */
+    private MimeMessage resetMail() throws Exception {
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender, atLeastOnce()).send(captor.capture());
+        List<MimeMessage> all = captor.getAllValues();
+        for (int i = all.size() - 1; i >= 0; i--) {
+            if (textOf(all.get(i)).contains("/reset-password?token=")) return all.get(i);
+        }
+        throw new AssertionError("No reset email was sent");
+    }
+
+    // Collects the text of every part of an email.
+    private static String textOf(Part part) throws Exception {
+        if (part.isMimeType("multipart/*")) {
+            Multipart multipart = (Multipart) part.getContent();
+            StringBuilder all = new StringBuilder();
+            for (int i = 0; i < multipart.getCount(); i++) {
+                all.append(textOf(multipart.getBodyPart(i))).append('\n');
+            }
+            return all.toString();
+        }
+        Object content = part.getContent();
+        if (content instanceof String text) {
+            return text;
+        }
+        if (content instanceof java.io.InputStream stream) {
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        part.getDataHandler().writeTo(out);
+        return out.toString(StandardCharsets.UTF_8);
     }
 
     private static String hash(String value) {
@@ -202,6 +238,64 @@ class PasswordResetFlowIntegrationTest {
         PasswordResetToken token = onlyToken();
         assertEquals("ADMIN", token.getUserType());
         assertEquals(admin.getId(), token.getAdminUser().getId());
+    }
+
+    @Test
+    void asking_emailsTheResetLinkToTheAccountOwner() throws Exception {
+        forgot(EMAIL).andExpect(status().isOk());
+
+        MimeMessage mail = resetMail();
+        assertEquals(1, mail.getRecipients(Message.RecipientType.TO).length);
+        assertEquals(EMAIL, mail.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals("noreply@butterfly.test", mail.getFrom()[0].toString());
+        assertEquals("Reset your Essential Butterfly password", mail.getSubject());
+        assertTrue(textOf(mail).contains("expires in 30 minutes"));
+    }
+
+    @Test
+    void theEmailedLinkMatchesTheTokenInTheDatabase() throws Exception {
+        String rawToken = requestedClientToken();
+
+        assertEquals(hash(rawToken), onlyToken().getTokenHash());
+    }
+
+    @Test
+    void anAdminEmail_getsTheResetLinkToo() throws Exception {
+        String rawToken = requestedToken("admin@test.com");
+
+        assertEquals(hash(rawToken), onlyToken().getTokenHash());
+    }
+
+    @Test
+    void anUnknownEmail_getsNoMail() throws Exception {
+        forgot("nobody@mail.com").andExpect(status().isOk());
+
+        verify(mailSender, never()).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void theLinkIsNotPrintedToTheConsole() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream original = System.out;
+        try {
+            System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+            forgot(EMAIL).andExpect(status().isOk());
+        } finally {
+            System.setOut(original);
+        }
+
+        assertFalse(output.toString(StandardCharsets.UTF_8).contains("/reset-password?token="));
+    }
+
+    @Test
+    void aFailedEmail_stillGivesTheSameAnswerAndKeepsTheToken() throws Exception {
+        doThrow(new MailSendException("mail server is down")).when(mailSender).send(any(MimeMessage.class));
+
+        forgot(EMAIL)
+                .andExpect(status().isOk())
+                .andExpect(content().string(GENERIC_ANSWER));
+
+        assertEquals(1, tokens.count());
     }
 
     // --------------------------------------------------------- setting the new one

@@ -50,7 +50,7 @@ describe("Signup page", () => {
     // Assert: one request, correct URL, method and data
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://localhost:8080/api/auth/signup");
+    expect(url).toBe("/api/auth/signup");
     expect(options?.method).toBe("POST");
     expect(JSON.parse(String(options?.body))).toEqual({
       fullName: "Jane Doe",
@@ -103,7 +103,7 @@ describe("Signup page", () => {
     // Assert: correct request, success message, then redirect to /login
     expect(await screen.findByRole("status")).toHaveTextContent(/email has been verified/i);
     const [url, options] = fetchMock.mock.calls[1];
-    expect(url).toBe("http://localhost:8080/api/auth/verify-email");
+    expect(url).toBe("/api/auth/verify-email");
     expect(JSON.parse(String(options?.body))).toEqual({
       email: "jane@mail.com",
       code: "123456",

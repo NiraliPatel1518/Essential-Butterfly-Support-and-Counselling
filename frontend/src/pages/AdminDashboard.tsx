@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiUrl } from "../api/api";
+import { readFriendlyError } from "../api/errors";
 import FeatureVisibility from "./FeatureVisibility";
 import AdminUpdates from "./AdminUpdates";
 import AdminTestimonials from "./AdminTestimonials";
@@ -44,22 +45,7 @@ type Section =
   | "content";
 
 async function readError(response: Response): Promise<string> {
-  const body = await response.text();
-
-  if (!body) {
-    return `Request failed (${response.status}).`;
-  }
-
-  try {
-    const parsed = JSON.parse(body) as {
-      message?: string;
-      error?: string;
-    };
-
-    return parsed.message || parsed.error || body;
-  } catch {
-    return body;
-  }
+  return readFriendlyError(response);
 }
 
 function formatDate(value: string): string {

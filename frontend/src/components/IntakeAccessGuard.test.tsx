@@ -153,3 +153,4 @@ describe("IntakeAccessGuard", () => {
     expect(screen.queryByText("Intake form")).not.toBeInTheDocument();
   });
 });
+

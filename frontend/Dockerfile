@@ -7,7 +7,9 @@ RUN npm ci
 
 COPY . .
 
-ARG VITE_API_BASE_URL=/api
+# Optional build-time API host.
+# When empty, requests remain same-origin and pass through the gateway.
+ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 RUN npm run build

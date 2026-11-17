@@ -124,3 +124,115 @@ describe("ClientDashboard", () => {
     expect(localStorage.getItem("authToken")).toBeNull();
   });
 });
+
+describe("ClientDashboard notifications", () => {
+  beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  function stubWithPhone(phone: object | null, status: object | null = null) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/api/intake/status")) {
+          return status ? jsonResponse(status) : jsonResponse({}, false, 404);
+        }
+        if (url.includes("/api/auth/me")) return jsonResponse({ fullName: "Alex Lee" });
+        if (url.includes("/api/phone-verification/status")) {
+          return phone ? jsonResponse(phone) : jsonResponse({}, false, 500);
+        }
+        return jsonResponse([]);
+      })
+    );
+  }
+
+  const unverified = { phoneVerified: false, phoneNumber: null, pendingPhoneNumber: null };
+  const verified = { phoneVerified: true, phoneNumber: "+14165550100", pendingPhoneNumber: null };
+
+  async function openBell() {
+    await screen.findByRole("heading", { name: /welcome back, alex!/i });
+    await userEvent.click(screen.getByRole("button", { name: /^Notifications/ }));
+  }
+
+  it("shows how many new notifications there are on the bell", async () => {
+    stubWithPhone(unverified, { status: "IN_PROGRESS" });
+    renderApp("/dashboard", <ClientDashboard />);
+
+    expect(await screen.findByRole("button", { name: "Notifications, 2 new" })).toBeInTheDocument();
+  });
+
+  it("opens and closes the notification panel", async () => {
+    stubWithPhone(verified);
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+    const bell = screen.getByRole("button", { name: /^Notifications/ });
+    expect(bell).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close notifications" }));
+
+    expect(screen.queryByRole("heading", { name: "Notifications" })).not.toBeInTheDocument();
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("says everything is up to date when there is nothing new", async () => {
+    stubWithPhone(verified);
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+
+    expect(screen.getByRole("status")).toHaveTextContent(/all caught up/i);
+    expect(screen.getByRole("button", { name: "Notifications" })).toBeInTheDocument();
+  });
+
+  it("asks the client to verify their phone number", async () => {
+    stubWithPhone(unverified);
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+
+    expect(screen.getByText("Verify your phone number")).toBeInTheDocument();
+    expect(screen.getByText(/Phone verification is required before submitting a secure intake request/)).toBeInTheDocument();
+  });
+
+  it("opens the phone verification window from the notification", async () => {
+    stubWithPhone(unverified);
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+    await userEvent.click(screen.getByRole("button", { name: "Verify phone" }));
+
+    expect(screen.queryByRole("heading", { name: "Notifications" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("shows the intake request status as a notification", async () => {
+    stubWithPhone(verified, { status: "IN_PROGRESS" });
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+
+    expect(screen.getByText("Intake request: Under Review")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View request" })).toBeInTheDocument();
+  });
+
+  it("closes the panel when View request is chosen", async () => {
+    stubWithPhone(verified, { status: "IN_PROGRESS" });
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+    await userEvent.click(screen.getByRole("button", { name: "View request" }));
+
+    expect(screen.queryByRole("heading", { name: "Notifications" })).not.toBeInTheDocument();
+  });
+
+  it("does not ask for phone verification when the phone status cannot be loaded", async () => {
+    stubWithPhone(null);
+    renderApp("/dashboard", <ClientDashboard />);
+
+    await openBell();
+
+    expect(screen.queryByText("Verify your phone number")).not.toBeInTheDocument();
+  });
+});

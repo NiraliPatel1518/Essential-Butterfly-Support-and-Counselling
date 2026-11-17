@@ -157,7 +157,7 @@ describe("PhoneVerificationModal", () => {
 
     expect(await screen.findByLabelText("6-digit verification code")).toBeInTheDocument();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://localhost:8080/api/phone-verification/send");
+    expect(url).toBe("/api/phone-verification/send");
     expect(JSON.parse(init.body)).toEqual({ phoneNumber: "+14165551234" });
     expect(init.headers.Authorization).toBe("Bearer client.jwt.token");
     expect(screen.getByText("+14165551234")).toBeInTheDocument();
@@ -185,7 +185,7 @@ describe("PhoneVerificationModal", () => {
 
     await vi.waitFor(() => expect(onVerified).toHaveBeenCalledWith(PENDING));
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://localhost:8080/api/phone-verification/verify");
+    expect(url).toBe("/api/phone-verification/verify");
     expect(JSON.parse(init.body)).toEqual({ code: "123456" });
     expect(await screen.findByRole("status")).toHaveTextContent(/verified successfully/i);
   });
@@ -219,7 +219,7 @@ describe("PhoneVerificationModal", () => {
     await user.click(screen.getByRole("button", { name: "Resend code" }));
 
     expect(await screen.findByText("Resend code in 90s")).toBeInTheDocument();
-    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8080/api/phone-verification/resend");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/phone-verification/resend");
     expect(screen.getByRole("status")).toHaveTextContent("A new verification code has been sent.");
   });
 

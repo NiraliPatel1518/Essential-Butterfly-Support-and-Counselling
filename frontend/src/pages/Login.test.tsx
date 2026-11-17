@@ -99,7 +99,7 @@ describe("Client Login page", () => {
     await login("jane@mail.com", "Password123");
 
     // Assert: correct API, token saved, user redirected
-    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8080/api/auth/login");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/login");
     expect(localStorage.getItem("authToken")).toBe(clientToken);
     expect(await screen.findByText(/^Landed on/)).toHaveTextContent(
       "Landed on /client-dashboard"
@@ -173,7 +173,7 @@ describe("Admin Login page", () => {
 
     await startAdminLogin();
 
-    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8080/api/auth/login");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/login");
     expect(screen.getByText("a***@test.com")).toBeInTheDocument();
     expect(localStorage.getItem("adminToken")).toBeNull();
     expect(localStorage.getItem("authToken")).toBeNull();

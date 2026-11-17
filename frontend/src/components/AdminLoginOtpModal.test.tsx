@@ -86,7 +86,7 @@ describe("AdminLoginOtpModal", () => {
     await enterCode("123456");
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "http://localhost:8080/api/admin-auth/login-otp/verify"
+      "/api/admin-auth/login-otp/verify"
     );
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       challengeToken: "7.secret",
@@ -175,7 +175,7 @@ describe("AdminLoginOtpModal", () => {
       .click(screen.getByRole("button", { name: "Resend code" }));
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "http://localhost:8080/api/admin-auth/login-otp/resend"
+      "/api/admin-auth/login-otp/resend"
     );
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ challengeToken: "7.secret" });
     expect(await screen.findByRole("status")).toHaveTextContent(

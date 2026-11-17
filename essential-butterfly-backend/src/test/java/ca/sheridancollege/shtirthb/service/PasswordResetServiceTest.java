@@ -153,4 +153,70 @@ class PasswordResetServiceTest {
         verify(clients, never()).save(any());
         verify(admins, never()).save(any());
     }
+
+    @Test
+    void requestResetEmailsTheLinkToTheClient() {
+        ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");
+        when(clients.findByEmail("jane@mail.com")).thenReturn(Optional.of(client));
+        when(admins.findByEmail("jane@mail.com")).thenReturn(Optional.empty());
+
+        service.requestPasswordReset("jane@mail.com");
+
+        ArgumentCaptor<String> link = ArgumentCaptor.forClass(String.class);
+        verify(mailService).sendResetLink(eq("jane@mail.com"), link.capture(), eq(30));
+        assertTrue(link.getValue().startsWith("http://localhost:5173/reset-password?token="));
+    }
+
+    @Test
+    void theEmailedLinkMatchesTheTokenThatWasSaved() {
+        ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");
+        when(clients.findByEmail("jane@mail.com")).thenReturn(Optional.of(client));
+        when(admins.findByEmail("jane@mail.com")).thenReturn(Optional.empty());
+
+        service.requestPasswordReset("jane@mail.com");
+
+        ArgumentCaptor<PasswordResetToken> saved = ArgumentCaptor.forClass(PasswordResetToken.class);
+        verify(tokens).save(saved.capture());
+        ArgumentCaptor<String> link = ArgumentCaptor.forClass(String.class);
+        verify(mailService).sendResetLink(eq("jane@mail.com"), link.capture(), eq(30));
+        String rawToken = link.getValue().substring(link.getValue().indexOf("token=") + "token=".length());
+        assertEquals(hash(rawToken), saved.getValue().getTokenHash());
+    }
+
+    @Test
+    void requestResetEmailsTheLinkToTheAdmin() {
+        AdminUser admin = new AdminUser("Admin", "admin@mail.com", "OLD");
+        when(clients.findByEmail("admin@mail.com")).thenReturn(Optional.empty());
+        when(admins.findByEmail("admin@mail.com")).thenReturn(Optional.of(admin));
+
+        service.requestPasswordReset("admin@mail.com");
+
+        verify(mailService).sendResetLink(eq("admin@mail.com"), argThat(link -> link.contains("/reset-password?token=")), eq(30));
+    }
+
+    @Test
+    void requestResetSendsNoEmailForUnknownOrAmbiguousEmail() {
+        when(clients.findByEmail("unknown@mail.com")).thenReturn(Optional.empty());
+        when(admins.findByEmail("unknown@mail.com")).thenReturn(Optional.empty());
+        service.requestPasswordReset("unknown@mail.com");
+        ClientUser client = new ClientUser("Jane", "both@mail.com", "OLD");
+        AdminUser admin = new AdminUser("Admin", "both@mail.com", "OLD");
+        when(clients.findByEmail("both@mail.com")).thenReturn(Optional.of(client));
+        when(admins.findByEmail("both@mail.com")).thenReturn(Optional.of(admin));
+        service.requestPasswordReset("both@mail.com");
+
+        verifyNoInteractions(mailService);
+    }
+
+    @Test
+    void theTokenIsStillSavedWhenTheEmailCannotBeSent() {
+        ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");
+        when(clients.findByEmail("jane@mail.com")).thenReturn(Optional.of(client));
+        when(admins.findByEmail("jane@mail.com")).thenReturn(Optional.empty());
+        when(mailService.sendResetLink(any(), any(), anyInt())).thenReturn(false);
+
+        service.requestPasswordReset("jane@mail.com");
+
+        verify(tokens).save(any(PasswordResetToken.class));
+    }
 }

@@ -33,12 +33,13 @@ class PasswordResetServiceTest {
     @Mock private AdminUserRepository admins;
     @Mock private PasswordResetTokenRepository tokens;
     @Mock private PasswordEncoder encoder;
+    @Mock private PasswordResetMailService mailService;
 
     private PasswordResetService service;
 
     @BeforeEach
     void setUp() {
-        service = new PasswordResetService(clients, admins, tokens, encoder, "http://localhost:5173");
+        service = new PasswordResetService(clients, admins, tokens, encoder, mailService, "http://localhost:5173");
     }
 
     private static String hash(String value) {

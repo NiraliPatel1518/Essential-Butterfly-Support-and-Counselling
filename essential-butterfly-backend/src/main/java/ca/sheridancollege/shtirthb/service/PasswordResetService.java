@@ -28,6 +28,7 @@ public class PasswordResetService {
     private final AdminUserRepository adminUserRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetMailService mailService;
     private final String frontendBaseUrl;
 
     public PasswordResetService(
@@ -35,6 +36,7 @@ public class PasswordResetService {
             AdminUserRepository adminUserRepository,
             PasswordResetTokenRepository passwordResetTokenRepository,
             PasswordEncoder passwordEncoder,
+            PasswordResetMailService mailService,
             @Value("${app.frontend-base-url:http://localhost:5173}")
             String frontendBaseUrl) {
 
@@ -42,6 +44,7 @@ public class PasswordResetService {
         this.adminUserRepository = adminUserRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.mailService = mailService;
         this.frontendBaseUrl = frontendBaseUrl;
     }
 
@@ -115,16 +118,11 @@ public class PasswordResetService {
                 + "/reset-password?token="
                 + token;
 
-        // Development only: replace console output with email delivery
-        // before deploying the application.
-        System.out.println();
-        System.out.println("======================================");
-        System.out.println("PASSWORD RESET REQUEST");
-        System.out.println("User type: " + resetToken.getUserType());
-        System.out.println("Reset link: " + resetLink);
-        System.out.println("Expires in: " + TOKEN_MINUTES + " minutes");
-        System.out.println("======================================");
-        System.out.println();
+        String recipient = admin != null
+                ? admin.getEmail()
+                : client.getEmail();
+
+        mailService.sendResetLink(recipient, resetLink, TOKEN_MINUTES);
     }
 
     @Transactional

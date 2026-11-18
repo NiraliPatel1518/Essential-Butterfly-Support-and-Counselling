@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiUrl } from "../api/api";
 import "./PhoneVerificationModal.css";
 
@@ -52,6 +52,10 @@ export default function PhoneVerificationModal({
   const [busy, setBusy] = useState(false);
   const [resendCount, setResendCount] = useState(0);
   const [cooldown, setCooldown] = useState(0);
+  const dialogRef = useRef<HTMLElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const codeInputRef = useRef<HTMLInputElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -77,6 +81,54 @@ export default function PhoneVerificationModal({
   }, [isOpen, currentPhoneNumber, pendingPhoneNumber]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      window.requestAnimationFrame(() => previouslyFocused.current?.focus());
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      (stage === "code" ? codeInputRef.current : phoneInputRef.current)?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isOpen, stage]);
+
+  useEffect(() => {
     if (!isOpen || cooldown <= 0) return;
 
     const timer = window.setTimeout(() => {
@@ -99,8 +151,14 @@ export default function PhoneVerificationModal({
     setError("");
     setMessage("");
 
-    const normalizedPhone =
-      phoneNumber.trim().replace(/[\s()-]/g, "");
+    const digits = phoneNumber.replace(/\D/g, "");
+    const normalizedPhone = digits.length === 10
+      ? `+1${digits}`
+      : phoneNumber.trim().startsWith("+")
+        ? `+${digits}`
+        : digits.length === 11 && digits.startsWith("1")
+          ? `+${digits}`
+          : phoneNumber.trim();
 
     if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
 
@@ -310,6 +368,7 @@ export default function PhoneVerificationModal({
     <div className="phone-verification-backdrop">
 
       <section
+        ref={dialogRef}
         className="phone-verification-dialog"
         role="dialog"
         aria-modal="true"
@@ -368,6 +427,7 @@ export default function PhoneVerificationModal({
             </label>
 
             <input
+              ref={phoneInputRef}
               id="phone-verification-number"
               type="tel"
               autoComplete="tel"
@@ -376,14 +436,14 @@ export default function PhoneVerificationModal({
               onChange={(event) =>
                 setPhoneNumber(event.target.value)
               }
-              placeholder="+14165551234"
-              maxLength={16}
+              placeholder="Canada: 416 555 1234"
+              maxLength={24}
               required
               disabled={busy}
             />
 
             <p className="phone-verification-hint">
-              Include the country code. For example, +1 for Canada or the United States.
+              Canadian numbers may be entered as 416 555 1234. Spaces, dashes and brackets are accepted.
             </p>
 
             {error && (
@@ -429,6 +489,7 @@ export default function PhoneVerificationModal({
             </label>
 
             <input
+              ref={codeInputRef}
               id="phone-verification-code"
               type="text"
               inputMode="numeric"
@@ -469,7 +530,7 @@ export default function PhoneVerificationModal({
             <button
               type="submit"
               className="phone-verification-primary"
-              disabled={busy}
+              disabled={busy || code.length !== 6}
             >
               {busy
                 ? "Verifying..."

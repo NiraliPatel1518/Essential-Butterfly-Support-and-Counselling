@@ -30,8 +30,24 @@ export function Accessibility() {
   );
 }
 
+export function Terms() {
+  return (
+    <main className="information-page">
+      <h1>Terms of Use</h1>
+      <p>By using this website, you agree to use its information and services lawfully and respectfully. Website information is provided for general support and does not replace emergency, medical, legal or other professional advice.</p>
+      <h2>Accounts and information</h2>
+      <p>You are responsible for keeping your sign-in details private and for providing accurate information. Do not submit another person’s private information without their permission.</p>
+      <h2>Appointments and messages</h2>
+      <p>Submitting a form or requesting an appointment does not guarantee immediate service. Essential Butterfly may contact you to clarify, accept, reschedule or decline a request.</p>
+      <h2>Questions</h2>
+      <p>If you have a question about these terms, please contact Casey.</p>
+      <Link to="/contact">Contact Casey</Link>
+    </main>
+  );
+}
+
 export function Sitemap() {
-  const links = [["Home","/"],["About Casey","/about"],["Services","/services"],["Contact","/contact"],["Resource Library","/resources"],["Secure Intake","/intake"],["Sign In","/login"],["Privacy","/privacy"],["Accessibility","/accessibility"]];
+  const links = [["Home","/"],["About Casey","/about"],["Services","/services"],["Contact","/contact"],["Resource Library","/resources"],["Appointments","/appointments"],["Secure Intake","/intake"],["Sign In","/login"],["Privacy","/privacy"],["Terms of Use","/terms"],["Accessibility","/accessibility"]];
   return (
     <main className="information-page">
       <h1>Site map</h1>

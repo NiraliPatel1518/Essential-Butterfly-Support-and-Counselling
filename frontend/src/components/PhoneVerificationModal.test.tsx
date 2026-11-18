@@ -141,11 +141,22 @@ describe("PhoneVerificationModal", () => {
     const fetchMock = stubFetch();
     const { user } = setup();
 
-    await user.type(screen.getByLabelText("Phone number"), "4165551234");
+    await user.type(screen.getByLabelText("Phone number"), "123");
     await user.click(screen.getByRole("button", { name: "Send verification code" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/international format/i);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("accepts a 10-digit Canadian number and adds the country code", async () => {
+    const fetchMock = stubFetch(reply(true, "A verification code has been sent."));
+    const { user } = setup();
+
+    await user.type(screen.getByLabelText("Phone number"), "416 555 1234");
+    await user.click(screen.getByRole("button", { name: "Send verification code" }));
+
+    await screen.findByLabelText("6-digit verification code");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ phoneNumber: "+14165551234" });
   });
 
   test("requests a code for the cleaned-up number with the client token", async () => {

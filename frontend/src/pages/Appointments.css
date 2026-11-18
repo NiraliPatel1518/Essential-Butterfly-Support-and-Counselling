@@ -1,9 +1,97 @@
 .appt-page {
-  width: min(960px, calc(100% - 32px));
+  width: min(1120px, calc(100% - 32px));
   min-height: 55vh;
   margin: 0 auto;
   padding: clamp(40px, 7vw, 88px) 0;
   color: #302044;
+}
+
+.appt-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+  margin-bottom: 2.25rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid #ded3e9;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, #fff, #f7effc);
+  box-shadow: 0 18px 45px rgba(50, 20, 95, 0.08);
+}
+
+.appt-header-copy {
+  min-width: 0;
+}
+
+.appt-header-visual {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+}
+
+.appt-header-visual img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 1.15rem;
+}
+
+.appt-header-visual figcaption {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  color: #fff;
+  background: rgba(38, 17, 67, 0.88);
+  font-weight: 700;
+  text-align: center;
+}
+
+.appt-how-it-works {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: appointment-step;
+}
+
+.appt-how-it-works li {
+  counter-increment: appointment-step;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid #ded3e9;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.appt-how-it-works li::before {
+  content: counter(appointment-step);
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-bottom: 0.4rem;
+  border-radius: 50%;
+  color: #fff;
+  background: #54248f;
+  font-weight: 800;
+}
+
+.appt-how-it-works strong,
+.appt-how-it-works span {
+  display: block;
+}
+
+.appt-how-it-works span {
+  margin-top: 0.2rem;
+  color: #554766;
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
 .appt-eyebrow {
@@ -225,5 +313,28 @@
 
   .appt-slot {
     width: 100%;
+  }
+}
+
+@media (max-width: 820px) {
+  .appt-header {
+    grid-template-columns: 1fr;
+  }
+
+  .appt-header-visual {
+    order: -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .appt-how-it-works {
+    grid-template-columns: 1fr;
+  }
+
+  .appt-header-visual figcaption {
+    position: static;
+    margin-top: 0.5rem;
+    color: #302044;
+    background: transparent;
   }
 }

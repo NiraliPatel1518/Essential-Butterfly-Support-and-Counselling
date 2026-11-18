@@ -2,12 +2,16 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { apiUrl } from "../api/api";
+import { networkErrorMessage, readFriendlyError } from "../api/errors";
 import "./Contact.css";
+
+const MESSAGE_LIMIT = 1500;
 
 function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -23,7 +27,7 @@ function Contact() {
       fullName: String(formData.get("fullName") || ""),
       email: String(formData.get("email") || "").trim().toLowerCase(),
       subject: String(formData.get("subject") || ""),
-      message: String(formData.get("message") || ""),
+      message: String(formData.get("message") || "").trim(),
     };
 
     const emailPattern =
@@ -46,21 +50,21 @@ function Contact() {
         body: JSON.stringify(requestData),
       });
 
-      const responseText = await response.text();
-
       if (!response.ok) {
-        throw new Error(
-          responseText || "Unable to send your message."
-        );
+        throw new Error(await readFriendlyError(
+          response,
+          "We could not send your message. Please review the form and try again."
+        ));
       }
 
       setSubmitted(true);
       form.reset();
+      setMessage("");
     } catch (err) {
       setError(
         err instanceof Error
-          ? err.message
-          : "Unable to send your message. Please try again."
+          ? networkErrorMessage(err)
+          : "We could not send your message. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -189,9 +193,13 @@ function Contact() {
               Fill out the form below and we’ll get back to you as soon as
               possible.
             </p>
+            <p className="contact-emergency-note">
+              <strong>This form is not monitored for emergencies.</strong>{" "}
+              If anyone is in immediate danger, call 911. For urgent mental-health support in Canada, call or text 988.
+            </p>
           </div>
 
-          <form className="contact-form" onSubmit={handleSubmit}>
+          <form className="contact-form" method="post" onSubmit={handleSubmit}>
             <div className="contact-form-row">
               <div className="contact-field">
                 <label htmlFor="contact-full-name">
@@ -245,6 +253,10 @@ function Contact() {
                   <option value="respite">Respite Support</option>
                   <option value="counselling">Counselling</option>
                   <option value="coaching">Coaching</option>
+                  <option value="tutoring-assistive-tech">Tutoring and Assistive Technology</option>
+                  <option value="social-skills">Social Skills Support</option>
+                  <option value="booking-help">Booking Help</option>
+                  <option value="accessibility-request">Accessibility Request</option>
                   <option value="other">Other</option>
                 </select>
 
@@ -273,13 +285,20 @@ function Contact() {
                 name="message"
                 placeholder="Write your message here..."
                 rows={5}
+                maxLength={MESSAGE_LIMIT}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                aria-describedby="contact-message-count"
                 required
               ></textarea>
+              <p id="contact-message-count" className="contact-character-count" aria-live="polite">
+                {message.length} of {MESSAGE_LIMIT} characters
+              </p>
             </div>
 
             {submitted && (
               <p className="contact-success" role="status" aria-live="polite">
-                Thank you. Your message has been received.
+                Thank you. Your message has been received. Please keep this page as confirmation that it was sent successfully.
               </p>
             )}
 

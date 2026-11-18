@@ -213,6 +213,22 @@
   line-height: 1.5;
 }
 
+.contact-form-header .contact-emergency-note {
+  margin-top: 0;
+  padding: 0.85rem 1rem;
+  border-left: 4px solid #8a1f3d;
+  border-radius: 0.5rem;
+  color: #4f1930;
+  background: #fff3f6;
+}
+
+.contact-character-count {
+  margin: 0.4rem 0 0;
+  color: #554766;
+  font-size: 0.875rem;
+  text-align: right;
+}
+
 .contact-form {
   width: 100%;
 }

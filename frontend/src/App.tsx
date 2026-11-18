@@ -45,6 +45,7 @@ import {
   Accessibility,
   Privacy,
   Sitemap,
+  Terms,
 } from "./pages/InformationPages";
 
 import { PublicFeatureProvider } from "./context/PublicFeatureContext";
@@ -74,6 +75,7 @@ const pageTitles: Record<string, string> = {
   "/client-dashboard": "Client Dashboard",
   "/my-bookings": "My Bookings",
   "/privacy": "Privacy",
+  "/terms": "Terms of Use",
   "/accessibility": "Accessibility",
   "/sitemap": "Site Map",
 };
@@ -353,6 +355,7 @@ function AppLayout() {
 
           {/* Information pages */}
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/accessibility" element={<Accessibility />} />
           <Route path="/sitemap" element={<Sitemap />} />
 

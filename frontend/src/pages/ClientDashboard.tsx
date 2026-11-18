@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import { networkErrorMessage, readFriendlyError } from "../api/errors";
 import "./ClientDashboard.css";
@@ -84,6 +84,7 @@ const navigationItems: {
 function ClientDashboard() {
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [intakeStatus, setIntakeStatus] =
     useState<IntakeStatus | null>(null);
@@ -108,6 +109,45 @@ function ClientDashboard() {
 
   const [notificationsOpen, setNotificationsOpen] =
     useState(false);
+
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
+  const notificationPanelRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen && !notificationsOpen) return;
+
+    const closePanels = (event: KeyboardEvent | MouseEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+
+      if (event instanceof MouseEvent) {
+        const target = event.target as Node;
+        const insideAccount = accountMenuRef.current?.contains(target) || accountButtonRef.current?.contains(target);
+        const insideNotifications = notificationPanelRef.current?.contains(target) || notificationButtonRef.current?.contains(target);
+        if (insideAccount || insideNotifications) return;
+      }
+
+      const returnToAccount = accountMenuOpen;
+      const returnToNotifications = notificationsOpen;
+      setAccountMenuOpen(false);
+      setNotificationsOpen(false);
+
+      if (event instanceof KeyboardEvent) {
+        window.requestAnimationFrame(() => {
+          if (returnToAccount) accountButtonRef.current?.focus();
+          else if (returnToNotifications) notificationButtonRef.current?.focus();
+        });
+      }
+    };
+
+    document.addEventListener("keydown", closePanels);
+    document.addEventListener("mousedown", closePanels);
+    return () => {
+      document.removeEventListener("keydown", closePanels);
+      document.removeEventListener("mousedown", closePanels);
+    };
+  }, [accountMenuOpen, notificationsOpen]);
 
   const loadStatus = async () => {
 
@@ -356,12 +396,13 @@ function ClientDashboard() {
           aria-label="Essential Butterfly home"
         >
 
-          <span
+          <img
             className="client-brand-butterfly"
-            aria-hidden="true"
-          >
-            🦋
-          </span>
+            src="/images/butterfly-mark.png"
+            alt=""
+            width="52"
+            height="42"
+          />
 
           <span className="client-brand-name">
             <strong>Essential Butterfly</strong>
@@ -388,6 +429,7 @@ function ClientDashboard() {
         <div className="client-header-actions">
 
           <button
+            ref={notificationButtonRef}
             type="button"
             className="client-notification-button"
             aria-label={`Notifications${notifications.length ? `, ${notifications.length} new` : ""}`}
@@ -406,6 +448,7 @@ function ClientDashboard() {
 
           {notificationsOpen && (
             <section
+              ref={notificationPanelRef}
               id="client-notification-panel"
               className="client-notification-panel"
               aria-labelledby="client-notification-title"
@@ -457,15 +500,18 @@ function ClientDashboard() {
           )}
 
           <button
+            ref={accountButtonRef}
             type="button"
             className="client-account-button"
+            aria-label="My Account menu"
+            aria-haspopup="menu"
             aria-expanded={accountMenuOpen}
             onClick={() =>
               setAccountMenuOpen((open) => !open)
             }
           >
 
-            <span className="client-avatar">C</span>
+            <span className="client-avatar">{firstName ? firstName.charAt(0).toUpperCase() : "A"}</span>
 
             <span>My Account</span>
 
@@ -483,7 +529,7 @@ function ClientDashboard() {
 
           {accountMenuOpen && (
 
-            <div className="client-account-menu">
+            <div ref={accountMenuRef} className="client-account-menu" role="menu">
 
               <button
                 type="button"
@@ -496,7 +542,7 @@ function ClientDashboard() {
                 }}
               >
 
-                <span>Phone verified</span>
+                <span>{phoneStatus?.phoneVerified ? "Phone verified" : "Verify your phone"}</span>
 
                 <span
                   className={
@@ -605,6 +651,12 @@ function ClientDashboard() {
         </aside>
 
         <div className="client-portal-content">
+
+          {searchParams.get("accessDenied") === "true" && (
+            <p className="client-dashboard-alert" role="alert">
+              You do not have access to that page. You have been returned to your client dashboard.
+            </p>
+          )}
 
           <section
             id="client-overview"

@@ -1,6 +1,6 @@
 
 import type { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 import AdminAccountSettings from "./AdminAccountSettings";
 
@@ -77,6 +77,8 @@ export default function ProtectedRoute({
   allowedRole,
   children,
 }: ProtectedRouteProps) {
+  const location = useLocation();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   const adminToken =
     localStorage.getItem("adminToken");
@@ -121,7 +123,7 @@ export default function ProtectedRoute({
   if (validAdmin) {
     return (
       <Navigate
-        to="/admin-dashboard"
+        to="/admin-dashboard?accessDenied=true"
         replace
       />
     );
@@ -130,7 +132,7 @@ export default function ProtectedRoute({
   if (validClient) {
     return (
       <Navigate
-        to="/client-dashboard"
+        to="/client-dashboard?accessDenied=true"
         replace
       />
     );
@@ -144,8 +146,8 @@ export default function ProtectedRoute({
     <Navigate
       to={
         hadInvalidToken
-          ? "/login?sessionExpired=true"
-          : "/login"
+          ? `/login?sessionExpired=true&returnTo=${encodeURIComponent(returnTo)}`
+          : `/login?returnTo=${encodeURIComponent(returnTo)}`
       }
       replace
     />

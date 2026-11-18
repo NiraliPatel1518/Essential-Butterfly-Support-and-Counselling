@@ -46,8 +46,9 @@
 }
 
 .client-brand-butterfly {
-  font-size: 37px;
-  line-height: 1;
+  width: 52px;
+  height: 42px;
+  object-fit: contain;
 }
 
 .client-brand-name {
@@ -57,7 +58,7 @@
 }
 
 .client-brand-name strong {
-  font-family: Georgia, serif;
+  font-family: inherit;
   font-size: 21px;
   letter-spacing: -0.5px;
 }
@@ -1038,7 +1039,8 @@
   }
 
   .client-brand-butterfly {
-    font-size: 29px;
+    width: 42px;
+    height: 34px;
   }
 
   .client-brand-name strong {
@@ -1051,8 +1053,7 @@
 
   .client-portal-divider,
   .client-portal-label,
-  .client-account-button > span:not(.client-avatar),
-  .client-notification-button {
+  .client-account-button > span:not(.client-avatar) {
     display: none;
   }
 

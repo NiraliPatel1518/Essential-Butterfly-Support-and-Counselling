@@ -61,7 +61,7 @@ function Footer() {
 
       <div className="footer-bottom">
         <p>© 2026 Essential Butterfly Support &amp; Counselling. All rights reserved.</p>
-        <nav aria-label="Legal navigation"><Link to="/privacy">Privacy Policy</Link><Link to="/accessibility">Accessibility</Link><Link to="/sitemap">Site Map</Link></nav>
+        <nav aria-label="Legal navigation"><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms of Use</Link><Link to="/accessibility">Accessibility</Link><Link to="/sitemap">Site Map</Link></nav>
       </div>
     </footer>
   );

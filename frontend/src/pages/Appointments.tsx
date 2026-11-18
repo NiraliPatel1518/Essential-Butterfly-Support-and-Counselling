@@ -228,14 +228,30 @@ function Appointments() {
   return (
     <main className="appt-page">
       <header className="appt-header">
-        <p className="appt-eyebrow">ESSENTIAL BUTTERFLY</p>
-        <h1>Available appointments</h1>
-        <p>
-          Choose a time that suits you and send a booking request. Casey
-          reviews every request and you will see the answer on your
-          dashboard. If you are not signed in yet, you will be asked to create
-          an account first.
-        </p>
+        <div className="appt-header-copy">
+          <p className="appt-eyebrow">A SIMPLE NEXT STEP</p>
+          <h1>Available appointments</h1>
+          <p>
+            Choose a time that suits you and send a booking request. Casey
+            reviews every request and you will see the answer on your
+            dashboard. If you are not signed in yet, you will be asked to create
+            an account first.
+          </p>
+          <ol className="appt-how-it-works" aria-label="How appointment booking works">
+            <li><strong>Choose</strong><span>Select an available time.</span></li>
+            <li><strong>Request</strong><span>Confirm your account details.</span></li>
+            <li><strong>Review</strong><span>Follow the status in My Bookings.</span></li>
+          </ol>
+        </div>
+        <figure className="appt-header-visual">
+          <img
+            src="/images/support-mountain.jpg"
+            alt="Peaceful mountain landscape representing a calm path forward"
+            width="720"
+            height="480"
+          />
+          <figcaption>Support at a pace that works for you.</figcaption>
+        </figure>
       </header>
 
       <div role="status" aria-live="polite" className="sr-only">

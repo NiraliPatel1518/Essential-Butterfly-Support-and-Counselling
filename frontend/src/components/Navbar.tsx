@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Link,
   NavLink,
@@ -25,6 +25,8 @@ function Navbar() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [, setAuthVersion] = useState(0);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const firstMenuLinkRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -35,11 +37,20 @@ function Navbar() {
     if (!menuOpen) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
     };
 
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (menuOpen) {
+      window.requestAnimationFrame(() => firstMenuLinkRef.current?.focus());
+    }
   }, [menuOpen]);
 
   useEffect(() => {
@@ -101,6 +112,7 @@ function Navbar() {
         </Link>
 
         <button
+          ref={menuButtonRef}
           type="button"
           className="menu-button"
           aria-expanded={menuOpen}
@@ -117,6 +129,7 @@ function Navbar() {
           <nav id="primary-navigation" aria-label="Main navigation">
             {navigation.map((item) => (
               <NavLink
+                ref={item.to === "/" ? firstMenuLinkRef : undefined}
                 key={item.to}
                 to={item.to}
                 end={item.end}
@@ -134,10 +147,10 @@ function Navbar() {
                 to="/appointments"
                 onClick={() => setMenuOpen(false)}
                 className={({ isActive }) =>
-                  `nav-link${isActive ? " active" : ""}`
+                  `nav-link book-time-link${isActive ? " active" : ""}`
                 }
               >
-                Appointments
+                Book a Time
               </NavLink>
             )}
 
@@ -186,7 +199,7 @@ function Navbar() {
                   Sign out
                 </button>
               </>
-            ) : (
+            ) : location.pathname !== "/login" ? (
               <Link
                 to="/login"
                 className="login-button"
@@ -194,7 +207,7 @@ function Navbar() {
               >
                 Sign in
               </Link>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

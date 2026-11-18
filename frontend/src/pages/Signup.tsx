@@ -436,6 +436,7 @@ function Signup() {
 
           <form
             className="signup-form"
+            method="post"
             onSubmit={handleSubmit}
           >
             <div className="signup-field">
@@ -551,6 +552,8 @@ function Signup() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a password"
                   autoComplete="new-password"
+                  minLength={8}
+                  aria-describedby="signup-password-help"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
@@ -566,6 +569,9 @@ function Signup() {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
+              <p id="signup-password-help" className="signup-field-help">
+                Use at least 8 characters. A longer, unique password is safer.
+              </p>
             </div>
 
             <div className="signup-field">
@@ -603,6 +609,7 @@ function Signup() {
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
                   autoComplete="new-password"
+                  minLength={8}
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   required
@@ -635,13 +642,13 @@ function Signup() {
 
               <span className="signup-terms-text">
                 I agree to the{" "}
-                <a href="#privacy">
+                <Link to="/privacy" target="_blank" rel="noreferrer">
                   Privacy Policy
-                </a>{" "}
+                </Link>{" "}
                 and{" "}
-                <a href="#terms">
+                <Link to="/terms" target="_blank" rel="noreferrer">
                   Terms of Use
-                </a>
+                </Link>
               </span>
             </label>
 

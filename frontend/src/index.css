@@ -166,7 +166,8 @@ textarea {
 }
 
 #main-content:focus {
-  outline: none;
+  outline: 3px solid #ffbf00;
+  outline-offset: -3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

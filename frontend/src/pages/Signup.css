@@ -310,6 +310,13 @@
   line-height: 1.45;
 }
 
+.signup-field-help {
+  margin: 0.45rem 0 0;
+  color: #554766;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 
 /* =========================================================
    SIGNUP CARD

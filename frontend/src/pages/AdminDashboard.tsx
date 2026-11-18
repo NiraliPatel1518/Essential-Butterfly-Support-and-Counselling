@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiUrl } from "../api/api";
 import { readFriendlyError } from "../api/errors";
@@ -7,6 +7,10 @@ import AdminUpdates from "./AdminUpdates";
 import AdminTestimonials from "./AdminTestimonials";
 import AdminNewsletter from "./AdminNewsletter";
 import AdminContent from "./AdminContent";
+import {
+  contactSubjectLabel,
+  formatServerDateTime,
+} from "../utils/displayFormat";
 import "./Dashboard.css";
 
 type ContactMessage = {
@@ -51,11 +55,7 @@ async function readError(response: Response): Promise<string> {
 function formatDate(value: string): string {
   if (!value) return "Date unavailable";
 
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString();
+  return formatServerDateTime(value);
 }
 
 function statusLabel(status: string): string {
@@ -79,6 +79,29 @@ function AdminDashboard() {
 
   const [selectedContact, setSelectedContact] =
     useState<ContactMessage | null>(null);
+
+  // The message detail opens below a long table. Bring it into view, move
+  // focus to its heading (so keyboard and screen-reader users know it
+  // opened), and give focus back to the button that opened it on close.
+  const contactDetailRef = useRef<HTMLElement | null>(null);
+  const contactHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const contactOpenerRef = useRef<HTMLElement | null>(null);
+  const selectedContactId = selectedContact?.id ?? null;
+
+  useEffect(() => {
+    if (selectedContactId === null) return;
+
+    contactDetailRef.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
+    contactHeadingRef.current?.focus({ preventScroll: true });
+  }, [selectedContactId]);
+
+  const closeContact = () => {
+    setSelectedContact(null);
+    contactOpenerRef.current?.focus();
+  };
 
   const [selectedIntake, setSelectedIntake] =
     useState<IntakeSubmission | null>(null);
@@ -546,7 +569,7 @@ function AdminDashboard() {
                     {contacts.map((message) => (
                       <tr key={message.id}>
                         <td>{message.fullName}</td>
-                        <td>{message.subject}</td>
+                        <td>{contactSubjectLabel(message.subject)}</td>
                         <td>{formatDate(message.createdAt)}</td>
                         <td>
                           <span
@@ -559,7 +582,10 @@ function AdminDashboard() {
                           <button
                             type="button"
                             className="dashboard-text-button"
-                            onClick={() => void openContact(message.id)}
+                            onClick={(event) => {
+                              contactOpenerRef.current = event.currentTarget;
+                              void openContact(message.id);
+                            }}
                           >
                             View message
                           </button>
@@ -573,21 +599,26 @@ function AdminDashboard() {
 
             {selectedContact && (
               <section
+                ref={contactDetailRef}
                 className="dashboard-detail"
                 aria-labelledby="contact-detail-title"
               >
                 <div className="dashboard-detail-header">
                   <div>
                     <p className="dashboard-eyebrow">CONTACT MESSAGE</p>
-                    <h3 id="contact-detail-title">
-                      {selectedContact.subject}
+                    <h3
+                      id="contact-detail-title"
+                      ref={contactHeadingRef}
+                      tabIndex={-1}
+                    >
+                      {contactSubjectLabel(selectedContact.subject)}
                     </h3>
                   </div>
 
                   <button
                     type="button"
                     className="dashboard-close"
-                    onClick={() => setSelectedContact(null)}
+                    onClick={closeContact}
                   >
                     Close
                   </button>

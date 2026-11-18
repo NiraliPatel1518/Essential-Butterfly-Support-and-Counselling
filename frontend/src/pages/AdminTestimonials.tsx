@@ -1,6 +1,7 @@
 import { useCallback,useEffect,useState } from "react";
 import { apiUrl } from "../api/api";
 import { readFriendlyError } from "../api/errors";
+import { formatServerDateTime } from "../utils/displayFormat";
 import "./TestimonialCards.css";
 type Item={id:number;displayName:string;content:string;photos:string[];status:string;publicationConsent:boolean;displayOnPublic:boolean;featuredOnHome:boolean;createdAt:string;ownerEmail:string|null};
 const token=()=>localStorage.getItem("adminToken")||"";
@@ -16,8 +17,8 @@ export default function AdminTestimonials(){
  {error&&<p role="alert" className="dashboard-alert dashboard-alert-error">{error}</p>}
  {pending.length===0&&<p className="testimonial-muted">No pending testimonials.</p>}
  {items.map(item=><article key={item.id} className="dashboard-detail" style={{marginBottom:18}}>
-  <div className="dashboard-detail-header"><div><p className="dashboard-eyebrow">{item.status} · {new Date(item.createdAt).toLocaleString()}</p><h3>{item.displayName}</h3><small>{item.ownerEmail}</small></div>
-   {item.status==="PENDING"&&<div className="testimonial-actions"><button disabled={busy} className="testimonial-primary" onClick={()=>void action(item.id,"approve")}>Approve</button><button disabled={busy} onClick={()=>void action(item.id,"reject")}>Reject</button></div>}</div>
+  <div className="dashboard-detail-header"><div><p className="dashboard-eyebrow">{item.status} · {formatServerDateTime(item.createdAt)}</p><h3>{item.displayName}</h3><small>{item.ownerEmail}</small><p className="testimonial-muted" style={{margin:"6px 0 0"}}>{item.publicationConsent?"✓ Client gave permission to publish this testimonial.":"✗ No permission to publish was given. This cannot be approved."}</p></div>
+   {item.status==="PENDING"&&<div className="testimonial-actions"><button disabled={busy||!item.publicationConsent} className="testimonial-primary" onClick={()=>void action(item.id,"approve")}>Approve</button><button disabled={busy} onClick={()=>{if(window.confirm("Reject this testimonial?"))void action(item.id,"reject");}}>Reject</button></div>}</div>
   <p style={{whiteSpace:"pre-wrap"}}>{item.content}</p>
   {item.photos?.length>0&&<div className="testimonial-grid">{item.photos.map((p,i)=><img key={i} src={p} alt={`Customer photo ${i+1}`} style={{width:"100%",height:110,objectFit:"cover",borderRadius:10}}/>)}</div>}
   {item.status==="APPROVED"&&<div className="testimonial-actions" style={{marginTop:14}}>

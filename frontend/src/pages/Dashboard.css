@@ -107,6 +107,7 @@ a.dashboard-refresh {
 
 .dashboard-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   border-bottom: 1px solid #e5dce9;
   margin-bottom: 28px;

@@ -330,7 +330,7 @@ function FeatureVisibility() {
 
                   <label className="feature-switch">
                     <span className="sr-only">
-                      {feature.enabled ? "Hide" : "Show"} {definition.label}
+                      Show {definition.label} on the public website
                     </span>
 
                     <input

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchAuditLog, type AuditEntry } from "../api/contentApi";
 import { useAdminSession } from "../hooks/useAdminSession";
 import "./AdminContent.css";
+import { formatServerDateTime } from "../utils/displayFormat";
 
 const ACTION_LABELS: Record<string, string> = {
   CONTENT_DRAFT_SAVED: "Page draft saved",
@@ -33,9 +34,7 @@ function summarize(details: string): string {
 }
 
 function formatTime(value: string): string {
-  const date = new Date(value.replace(" ", "T"));
-
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  return formatServerDateTime(value);
 }
 
 function AdminContentActivity() {

@@ -831,7 +831,9 @@ function Signup() {
 
                   <button
                     type="submit"
-                    className="verification-modal-submit"
+                    className={`verification-modal-submit${
+                      verificationCode.length < 6 ? " is-incomplete" : ""
+                    }`}
                     disabled={verificationLoading}
                   >
                     {verificationLoading ? "Verifying..." : "Verify Email"}

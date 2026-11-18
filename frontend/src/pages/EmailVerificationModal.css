@@ -291,3 +291,8 @@
     transition: none;
   }
 }
+/* Dull until all 6 digits are entered, then bright. The button stays
+   clickable so an incomplete code still gets a clear error message. */
+.verification-modal-submit.is-incomplete {
+  opacity: 0.6;
+}

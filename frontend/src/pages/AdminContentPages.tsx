@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatServerDateTime } from "../utils/displayFormat";
 import {
   ApiError,
   fetchAdminPages,
@@ -34,9 +35,7 @@ const draftKey = (key: ContentPageKey) => `page:${key}`;
 function formatDate(value: string | null): string {
   if (!value) return "";
 
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  return formatServerDateTime(value);
 }
 
 // What the editor shows first: the draft, else the live page, else the

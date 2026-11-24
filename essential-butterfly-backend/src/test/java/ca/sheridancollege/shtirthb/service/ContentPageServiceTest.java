@@ -87,6 +87,11 @@ class ContentPageServiceTest {
 
     // ------------------------------------------------------- public reading
 
+    /*
+     * Checks: The public page returns the published title and body.
+     * How:    Mockito fake repository. The about page is published. The result has the key, title,
+     *   body and a published date.
+     */
     @Test
     void getPublished_returnsThePublishedPage() {
         about.publish("About Casey", BODY_V1);
@@ -101,6 +106,10 @@ class ContentPageServiceTest {
         assertNotNull(result.get().publishedAt());
     }
 
+    /*
+     * Checks: A page that was never published returns nothing.
+     * How:    The page only has a draft. The result is empty.
+     */
     @Test
     void getPublished_returnsNothing_whenThePageWasNeverPublished() {
         about.saveDraft("Draft title", BODY_V1);
@@ -109,6 +118,11 @@ class ContentPageServiceTest {
         assertTrue(service.getPublished("about").isEmpty());
     }
 
+    /*
+     * Checks: A saved draft never shows to visitors.
+     * How:    The page is published as v1, then a draft v2 is saved. The public result still has the
+     *   live title and body (v1).
+     */
     @Test
     void getPublished_neverShowsTheDraft_afterAChangeWasSavedAsDraft() {
         about.publish("Live title", BODY_V1);
@@ -121,6 +135,10 @@ class ContentPageServiceTest {
         assertEquals(BODY_V1, result.body());
     }
 
+    /*
+     * Checks: An unknown page returns nothing.
+     * How:    getPublished("missing") is empty.
+     */
     @Test
     void getPublished_returnsNothing_whenThePageDoesNotExist() {
         when(pages.findByPageKey("missing")).thenReturn(Optional.empty());
@@ -128,6 +146,10 @@ class ContentPageServiceTest {
         assertTrue(service.getPublished("missing").isEmpty());
     }
 
+    /*
+     * Checks: Capital letters and spaces in the page key are ignored.
+     * How:    " ABOUT " finds the page.
+     */
     @Test
     void getPublished_ignoresCapitalLettersAndSpacesInThePageKey() {
         about.publish("About Casey", BODY_V1);
@@ -136,6 +158,10 @@ class ContentPageServiceTest {
         assertTrue(service.getPublished("  ABOUT ").isPresent());
     }
 
+    /*
+     * Checks: A null page key returns nothing.
+     * How:    getPublished(null) is empty.
+     */
     @Test
     void getPublished_returnsNothing_whenThePageKeyIsNull() {
         when(pages.findByPageKey("")).thenReturn(Optional.empty());
@@ -145,6 +171,11 @@ class ContentPageServiceTest {
 
     // ------------------------------------------------------- admin reading
 
+    /*
+     * Checks: The admin list gives each page a readable label.
+     * How:    There are 4 pages. The labels are Service page, About and Credentials page, Privacy
+     *   Policy page and faq.
+     */
     @Test
     void getAdminPages_givesEachPageAReadableLabel() {
         ContentPage services = new ContentPage("services");
@@ -162,6 +193,11 @@ class ContentPageServiceTest {
         assertEquals("faq", result.get(3).label());
     }
 
+    /*
+     * Checks: The admin view shows the draft, the published copy and the unpublished-changes flag.
+     * How:    A published v1 with a draft v2 shows published true, hasUnpublishedChanges true, and
+     *   both titles and bodies.
+     */
     @Test
     void getAdminPage_showsDraftPublishedAndUnpublishedChanges() {
         about.publish("Live title", BODY_V1);
@@ -178,6 +214,10 @@ class ContentPageServiceTest {
         assertEquals(BODY_V2, result.draftBody());
     }
 
+    /*
+     * Checks: No unpublished changes when the draft equals the published page.
+     * How:    hasUnpublishedChanges is false.
+     */
     @Test
     void getAdminPage_saysThereAreNoChanges_whenTheDraftMatchesThePublishedPage() {
         about.publish("Live title", BODY_V1);
@@ -186,6 +226,10 @@ class ContentPageServiceTest {
         assertFalse(service.getAdminPage("about").hasUnpublishedChanges());
     }
 
+    /*
+     * Checks: An unknown page gives not found for the admin.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void getAdminPage_throwsError_whenThePageDoesNotExist() {
         when(pages.findByPageKey("missing")).thenReturn(Optional.empty());
@@ -196,6 +240,11 @@ class ContentPageServiceTest {
 
     // ---------------------------------------------------------------- save
 
+    /*
+     * Checks: Saving as a draft keeps the published page unchanged.
+     * How:    The published title and body stay the same, the draft has the new text,
+     *   hasUnpublishedChanges is true, and the audit trail records the admin.
+     */
     @Test
     void save_asDraft_keepsThePublishedPageUnchanged() {
         about.publish("Live title", BODY_V1);
@@ -213,6 +262,10 @@ class ContentPageServiceTest {
         verify(auditTrail).actAs(ADMIN);
     }
 
+    /*
+     * Checks: A save without the publish flag is a draft.
+     * How:    published is false and the draft title is saved.
+     */
     @Test
     void save_withoutThePublishFlag_isTreatedAsADraft() {
         aboutExists();
@@ -225,6 +278,11 @@ class ContentPageServiceTest {
         assertEquals("Title", result.draftTitle());
     }
 
+    /*
+     * Checks: Saving with publish makes the draft the public page.
+     * How:    The published title and body become the new ones, hasUnpublishedChanges is false, a
+     *   published date is set, the page is saved and the admin is recorded.
+     */
     @Test
     void save_withPublish_makesTheDraftThePublicPage() {
         about.publish("Live title", BODY_V1);
@@ -243,6 +301,10 @@ class ContentPageServiceTest {
         verify(auditTrail).actAs(ADMIN);
     }
 
+    /*
+     * Checks: Spaces around the title and body are trimmed.
+     * How:    The saved title and body have no extra spaces.
+     */
     @Test
     void save_trimsSpacesAroundTheTitleAndBody() {
         aboutExists();
@@ -255,6 +317,10 @@ class ContentPageServiceTest {
         assertEquals(BODY_V1, result.publishedBody());
     }
 
+    /*
+     * Checks: The admin is recorded before the page is changed.
+     * How:    Mockito InOrder: actAs(admin) must run before pages.save().
+     */
     @Test
     void save_recordsTheAdminBeforeChangingThePage() {
         aboutExists();
@@ -267,6 +333,10 @@ class ContentPageServiceTest {
         order.verify(pages).save(about);
     }
 
+    /*
+     * Checks: Saving an unknown page is refused.
+     * How:    It throws ResourceNotFoundException and nothing is saved or recorded.
+     */
     @Test
     void save_throwsError_whenThePageDoesNotExist() {
         when(pages.findByPageKey("missing")).thenReturn(Optional.empty());
@@ -277,6 +347,11 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: The error names every missing part.
+     * How:    No title and no body gives "Required content is missing: page title, page content." Only
+     *   one missing gives only that part. Nothing is saved.
+     */
     @Test
     void save_namesEveryMissingPart() {
         aboutExists();
@@ -290,6 +365,10 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A missing request is refused.
+     * How:    A null request throws ValidationException and nothing is saved.
+     */
     @Test
     void save_throwsError_whenTheRequestIsMissing() {
         aboutExists();
@@ -300,6 +379,10 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A title that is too long is refused.
+     * How:    The message is "The page title must be 180 characters or fewer." and nothing is saved.
+     */
     @Test
     void save_throwsError_whenTheTitleIsTooLong() {
         aboutExists();
@@ -310,6 +393,10 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A title of exactly the maximum length is accepted.
+     * How:    A title of the maximum length does not throw.
+     */
     @Test
     void save_acceptsATitleOfExactlyTheMaximumLength() {
         aboutExists();
@@ -320,6 +407,11 @@ class ContentPageServiceTest {
                 service.save("about", request(title, BODY_V1, true), ADMIN));
     }
 
+    /*
+     * Checks: A body that is too long is refused.
+     * How:    The message is "The page content must be 50000 characters or fewer." and nothing is
+     *   saved.
+     */
     @Test
     void save_throwsError_whenTheBodyIsTooLong() {
         aboutExists();
@@ -330,6 +422,11 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A title with a null character is refused.
+     * How:    The message is "The content contains characters that are not allowed." and nothing is
+     *   saved.
+     */
     @Test
     void save_throwsError_whenTheTitleHasANullCharacter() {
         aboutExists();
@@ -339,6 +436,10 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A body in the wrong format is refused.
+     * How:    A body with a script tag is refused and nothing is saved.
+     */
     @Test
     void save_throwsError_whenTheBodyIsNotInTheExpectedFormat() {
         aboutExists();
@@ -348,6 +449,10 @@ class ContentPageServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A refused save leaves the page unchanged.
+     * How:    After a refused save, the published and draft titles and bodies are the same as before.
+     */
     @Test
     void save_keepsThePageUnchanged_whenTheContentIsRefused() {
         about.publish("Live title", BODY_V1);

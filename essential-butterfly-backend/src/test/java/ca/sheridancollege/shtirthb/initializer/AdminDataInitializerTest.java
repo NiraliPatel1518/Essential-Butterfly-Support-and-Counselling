@@ -45,6 +45,12 @@ class AdminDataInitializerTest {
         return saved.getValue();
     }
 
+    /*
+     * Checks: When there is no admin, the first admin is created from the configured email and
+     *   password.
+     * How:    The fake repository says count is 0. We run the initializer and capture the saved
+     *   AdminUser. Its full name must be Administrator.
+     */
     @Test
     void createsTheAdminFromTheConfiguredEmailAndPasswordWhenThereAreNoAdmins() throws Exception {
         when(repository.count()).thenReturn(0L);
@@ -54,6 +60,11 @@ class AdminDataInitializerTest {
         assertEquals("Administrator", savedAdmin().getFullName());
     }
 
+    /*
+     * Checks: The admin email is trimmed and saved in lower case.
+     * How:    We give the email with spaces and capital letters. The saved email must be
+     *   owner@example.com.
+     */
     @Test
     void theEmailIsTrimmedAndSavedInLowerCase() throws Exception {
         when(repository.count()).thenReturn(0L);
@@ -63,6 +74,11 @@ class AdminDataInitializerTest {
         assertEquals("owner@example.com", savedAdmin().getEmail());
     }
 
+    /*
+     * Checks: Only a hashed (BCrypt) password is saved, never the plain text.
+     * How:    The saved password must be different from the original, and the BCrypt encoder must say
+     *   it matches the original.
+     */
     @Test
     void storesOnlyAHashedPassword() throws Exception {
         when(repository.count()).thenReturn(0L);
@@ -74,6 +90,10 @@ class AdminDataInitializerTest {
         assertTrue(encoder.matches(PASSWORD, stored));
     }
 
+    /*
+     * Checks: No new admin is created when an admin already exists.
+     * How:    The fake repository says count is 1. We verify that save is never called.
+     */
     @Test
     void doesNotCreateAnAdminWhenOneAlreadyExists() throws Exception {
         when(repository.count()).thenReturn(1L);
@@ -83,6 +103,11 @@ class AdminDataInitializerTest {
         verify(repository, never()).save(any(AdminUser.class));
     }
 
+    /*
+     * Checks: The admin is not created again after the admin changed their email.
+     * How:    One admin exists, but its email is not the configured one. The initializer must still
+     *   not save a second admin.
+     */
     @Test
     void doesNotRecreateTheAdminAfterTheAdminChangedTheirEmail() throws Exception {
         // The only admin now has a different email than the configured one.
@@ -94,6 +119,10 @@ class AdminDataInitializerTest {
         verify(repository, never()).save(any(AdminUser.class));
     }
 
+    /*
+     * Checks: No admin is created when the email setting is empty.
+     * How:    We run it with an empty email and a spaces-only email. save must never be called.
+     */
     @Test
     void createsNoAdminWhenTheEmailIsNotConfigured() throws Exception {
         runner("", PASSWORD).run();
@@ -102,6 +131,10 @@ class AdminDataInitializerTest {
         verify(repository, never()).save(any(AdminUser.class));
     }
 
+    /*
+     * Checks: No admin is created when the password setting is empty.
+     * How:    We run it with an empty password and a spaces-only password. save must never be called.
+     */
     @Test
     void createsNoAdminWhenThePasswordIsNotConfigured() throws Exception {
         runner(EMAIL, "").run();

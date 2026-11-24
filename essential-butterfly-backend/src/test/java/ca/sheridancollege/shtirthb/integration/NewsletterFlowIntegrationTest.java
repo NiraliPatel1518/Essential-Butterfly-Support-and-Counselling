@@ -142,6 +142,11 @@ class NewsletterFlowIntegrationTest {
 
     // ------------------------------------------------------- visitor subscribes
 
+    /*
+     * Checks: A visitor can subscribe to the newsletter with consent.
+     * How:    The answer is 200 with success true. In the database the subscriber is active and
+     *   consentGiven is true.
+     */
     @Test
     void visitor_canSubscribeWithConsent() throws Exception {
         subscribe("fan@mail.com", true)
@@ -153,6 +158,11 @@ class NewsletterFlowIntegrationTest {
         assertTrue(saved.isConsentGiven());
     }
 
+    /*
+     * Checks: The email is trimmed and saved in lower case.
+     * How:    We send " Fan@Mail.COM ". The saved email is fan@mail.com and there is only 1
+     *   subscriber.
+     */
     @Test
     void emailIsTrimmedAndStoredInLowerCase() throws Exception {
         subscribe("  Fan@Mail.COM  ", true).andExpect(status().isOk());
@@ -161,6 +171,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals(1, subscribers.count());
     }
 
+    /*
+     * Checks: An invalid email is refused.
+     * How:    The answer is 400 and no subscriber is saved.
+     */
     @Test
     void invalidEmail_isRejected() throws Exception {
         subscribe("not-an-email", true).andExpect(status().isBadRequest());
@@ -168,6 +182,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals(0, subscribers.count());
     }
 
+    /*
+     * Checks: Without consent, nobody is subscribed.
+     * How:    Consent false gives 400 and no subscriber is saved.
+     */
     @Test
     void withoutConsent_visitorIsNotSubscribed() throws Exception {
         subscribe("fan@mail.com", false).andExpect(status().isBadRequest());
@@ -175,6 +193,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals(0, subscribers.count());
     }
 
+    /*
+     * Checks: Subscribing twice keeps only one subscriber.
+     * How:    Both requests give 200, and the table has 1 row.
+     */
     @Test
     void subscribingTwice_keepsOnlyOneSubscriber() throws Exception {
         subscribe("fan@mail.com", true).andExpect(status().isOk());
@@ -183,6 +205,11 @@ class NewsletterFlowIntegrationTest {
         assertEquals(1, subscribers.count());
     }
 
+    /*
+     * Checks: When the admin turns the newsletter feature off, visitors cannot subscribe.
+     * How:    The admin sends the feature list with NEWSLETTER set to false. A subscribe request then
+     *   gives 404 and nothing is saved.
+     */
     @Test
     void whenTheAdminTurnsTheNewsletterOff_visitorsCannotSubscribe() throws Exception {
         mvc.perform(put("/api/admin/features")
@@ -202,6 +229,11 @@ class NewsletterFlowIntegrationTest {
 
     // ----------------------------------------------------------- unsubscribing
 
+    /*
+     * Checks: The unsubscribe link turns the subscription off.
+     * How:    We use the saved token on the unsubscribe URL. The answer has success true, and the
+     *   subscriber is no longer active.
+     */
     @Test
     void unsubscribeLink_turnsTheSubscriptionOff() throws Exception {
         subscribe("fan@mail.com", true).andExpect(status().isOk());
@@ -214,12 +246,21 @@ class NewsletterFlowIntegrationTest {
         assertFalse(find("fan@mail.com").isActive());
     }
 
+    /*
+     * Checks: An unknown unsubscribe token gives 404.
+     * How:    We use "not-a-real-token".
+     */
     @Test
     void unknownUnsubscribeLink_isNotFound() throws Exception {
         mvc.perform(get("/api/newsletter/unsubscribe").param("token", "not-a-real-token"))
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: After unsubscribing, the visitor can subscribe again.
+     * How:    The subscriber becomes active again, there is still 1 row, and the new unsubscribe token
+     *   is different from the old one.
+     */
     @Test
     void afterUnsubscribing_visitorCanSubscribeAgain() throws Exception {
         subscribe("fan@mail.com", true).andExpect(status().isOk());
@@ -238,6 +279,10 @@ class NewsletterFlowIntegrationTest {
 
     // --------------------------------------------------------- admin protection
 
+    /*
+     * Checks: The admin newsletter pages need an admin login.
+     * How:    No token gives 401. A client token gives 403.
+     */
     @Test
     void adminNewsletterPages_needAnAdminLogin() throws Exception {
         mvc.perform(get("/api/admin/newsletter")).andExpect(status().isUnauthorized());
@@ -249,6 +294,10 @@ class NewsletterFlowIntegrationTest {
 
     // ------------------------------------------------------------ admin drafts
 
+    /*
+     * Checks: The admin overview counts only active subscribers.
+     * How:    We add three subscribers and unsubscribe one. The overview shows activeSubscribers 2.
+     */
     @Test
     void adminOverview_countsOnlyActiveSubscribers() throws Exception {
         addSubscriber("one@mail.com");
@@ -262,6 +311,10 @@ class NewsletterFlowIntegrationTest {
                 .andExpect(jsonPath("$.activeSubscribers").value(2));
     }
 
+    /*
+     * Checks: The admin can create a draft.
+     * How:    The answer is 201 with status DRAFT and the subject.
+     */
     @Test
     void admin_canCreateADraft() throws Exception {
         createDraft("November news", "Hello everyone.")
@@ -270,6 +323,10 @@ class NewsletterFlowIntegrationTest {
                 .andExpect(jsonPath("$.subject").value("November news"));
     }
 
+    /*
+     * Checks: A draft without a subject or content is refused.
+     * How:    An empty subject and an empty content each give 400, and no campaign is saved.
+     */
     @Test
     void draftWithoutSubjectOrContent_isRejected() throws Exception {
         createDraft("", "Hello everyone.").andExpect(status().isBadRequest());
@@ -278,6 +335,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals(0, campaigns.count());
     }
 
+    /*
+     * Checks: The admin can edit a draft.
+     * How:    A PUT with a new subject and content gives 200. The database has the new content.
+     */
     @Test
     void admin_canEditADraft() throws Exception {
         long id = newDraft();
@@ -292,6 +353,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals("New content.", campaign(id).getContent());
     }
 
+    /*
+     * Checks: Editing a draft that does not exist gives 404.
+     * How:    We use id 999999.
+     */
     @Test
     void editingAMissingDraft_isNotFound() throws Exception {
         mvc.perform(put("/api/admin/newsletter/999999")
@@ -301,6 +366,10 @@ class NewsletterFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: The preview shows the draft and how many people will get it.
+     * How:    With two active subscribers, the preview shows the subject and activeRecipientCount 2.
+     */
     @Test
     void preview_showsTheDraftAndHowManyPeopleWillGetIt() throws Exception {
         addSubscriber("one@mail.com");
@@ -315,6 +384,10 @@ class NewsletterFlowIntegrationTest {
 
     // ----------------------------------------------------------------- sending
 
+    /*
+     * Checks: Sending with no subscribers is refused.
+     * How:    The answer is 409, the campaign stays DRAFT, and the fake mail sender is never called.
+     */
     @Test
     void sendingWithoutSubscribers_isRefused() throws Exception {
         long id = newDraft();
@@ -326,6 +399,11 @@ class NewsletterFlowIntegrationTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Sending emails every active subscriber once.
+     * How:    The answer shows SENT with 2 recipients, 2 successes and 0 failures. The fake mail
+     *   sender is called twice, and the two recipients are one@mail.com and two@mail.com.
+     */
     @Test
     void sending_emailsEveryActiveSubscriberOnce() throws Exception {
         addSubscriber("one@mail.com");
@@ -351,6 +429,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals(Set.of("one@mail.com", "two@mail.com"), recipients);
     }
 
+    /*
+     * Checks: People who unsubscribed do not get the newsletter.
+     * How:    Only stays@mail.com gets an email, and recipientCount is 1.
+     */
     @Test
     void unsubscribedPeople_doNotGetTheNewsletter() throws Exception {
         addSubscriber("stays@mail.com");
@@ -369,6 +451,10 @@ class NewsletterFlowIntegrationTest {
                 sent.getValue().getAllRecipients()[0].toString());
     }
 
+    /*
+     * Checks: A newsletter can only be sent once.
+     * How:    The second send gives 409, and the fake sender was called only once in total.
+     */
     @Test
     void aNewsletterCanOnlyBeSentOnce() throws Exception {
         addSubscriber("one@mail.com");
@@ -381,6 +467,10 @@ class NewsletterFlowIntegrationTest {
         verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: A sent newsletter cannot be edited.
+     * How:    The edit gives 409, and the subject in the database is unchanged.
+     */
     @Test
     void aSentNewsletter_cannotBeEdited() throws Exception {
         addSubscriber("one@mail.com");
@@ -396,6 +486,10 @@ class NewsletterFlowIntegrationTest {
         assertEquals("November news", campaign(id).getSubject());
     }
 
+    /*
+     * Checks: The delivery results list each recipient.
+     * How:    After sending to two people, the deliveries list has 2 items, both with status SENT.
+     */
     @Test
     void deliveryResults_listEachRecipient() throws Exception {
         addSubscriber("one@mail.com");
@@ -412,6 +506,11 @@ class NewsletterFlowIntegrationTest {
 
     // ------------------------------------------------------------ failed mails
 
+    /*
+     * Checks: If one email fails, the newsletter is PARTIAL and the failure is recorded.
+     * How:    The fake sender throws MailSendException for the first email and works for the next. The
+     *   answer shows PARTIAL with 1 success and 1 failure, and 2 delivery rows.
+     */
     @Test
     void ifOneEmailFails_theNewsletterIsPartialAndTheFailureIsRecorded() throws Exception {
         addSubscriber("one@mail.com");
@@ -432,6 +531,10 @@ class NewsletterFlowIntegrationTest {
                 .andExpect(jsonPath("$.deliveries.length()").value(2));
     }
 
+    /*
+     * Checks: If every email fails, the newsletter is marked FAILED.
+     * How:    The fake sender always throws. The answer shows FAILED with failedCount 1.
+     */
     @Test
     void whenEveryEmailFails_theNewsletterIsMarkedFailed() throws Exception {
         addSubscriber("one@mail.com");
@@ -445,6 +548,11 @@ class NewsletterFlowIntegrationTest {
                 .andExpect(jsonPath("$.failedCount").value(1));
     }
 
+    /*
+     * Checks: A retry sends only to the people whose email failed.
+     * How:    After one failure, the fake sender works again. The retry gives SENT with 2 successes
+     *   and 0 failures, and the sender was called 3 times in total (2 first, 1 retry).
+     */
     @Test
     void retry_sendsOnlyToThePeopleWhoFailed() throws Exception {
         addSubscriber("one@mail.com");
@@ -468,6 +576,10 @@ class NewsletterFlowIntegrationTest {
         verify(mailSender, times(3)).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: A retry with nothing failed is refused.
+     * How:    After a fully successful send, retry-failed gives 409.
+     */
     @Test
     void retryWithNothingFailed_isRefused() throws Exception {
         addSubscriber("one@mail.com");
@@ -478,6 +590,11 @@ class NewsletterFlowIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    /*
+     * Checks: A retry skips someone who unsubscribed after the failure.
+     * How:    The only email fails, then the person unsubscribes. The retry still shows failedCount 1,
+     *   and the sender was called only once in total.
+     */
     @Test
     void retry_skipsSomeoneWhoUnsubscribedInTheMeantime() throws Exception {
         addSubscriber("one@mail.com");

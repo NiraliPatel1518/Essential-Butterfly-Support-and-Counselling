@@ -86,6 +86,11 @@ class EmailVerificationServiceTest {
 
     // ---------------------------------------------------------------- sending
 
+    /*
+     * Checks: The service stores a hashed code with an expiry and emails the user.
+     * How:    Mockito fakes. After sendVerificationCode the user has the (fake) hash, a last-sent time
+     *   and an expiry more than 9 minutes away. The user is saved and one email is sent.
+     */
     @Test
     void sendVerificationCode_storesHashedCodeAndEmailsTheUser() {
         mailWillBeSent();
@@ -100,6 +105,11 @@ class EmailVerificationServiceTest {
         verify(mailSender).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: The code is stored as a hash, never as plain text.
+     * How:    We check that the encoder received a 6-digit code, and the user holds only the encoder's
+     *   output.
+     */
     @Test
     void sendVerificationCode_storesTheCodeAsAHashNeverAsPlainText() {
         mailWillBeSent();
@@ -112,6 +122,10 @@ class EmailVerificationServiceTest {
         assertEquals("NEW_HASH", user.getEmailVerificationCodeHash());
     }
 
+    /*
+     * Checks: Sending a new code does not reset the wrong-attempt count.
+     * How:    The user has 2 attempts before and still has 2 after.
+     */
     @Test
     void sendVerificationCode_keepsTheIncorrectAttemptCount() {
         mailWillBeSent();
@@ -123,6 +137,10 @@ class EmailVerificationServiceTest {
         assertEquals(2, user.getEmailVerificationAttempts());
     }
 
+    /*
+     * Checks: A blank sender address gives a service error.
+     * How:    It throws ServiceUnavailableException. No mail is sent and the user is not saved.
+     */
     @Test
     void sendVerificationCode_throwsError_whenSenderAddressIsNotConfigured() {
         service = newService(" ");
@@ -134,6 +152,11 @@ class EmailVerificationServiceTest {
         verify(users, never()).save(any());
     }
 
+    /*
+     * Checks: A mail failure gives a service error.
+     * How:    The fake sender throws MailSendException. The service throws
+     *   ServiceUnavailableException.
+     */
     @Test
     void sendVerificationCode_throwsError_whenEmailCannotBeSent() {
         mailWillBeSent();
@@ -145,6 +168,10 @@ class EmailVerificationServiceTest {
 
     // ----------------------------------------------------------------- verify
 
+    /*
+     * Checks: Verifying an unknown email is refused.
+     * How:    findByEmail returns empty. It throws ValidationException.
+     */
     @Test
     void verify_throwsError_whenNoAccountExistsForTheEmail() {
         when(users.findByEmail("jane@mail.com")).thenReturn(Optional.empty());
@@ -153,6 +180,10 @@ class EmailVerificationServiceTest {
                 () -> service.verify(verifyRequest("jane@mail.com", "123456")));
     }
 
+    /*
+     * Checks: An already verified account is left alone.
+     * How:    Nothing is saved and the encoder is never used.
+     */
     @Test
     void verify_doesNothing_whenEmailIsAlreadyVerified() {
         ClientUser user = new ClientUser("Jane Doe", "jane@mail.com", "ENCODED"); // verified by default
@@ -164,6 +195,11 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(encoder);
     }
 
+    /*
+     * Checks: The right code verifies the email and clears the code data.
+     * How:    The encoder says the code matches. The user is verified, the hash, expiry and last-sent
+     *   time are null, the attempts and resend counts are 0, and the user is saved.
+     */
     @Test
     void verify_marksTheEmailVerifiedAndClearsTheCode_whenCodeIsCorrect() {
         ClientUser user = userWithValidCode();
@@ -183,6 +219,10 @@ class EmailVerificationServiceTest {
         verify(users).save(user);
     }
 
+    /*
+     * Checks: Capital letters and spaces in the email are ignored.
+     * How:    " Jane@Mail.COM " finds the same user and verifies it.
+     */
     @Test
     void verify_ignoresCapitalLettersAndSpacesInTheEmail() {
         ClientUser user = userWithValidCode();
@@ -194,6 +234,11 @@ class EmailVerificationServiceTest {
         assertTrue(user.isEmailVerified());
     }
 
+    /*
+     * Checks: A wrong code is counted and the message says how many tries are left.
+     * How:    The message contains "4 attempt(s) remaining", the attempts are 1, the user is still
+     *   unverified and is saved.
+     */
     @Test
     void verify_countsTheWrongCodeAndSaysHowManyAttemptsAreLeft() {
         ClientUser user = userWithValidCode();
@@ -210,6 +255,11 @@ class EmailVerificationServiceTest {
         verify(users).save(user);
     }
 
+    /*
+     * Checks: The fifth wrong code deletes the registration.
+     * How:    With 4 attempts already, one more wrong code throws ValidationException ("five incorrect
+     *   attempts"), and the user is deleted, not saved.
+     */
     @Test
     void verify_deletesTheRegistration_onTheFifthWrongCode() {
         ClientUser user = userWithValidCode();
@@ -226,6 +276,10 @@ class EmailVerificationServiceTest {
         verify(users, never()).save(any());
     }
 
+    /*
+     * Checks: A user with five used attempts is deleted without checking the code.
+     * How:    The user is deleted and the encoder is never used.
+     */
     @Test
     void verify_deletesTheRegistration_whenFiveAttemptsWereAlreadyUsed() {
         ClientUser user = userWithValidCode();
@@ -239,6 +293,10 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(encoder);
     }
 
+    /*
+     * Checks: Verifying when no code was ever sent is refused.
+     * How:    The user has no hash and no expiry. The message mentions that the code expired.
+     */
     @Test
     void verify_throwsError_whenNoCodeWasEverSent() {
         ClientUser user = unverifiedUser(); // no hash, no expiry
@@ -251,6 +309,11 @@ class EmailVerificationServiceTest {
         assertTrue(error.getMessage().contains("expired"));
     }
 
+    /*
+     * Checks: An expired code is refused.
+     * How:    The expiry is one minute ago. The message says expired, the encoder is never used, and
+     *   the user stays unverified.
+     */
     @Test
     void verify_throwsError_whenTheCodeHasExpired() {
         ClientUser user = userWithValidCode();
@@ -268,6 +331,10 @@ class EmailVerificationServiceTest {
 
     // ----------------------------------------------------------------- resend
 
+    /*
+     * Checks: Resend for an unknown email gives not found.
+     * How:    findByEmail returns empty. It throws ResourceNotFoundException.
+     */
     @Test
     void resend_throwsError_whenNoUnverifiedAccountExists() {
         when(users.findByEmail("jane@mail.com")).thenReturn(Optional.empty());
@@ -276,6 +343,10 @@ class EmailVerificationServiceTest {
                 () -> service.resend(resendRequest("jane@mail.com")));
     }
 
+    /*
+     * Checks: Resend for an already verified email is refused.
+     * How:    It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void resend_throwsError_whenEmailIsAlreadyVerified() {
         ClientUser user = new ClientUser("Jane Doe", "jane@mail.com", "ENCODED");
@@ -287,6 +358,11 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: A fourth resend is refused.
+     * How:    The resend count is 3. The message says "maximum number of resend requests" and no mail
+     *   is sent.
+     */
     @Test
     void resend_throwsError_afterTheThirdResend() {
         ClientUser user = userWithValidCode();
@@ -302,6 +378,10 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Resend is refused when no code was ever sent.
+     * How:    lastSentAt is null. It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void resend_throwsError_whenNoCodeWasSentBefore() {
         ClientUser user = unverifiedUser(); // lastSentAt is null
@@ -313,6 +393,11 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Resend within 60 seconds is refused.
+     * How:    The last send was 30 seconds ago. The message starts with "Please wait", no mail is
+     *   sent, and the resend count stays 0.
+     */
     @Test
     void resend_throwsError_whenTheFirstWaitOf60SecondsIsNotOver() {
         ClientUser user = userWithValidCode();
@@ -328,6 +413,11 @@ class EmailVerificationServiceTest {
         assertEquals(0, user.getEmailVerificationResendCount());
     }
 
+    /*
+     * Checks: After the wait, resend sends a new code and counts it.
+     * How:    The last send was 61 seconds ago. The resend count is 1, the hash is updated, and one
+     *   mail is sent.
+     */
     @Test
     void resend_sendsANewCodeAndCountsIt_whenTheWaitIsOver() {
         mailWillBeSent();
@@ -342,6 +432,10 @@ class EmailVerificationServiceTest {
         verify(mailSender).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: The second resend needs a longer wait.
+     * How:    With 1 resend done and the last send 80 seconds ago, resend is refused.
+     */
     @Test
     void resend_waitsLongerForTheSecondResend() {
         // after one resend the wait is 90 seconds, so 80 seconds is still too soon
@@ -356,6 +450,11 @@ class EmailVerificationServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: A failed resend email is not counted.
+     * How:    The fake sender throws. The service throws ServiceUnavailableException and the resend
+     *   count stays 0.
+     */
     @Test
     void resend_doesNotCountTheResend_whenTheEmailCannotBeSent() {
         mailWillBeSent();

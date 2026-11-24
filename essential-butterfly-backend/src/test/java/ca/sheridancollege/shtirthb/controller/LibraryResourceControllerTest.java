@@ -33,6 +33,10 @@ class LibraryResourceControllerTest {
 
     // ------------------------------------------------------------- public
 
+    /*
+     * Checks: The public list of resources is returned with 200.
+     * How:    The fake service returns a list, and the controller returns the same list.
+     */
     @Test void returnsThePublishedResources() {
         List<LibraryResourcePublicResponse> resources = List.of(mock(LibraryResourcePublicResponse.class));
         when(service.getPublicResources()).thenReturn(resources);
@@ -43,6 +47,11 @@ class LibraryResourceControllerTest {
         assertSame(resources, response.getBody());
     }
 
+    /*
+     * Checks: A download is sent with the right content type, file bytes and file name.
+     * How:    The fake service returns guide.pdf. The answer has content type application/pdf, the
+     *   same bytes, and a Content-Disposition header that contains guide.pdf.
+     */
     @Test void downloadSendsTheFileWithItsTypeAndName() {
         byte[] bytes = {1, 2, 3};
         when(service.getPublicDownload(7L))
@@ -56,6 +65,10 @@ class LibraryResourceControllerTest {
         assertTrue(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION).contains("guide.pdf"));
     }
 
+    /*
+     * Checks: A document such as a PDF is offered as a download (attachment).
+     * How:    The Content-Disposition header must start with the word attachment.
+     */
     @Test void aDocumentIsOfferedAsAnAttachment() {
         when(service.getPublicDownload(7L))
                 .thenReturn(new ResourceDownload("guide.pdf", "application/pdf", new byte[] {1}, false));
@@ -65,6 +78,10 @@ class LibraryResourceControllerTest {
         assertTrue(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION).startsWith("attachment"));
     }
 
+    /*
+     * Checks: An image is shown inside the page (inline).
+     * How:    For an image resource, the Content-Disposition header must start with inline.
+     */
     @Test void anImageIsShownInline() {
         when(service.getPublicDownload(8L))
                 .thenReturn(new ResourceDownload("photo.png", "image/png", new byte[] {1}, true));
@@ -74,6 +91,10 @@ class LibraryResourceControllerTest {
         assertTrue(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION).startsWith("inline"));
     }
 
+    /*
+     * Checks: Downloads tell the browser not to guess the file type.
+     * How:    The header X-Content-Type-Options must be nosniff. This is a security rule.
+     */
     @Test void downloadsTellTheBrowserNotToGuessTheFileType() {
         when(service.getPublicDownload(8L))
                 .thenReturn(new ResourceDownload("photo.png", "image/png", new byte[] {1}, true));
@@ -81,6 +102,10 @@ class LibraryResourceControllerTest {
         assertEquals("nosniff", controller.download(8L).getHeaders().getFirst("X-Content-Type-Options"));
     }
 
+    /*
+     * Checks: A download error from the service reaches the caller.
+     * How:    The service throws IllegalStateException and the controller throws it too.
+     */
     @Test void downloadErrorsFromTheServiceAreNotHidden() {
         when(service.getPublicDownload(99L)).thenThrow(new IllegalStateException("not found"));
 
@@ -89,6 +114,10 @@ class LibraryResourceControllerTest {
 
     // -------------------------------------------------------------- admin
 
+    /*
+     * Checks: The admin can list every resource, including unpublished ones.
+     * How:    The fake service returns a list and the controller answers 200 with it.
+     */
     @Test void returnsEveryResourceForTheAdministrator() {
         List<LibraryResourceAdminResponse> resources = List.of(mock(LibraryResourceAdminResponse.class));
         when(service.getAdminResources()).thenReturn(resources);
@@ -99,6 +128,11 @@ class LibraryResourceControllerTest {
         assertSame(resources, response.getBody());
     }
 
+    /*
+     * Checks: The upload rules (size and allowed file types) are returned.
+     * How:    The fake service returns a rules object. The controller returns the same object with
+     *   200.
+     */
     @Test void returnsTheUploadRules() {
         UploadRulesResponse rules = new UploadRulesResponse(
                 1000L, "1 KB", List.of("pdf", "png"), "PDF or PNG");
@@ -110,6 +144,11 @@ class LibraryResourceControllerTest {
         assertSame(rules, response.getBody());
     }
 
+    /*
+     * Checks: Creating a resource builds the request from the form fields and answers 201 Created.
+     * How:    We call the controller with title, description, category, link, alt text and a file. A
+     *   captor reads the request the service received, and each field must match.
+     */
     @Test void createBuildsTheRequestFromTheFormAndReturnsCreated() {
         MockMultipartFile file = new MockMultipartFile("file", "guide.pdf", "application/pdf", new byte[] {1});
         LibraryResourceAdminResponse expected = mock(LibraryResourceAdminResponse.class);
@@ -135,6 +174,11 @@ class LibraryResourceControllerTest {
         assertFalse(sent.removeFile());
     }
 
+    /*
+     * Checks: A resource can be created without a file.
+     * How:    The file is null. The service is verified to be called with a null file and the admin's
+     *   email, and the answer is 201.
+     */
     @Test void createWorksWithoutAFile() {
         when(authentication.getName()).thenReturn("casey@example.com");
         when(service.create(any(), isNull(), eq("casey@example.com")))
@@ -148,6 +192,10 @@ class LibraryResourceControllerTest {
         verify(service).create(any(), isNull(), eq("casey@example.com"));
     }
 
+    /*
+     * Checks: Updating a resource uses the id from the URL and answers 200.
+     * How:    We update id 5. The captured request has no link, publish false and removeFile true.
+     */
     @Test void updateUsesTheIdAndReturnsOk() {
         LibraryResourceAdminResponse expected = mock(LibraryResourceAdminResponse.class);
         when(authentication.getName()).thenReturn("casey@example.com");
@@ -167,6 +215,10 @@ class LibraryResourceControllerTest {
         assertTrue(captor.getValue().removeFile());
     }
 
+    /*
+     * Checks: Removing a resource answers 204 No Content.
+     * How:    The body is null, and service.remove is called with id 5 and the admin's email.
+     */
     @Test void removeReturnsNoContent() {
         when(authentication.getName()).thenReturn("casey@example.com");
 

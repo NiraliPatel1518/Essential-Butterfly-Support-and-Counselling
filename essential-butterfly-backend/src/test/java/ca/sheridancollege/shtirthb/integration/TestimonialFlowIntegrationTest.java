@@ -145,6 +145,10 @@ class TestimonialFlowIntegrationTest {
 
     // ----------------------------------------------------------- client submits
 
+    /*
+     * Checks: A testimonial cannot be sent without logging in.
+     * How:    We post with no token. The answer is 401.
+     */
     @Test
     void submit_withoutLoggingIn_isUnauthorized() throws Exception {
         mvc.perform(post("/api/testimonials")
@@ -153,6 +157,11 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A testimonial is saved as PENDING and the owner's email is not shown.
+     * How:    The answer is 201 with the display name and no ownerEmail field. The database status is
+     *   PENDING.
+     */
     @Test
     void submit_savesTheTestimonialAsPendingAndHidesPrivateDetails() throws Exception {
         submit(jane, json("Jane L.", "Casey was a great support for our family.", true, "[]"))
@@ -163,6 +172,10 @@ class TestimonialFlowIntegrationTest {
         assertEquals("PENDING", testimonials.findAll().get(0).getStatus());
     }
 
+    /*
+     * Checks: A testimonial without publication consent is refused.
+     * How:    Consent false gives 400 with "Publication consent is required." and nothing is saved.
+     */
     @Test
     void submit_withoutPublicationConsent_isRefused() throws Exception {
         submit(jane, json("Jane L.", "Casey was a great support.", false, "[]"))
@@ -172,16 +185,28 @@ class TestimonialFlowIntegrationTest {
         assertEquals(0, testimonials.count());
     }
 
+    /*
+     * Checks: A text that is too short is refused.
+     * How:    "Too short" gives 400.
+     */
     @Test
     void submit_withATextThatIsTooShort_isRefused() throws Exception {
         submit(jane, json("Jane L.", "Too short", true, "[]")).andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: A blank display name is refused.
+     * How:    A name of two spaces gives 400.
+     */
     @Test
     void submit_withoutADisplayName_isRefused() throws Exception {
         submit(jane, json("  ", "Casey was a great support.", true, "[]")).andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: A testimonial with a photo keeps the photo.
+     * How:    We send one small PNG data URL. The answer is 201 with 1 photo.
+     */
     @Test
     void submit_withAPhoto_keepsThePhoto() throws Exception {
         submit(jane, json("Jane L.", "Casey was a great support.", true, "[\"" + PHOTO + "\"]"))
@@ -189,6 +214,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(jsonPath("$.photos.length()").value(1));
     }
 
+    /*
+     * Checks: More than three photos are refused.
+     * How:    We send 4 photos. The answer is 400 with "up to 3 photos".
+     */
     @Test
     void submit_withMoreThanThreePhotos_isRefused() throws Exception {
         String photos = "[\"" + PHOTO + "\",\"" + PHOTO + "\",\"" + PHOTO + "\",\"" + PHOTO + "\"]";
@@ -198,6 +227,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(messageContains("up to 3 photos"));
     }
 
+    /*
+     * Checks: A file that is not an image is refused.
+     * How:    A PDF data URL gives 400 with a message about JPG, PNG or WEBP.
+     */
     @Test
     void submit_withAFileThatIsNotAnImage_isRefused() throws Exception {
         String photos = "[\"data:application/pdf;base64,AAAA\"]";
@@ -207,6 +240,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(messageContains("JPG, PNG or WEBP"));
     }
 
+    /*
+     * Checks: A client sees only their own testimonials.
+     * How:    Jane and Sam each submit one. Jane's list has 1 item, her own.
+     */
     @Test
     void mine_showsOnlyTheClientsOwnTestimonials() throws Exception {
         String sam = client("sam@mail.com");
@@ -221,6 +258,10 @@ class TestimonialFlowIntegrationTest {
 
     // ------------------------------------------------------------ admin reviews
 
+    /*
+     * Checks: The admin list needs a token and the admin role.
+     * How:    No token gives 401. A client token gives 403.
+     */
     @Test
     void adminList_isClosedWithoutATokenAndToClients() throws Exception {
         mvc.perform(get("/api/admin/testimonials")).andExpect(status().isUnauthorized());
@@ -228,6 +269,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /*
+     * Checks: The admin list shows pending testimonials with the owner's email.
+     * How:    The first item has status PENDING and ownerEmail jane@mail.com.
+     */
     @Test
     void adminList_showsPendingTestimonialsWithTheOwnerEmail() throws Exception {
         submitValid(jane, "Jane L.");
@@ -238,6 +283,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].ownerEmail").value("jane@mail.com"));
     }
 
+    /*
+     * Checks: A client cannot approve testimonials.
+     * How:    Approve with a client token gives 403, and the status in the database is still PENDING.
+     */
     @Test
     void aClient_cannotApproveTestimonials() throws Exception {
         submitValid(jane, "Jane L.");
@@ -249,6 +298,10 @@ class TestimonialFlowIntegrationTest {
         assertEquals("PENDING", testimonials.findAll().get(0).getStatus());
     }
 
+    /*
+     * Checks: Approving a testimonial that does not exist gives 404.
+     * How:    We use id 999999.
+     */
     @Test
     void approving_aTestimonialThatDoesNotExist_isNotFound() throws Exception {
         approve(999999L).andExpect(status().isNotFound());
@@ -256,6 +309,10 @@ class TestimonialFlowIntegrationTest {
 
     // ------------------------------------------------- what visitors can see
 
+    /*
+     * Checks: The public page shows nothing while testimonials are pending.
+     * How:    After a submit, the public list has 0 items.
+     */
     @Test
     void publicPage_showsNothingWhileTestimonialsArePending() throws Exception {
         submitValid(jane, "Jane L.");
@@ -263,6 +320,11 @@ class TestimonialFlowIntegrationTest {
         publicList().andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: Approving does not show a testimonial until the admin chooses to display it.
+     * How:    After approve, the public list is still empty. After display(true), it has 1 item with
+     *   no ownerEmail.
+     */
     @Test
     void approving_doesNotShowItYet_untilTheAdminChoosesToDisplayIt() throws Exception {
         submitValid(jane, "Jane L.");
@@ -278,6 +340,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].ownerEmail").doesNotExist());
     }
 
+    /*
+     * Checks: A testimonial that is not approved cannot be displayed.
+     * How:    Display on a pending one gives 409 with "Only approved testimonials".
+     */
     @Test
     void displaying_aTestimonialThatIsNotApproved_isRefused() throws Exception {
         submitValid(jane, "Jane L.");
@@ -287,6 +353,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(messageContains("Only approved testimonials"));
     }
 
+    /*
+     * Checks: A rejected testimonial stays off the public page.
+     * How:    Reject gives status REJECTED, and the public list is empty.
+     */
     @Test
     void rejecting_keepsATestimonialOffThePublicPage() throws Exception {
         submitValid(jane, "Jane L.");
@@ -298,6 +368,10 @@ class TestimonialFlowIntegrationTest {
         publicList().andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: Rejecting a public testimonial removes it from the public page.
+     * How:    It is public (1 item). After reject, the public list has 0 items.
+     */
     @Test
     void rejecting_aTestimonialThatWasPublic_removesItFromThePublicPage() throws Exception {
         long id = publishedTestimonial("Jane L.", false);
@@ -308,6 +382,10 @@ class TestimonialFlowIntegrationTest {
         publicList().andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: Removing takes a testimonial off the website.
+     * How:    Remove gives status REMOVED. Both the public list and the featured list are empty.
+     */
     @Test
     void removing_takesATestimonialOffTheWebsite() throws Exception {
         long id = publishedTestimonial("Jane L.", true);
@@ -322,6 +400,10 @@ class TestimonialFlowIntegrationTest {
 
     // ------------------------------------------------------------- home page
 
+    /*
+     * Checks: A featured testimonial appears on the home page.
+     * How:    The featured list has 1 item with the right name.
+     */
     @Test
     void featuredTestimonial_appearsOnTheHomePage() throws Exception {
         publishedTestimonial("Jane L.", true);
@@ -332,6 +414,10 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].displayName").value("Jane L."));
     }
 
+    /*
+     * Checks: A testimonial that is not public cannot be featured.
+     * How:    display(public false, featured true) gives 409 with "must also be public".
+     */
     @Test
     void featuring_aTestimonialThatIsNotPublic_isRefused() throws Exception {
         submitValid(jane, "Jane L.");
@@ -343,6 +429,11 @@ class TestimonialFlowIntegrationTest {
                 .andExpect(messageContains("must also be public"));
     }
 
+    /*
+     * Checks: Only two testimonials can be featured on the home page.
+     * How:    Two are featured. A third gives 409 with "Only two testimonials", and the featured list
+     *   still has 2.
+     */
     @Test
     void onlyTwoTestimonials_canBeFeaturedOnTheHomePage() throws Exception {
         publishedTestimonial("First", true);
@@ -360,6 +451,11 @@ class TestimonialFlowIntegrationTest {
 
     // ------------------------------------------------- website feature switch
 
+    /*
+     * Checks: When the admin turns testimonials off, visitors see none.
+     * How:    We turn TESTIMONIALS off with the features URL. The public list and the featured list
+     *   both become empty.
+     */
     @Test
     void whenTheAdminTurnsTestimonialsOff_visitorsSeeNone() throws Exception {
         publishedTestimonial("Jane L.", true);

@@ -64,6 +64,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         return intakes.save(intake);
     }
 
+    /*
+     * Checks: An admin can be found by email.
+     * How:    findByEmail and existsByEmail return true for the saved email and false for an unknown
+     *   one.
+     */
     @Test
     void findsAnAdminByEmail() {
         adminUsers.save(new AdminUser("Admin", "new-admin@mail.com", "hash"));
@@ -74,6 +79,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         assertTrue(adminUsers.findByEmail("nobody@mail.com").isEmpty());
     }
 
+    /*
+     * Checks: A client can be found by email.
+     * How:    findByEmail and existsByEmail return true for the saved email and false for an unknown
+     *   one.
+     */
     @Test
     void findsAClientByEmail() {
         client("lee@mail.com");
@@ -83,6 +93,10 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         assertFalse(clients.existsByEmail("nobody@mail.com"));
     }
 
+    /*
+     * Checks: The database refuses two clients with the same email.
+     * How:    The second saveAndFlush throws DataIntegrityViolationException.
+     */
     @Test
     void databaseRejectsTwoClientsWithTheSameEmail() {
         client("same@mail.com");
@@ -91,6 +105,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
                 clients.saveAndFlush(new ClientUser("Other", "same@mail.com", "hash")));
     }
 
+    /*
+     * Checks: Contact messages are listed newest first, in pages.
+     * How:    We save three messages. Page 0 with size 2 gives new and mid, page 1 gives old, and
+     *   there are 2 pages.
+     */
     @Test
     void listsContactMessagesNewestFirstWithPaging() {
         LocalDateTime now = LocalDateTime.now();
@@ -108,6 +127,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         assertEquals(2, first.getTotalPages());
     }
 
+    /*
+     * Checks: Contact messages can be filtered and counted by status.
+     * How:    We save two NEW and one VIEWED. The counts go up by 2 and 1, and the VIEWED page
+     *   contains c but not a.
+     */
     @Test
     void filtersAndCountsContactMessagesByStatus() {
         long newBefore = contactMessages.countByStatus("NEW");
@@ -128,6 +152,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         assertTrue(viewed.getContent().stream().noneMatch(m -> m.getSubject().equals("a")));
     }
 
+    /*
+     * Checks: The repository can tell whether a client has an intake with a given status.
+     * How:    We save a SUBMITTED intake for the owner. The existence queries are true for the owner
+     *   and SUBMITTED, and false for ACCEPTED, REJECTED, or for another client.
+     */
     @Test
     void checksWhetherAClientHasAnIntakeWithAGivenStatus() {
         ClientUser owner = client("owner@mail.com");
@@ -143,6 +172,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
         assertFalse(intakes.existsByClientUserAndStatusIn(other, List.of("SUBMITTED", "ACCEPTED")));
     }
 
+    /*
+     * Checks: A client only sees their own intakes, newest first.
+     * How:    Ann has two intakes and Bob has one. The query for Ann returns Ann newer, then Ann
+     *   older.
+     */
     @Test
     void aClientOnlySeesTheirOwnIntakesNewestFirst() {
         ClientUser ann = client("ann@mail.com");
@@ -159,6 +193,11 @@ class UserAndRequestRepositoriesIntegrationTest extends RepositoryIntegrationTes
                 result.getContent().stream().map(IntakeSubmission::getClientFullName).toList());
     }
 
+    /*
+     * Checks: The admin can list and count intakes by status.
+     * How:    We save two SUBMITTED and one ACCEPTED. The counts go up by 2 and 1, the total goes up
+     *   by 3, and the SUBMITTED list shows Two then One.
+     */
     @Test
     void adminCanListAndCountIntakesByStatus() {
         ClientUser owner = client("lister@mail.com");

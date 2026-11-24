@@ -19,6 +19,10 @@ class ContactMessageControllerTest {
     @Mock ContactMessageService service;
     @InjectMocks ContactMessageController controller;
 
+    /*
+     * Checks: A contact message is submitted and answered with 200.
+     * How:    The controller calls service.submitMessage with the request. We verify that call.
+     */
     @Test void submitsContactMessage() {
         ContactMessageRequest request = mock(ContactMessageRequest.class);
         var response = controller.submitMessage(request);

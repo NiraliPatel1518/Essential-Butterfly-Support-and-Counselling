@@ -22,6 +22,12 @@ class NewsletterMailServiceTest {
         return properties;
     }
 
+    /*
+     * Checks: The mail service stops with a clear error when the sender address is empty.
+     * How:    Unit test with a fake mail sender. We build the service with a blank sender address and
+     *   call send(). It must throw IllegalStateException, and the mail sender must not be
+     *   touched.
+     */
     @Test void failsClearlyWhenSenderAddressIsNotConfigured() {
         NewsletterMailService service = new NewsletterMailService(mailSender, propertiesWith(" ", "http://localhost:5173"));
         assertThrows(IllegalStateException.class, () -> service.send(null, null));

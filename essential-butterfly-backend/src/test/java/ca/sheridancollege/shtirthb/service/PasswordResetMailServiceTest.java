@@ -80,6 +80,10 @@ class PasswordResetMailServiceTest {
 
     // -------------------------------------------------------------- sending
 
+    /*
+     * Checks: The reset email is sent and the service answers true.
+     * How:    Mockito fake mail sender. sendResetLink returns true and send() is called once.
+     */
     @Test void sendsTheEmailAndSaysYes() {
         boolean sent = service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 30);
 
@@ -87,6 +91,11 @@ class PasswordResetMailServiceTest {
         verify(mailSender).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: The email goes to the right person from the clinic address.
+     * How:    The captured message has one recipient (jane@mail.com) and the configured sender
+     *   address.
+     */
     @Test void theEmailGoesToTheRightPersonFromTheClinicAddress() throws Exception {
         service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 30);
 
@@ -96,18 +105,30 @@ class PasswordResetMailServiceTest {
         assertEquals("noreply@example.org", message.getFrom()[0].toString());
     }
 
+    /*
+     * Checks: The subject names the password reset.
+     * How:    The subject must be "Reset your Essential Butterfly password".
+     */
     @Test void theSubjectNamesThePasswordReset() throws Exception {
         service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 30);
 
         assertEquals("Reset your Essential Butterfly password", sentMessage().getSubject());
     }
 
+    /*
+     * Checks: The email contains the reset link.
+     * How:    The text contains "Reset it here: " followed by the link.
+     */
     @Test void theEmailContainsTheResetLink() throws Exception {
         service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 30);
 
         assertTrue(textOf(sentMessage()).contains("Reset it here: " + LINK));
     }
 
+    /*
+     * Checks: The HTML email has a button that opens the link.
+     * How:    The HTML contains an <a href> with the link and the text "Reset password".
+     */
     @Test void theEmailHasAResetButtonThatOpensTheLink() throws Exception {
         service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 30);
 
@@ -117,6 +138,11 @@ class PasswordResetMailServiceTest {
         assertTrue(text.contains("Reset password</a>"));
     }
 
+    /*
+     * Checks: The email says how long the link works.
+     * How:    We pass 45 minutes. The text says "expires in 45 minutes", shows 45 minutes in bold, and
+     *   says the link can be used once.
+     */
     @Test void theEmailSaysHowLongTheLinkWorks() throws Exception {
         service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 45);
 
@@ -127,12 +153,21 @@ class PasswordResetMailServiceTest {
         assertTrue(text.contains("can be used once"));
     }
 
+    /*
+     * Checks: The email tells people who did not ask for it to ignore it.
+     * How:    The text contains the "you can ignore this email" sentence.
+     */
     @Test void theEmailTellsSomeoneWhoDidNotAskToIgnoreIt() throws Exception {
         service("noreply@example.org").sendResetLink("jane@mail.com", LINK, 30);
 
         assertTrue(textOf(sentMessage()).contains("you can ignore this email and your password will stay the same"));
     }
 
+    /*
+     * Checks: Special characters in the link are escaped in the HTML.
+     * How:    A link with &, quotes, < and > must show as &amp; &quot; &lt; &gt;, and must not appear
+     *   raw inside href.
+     */
     @Test void specialCharactersInTheLinkAreEscapedInTheHtmlPart() throws Exception {
         service("noreply@example.org")
                 .sendResetLink("jane@mail.com", "https://x.org/r?a=1&b=\"2\"<3>", 30);
@@ -145,6 +180,10 @@ class PasswordResetMailServiceTest {
 
     // ------------------------------------------------------ nothing is sent
 
+    /*
+     * Checks: Nothing is sent when the sender is empty.
+     * How:    An empty from-address returns false and send() is never called.
+     */
     @Test void sendsNothingWhenEmailIsNotConfigured() {
         boolean sent = service("").sendResetLink("jane@mail.com", LINK, 30);
 
@@ -152,6 +191,10 @@ class PasswordResetMailServiceTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Nothing is sent when the sender is null or blank.
+     * How:    null and spaces both return false and send() is never called.
+     */
     @Test void sendsNothingWhenTheFromAddressIsMissingOrBlank() {
         assertFalse(service(null).sendResetLink("jane@mail.com", LINK, 30));
         assertFalse(service("   ").sendResetLink("jane@mail.com", LINK, 30));
@@ -159,6 +202,10 @@ class PasswordResetMailServiceTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Nothing is sent without a recipient.
+     * How:    A null and a blank recipient both return false and send() is never called.
+     */
     @Test void sendsNothingWithoutARecipient() {
         assertFalse(service("noreply@example.org").sendResetLink(null, LINK, 30));
         assertFalse(service("noreply@example.org").sendResetLink("  ", LINK, 30));
@@ -168,6 +215,10 @@ class PasswordResetMailServiceTest {
 
     // ---------------------------------------------------------- failures
 
+    /*
+     * Checks: A mail server failure returns false and does not throw.
+     * How:    The fake sender throws MailSendException.
+     */
     @Test void saysNoAndDoesNotThrowWhenTheMailServerFails() {
         doThrow(new MailSendException("mail server is down")).when(mailSender).send(any(MimeMessage.class));
 
@@ -176,6 +227,10 @@ class PasswordResetMailServiceTest {
         assertFalse(sent);
     }
 
+    /*
+     * Checks: If the message cannot be built, false is returned.
+     * How:    createMimeMessage throws, the result is false and send() is never called.
+     */
     @Test void saysNoAndDoesNotThrowWhenTheMessageCannotBeBuilt() {
         when(mailSender.createMimeMessage()).thenThrow(new IllegalStateException("no session"));
 

@@ -142,11 +142,20 @@ class AppointmentScheduleServiceTest {
 
     // ------------------------------------------------------ feature switch
 
+    /*
+     * Checks: The appointments feature is ON when no setting exists.
+     * How:    Mockito fakes, with the clock fixed on Monday 2026-11-16. The feature repository returns
+     *   nothing. isFeatureEnabled() is true.
+     */
     @Test
     void featureIsOnWhenNoSettingExists() {
         assertTrue(service.isFeatureEnabled());
     }
 
+    /*
+     * Checks: The feature follows the admin's switch.
+     * How:    A switch set to off makes isFeatureEnabled() false.
+     */
     @Test
     void featureFollowsTheAdministratorsSwitch() {
         FeatureVisibility off = mock(FeatureVisibility.class);
@@ -156,6 +165,10 @@ class AppointmentScheduleServiceTest {
         assertFalse(service.isFeatureEnabled());
     }
 
+    /*
+     * Checks: No slots are shown when the feature is off.
+     * How:    getOpenSlots() is empty.
+     */
     @Test
     void showsNoSlotsWhenTheFeatureIsOff() {
         FeatureVisibility off = mock(FeatureVisibility.class);
@@ -168,11 +181,20 @@ class AppointmentScheduleServiceTest {
 
     // --------------------------------------------------------- open slots
 
+    /*
+     * Checks: Nothing is shown when there are no slot rules.
+     * How:    The rules list is empty, so getOpenSlots() is empty.
+     */
     @Test
     void showsNothingWhenThereAreNoSlots() {
         assertTrue(service.getOpenSlots().isEmpty());
     }
 
+    /*
+     * Checks: A weekly slot becomes the next matching day.
+     * How:    A Monday 10:00 rule for 60 minutes gives one slot on 2026-11-16 from 10:00 to 11:00 with
+     *   60 minutes.
+     */
     @Test
     void turnsAWeeklySlotIntoTheNextMatchingDay() {
         existing(weekly(1, 10, 0, 60));   // Monday 10:00
@@ -185,6 +207,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(60, slots.get(0).minutes());
     }
 
+    /*
+     * Checks: Slots are listed earliest first.
+     * How:    Several rules in a mixed order come out sorted by start time.
+     */
     @Test
     void listsSlotsEarliestFirst() {
         existing(weekly(3, 9, 0, 30), weekly(1, 15, 0, 45), weekly(1, 10, 0, 60));
@@ -196,6 +222,11 @@ class AppointmentScheduleServiceTest {
                 "2026-11-16T10:00", "2026-11-16T15:00", "2026-11-18T09:00"), starts);
     }
 
+    /*
+     * Checks: Only slots inside the booking window are shown.
+     * How:    With a 7-day window only today's Monday shows. With 8 and 14 days the next Monday shows
+     *   too (2 slots).
+     */
     @Test
     void showsOnlyTheBookingWindow() {
         existing(weekly(1, 10, 0, 60));   // Mondays
@@ -210,6 +241,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(2, service.getOpenSlots().size());
     }
 
+    /*
+     * Checks: A window of 0 days still shows today.
+     * How:    bookingWindowDays 0 still gives 1 slot.
+     */
     @Test
     void aWindowOfZeroDaysStillShowsToday() {
         properties.getAppointments().setBookingWindowDays(0);
@@ -218,6 +253,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(1, service.getOpenSlots().size());
     }
 
+    /*
+     * Checks: A slot that has already started is hidden.
+     * How:    The slot time is before the fixed "now". The list is empty.
+     */
     @Test
     void hidesASlotThatHasAlreadyStarted() {
         existing(weekly(1, 8, 0, 60));   // it is 09:00 now
@@ -225,6 +264,10 @@ class AppointmentScheduleServiceTest {
         assertTrue(service.getOpenSlots().isEmpty());
     }
 
+    /*
+     * Checks: A slot that starts exactly now or later is shown.
+     * How:    Two slots at and after "now" are both listed.
+     */
     @Test
     void showsASlotThatStartsExactlyNowOrLater() {
         existing(weekly(1, 9, 0, 60), weekly(1, 9, 15, 30));
@@ -232,6 +275,11 @@ class AppointmentScheduleServiceTest {
         assertEquals(2, service.getOpenSlots().size());
     }
 
+    /*
+     * Checks: Slots too close to their start are hidden.
+     * How:    With 24 hide-hours, Monday 10:00 and Tuesday 08:00 are hidden. Only Tuesday 09:00 is
+     *   left.
+     */
     @Test
     void hidesSlotsTooCloseToTheirStart() {
         settings = settings(24);
@@ -246,6 +294,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(List.of("2026-11-17T09:00"), starts);
     }
 
+    /*
+     * Checks: A slot that is already requested or accepted is hidden.
+     * How:    An active appointment exists at 10:00. Only the 12:00 slot is listed.
+     */
     @Test
     void hidesASlotThatIsAlreadyRequestedOrAccepted() {
         existing(weekly(1, 10, 0, 60), weekly(1, 12, 0, 60));
@@ -260,6 +312,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(List.of("2026-11-16T12:00"), starts);
     }
 
+    /*
+     * Checks: A slot that overlaps a booking is hidden.
+     * How:    A booking from 10:30 to 11:30 hides the 10:00-11:00 slot.
+     */
     @Test
     void hidesASlotThatOverlapsABooking() {
         existing(weekly(1, 10, 0, 60));
@@ -271,6 +327,10 @@ class AppointmentScheduleServiceTest {
         assertTrue(service.getOpenSlots().isEmpty());
     }
 
+    /*
+     * Checks: A booking that ends when a slot starts does not block it.
+     * How:    A booking from 10:00 to 11:00 and a slot at 11:00 give 1 open slot.
+     */
     @Test
     void aBookingThatEndsWhenTheSlotStartsDoesNotBlockIt() {
         existing(weekly(1, 11, 0, 60));
@@ -282,6 +342,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(1, service.getOpenSlots().size());
     }
 
+    /*
+     * Checks: A one-date slot shows only on its date.
+     * How:    The slot rule for 2026-11-19 gives one slot at 13:00 on that date.
+     */
     @Test
     void showsAOneDateSlotOnItsDateOnly() {
         existing(onDate(LocalDate.of(2026, 11, 19), 13, 0, 60));
@@ -292,6 +356,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("2026-11-19T13:00", slots.get(0).startsAt());
     }
 
+    /*
+     * Checks: A one-date slot outside the window is hidden.
+     * How:    A date after the window gives an empty list.
+     */
     @Test
     void hidesAOneDateSlotOutsideTheWindow() {
         existing(onDate(LocalDate.of(2026, 12, 25), 13, 0, 60));
@@ -299,6 +367,10 @@ class AppointmentScheduleServiceTest {
         assertTrue(service.getOpenSlots().isEmpty());
     }
 
+    /*
+     * Checks: A slot is listed once when a weekly rule and a date rule give the same time.
+     * How:    The result has 1 slot, not 2.
+     */
     @Test
     void listsASlotOnceWhenAWeeklyAndADateSlotStartTogether() {
         existing(weekly(4, 13, 0, 60), onDate(LocalDate.of(2026, 11, 19), 13, 0, 60));
@@ -306,6 +378,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(1, service.getOpenSlots().size());
     }
 
+    /*
+     * Checks: The service asks for the bookings of the whole window.
+     * How:    findActiveBetween is called from 2026-11-16 00:00 to 2026-11-23 00:00.
+     */
     @Test
     void asksForBookingsOfTheWholeWindow() {
         service.getOpenSlots();
@@ -317,6 +393,10 @@ class AppointmentScheduleServiceTest {
 
     // ------------------------------------------------------ requireOpenSlot
 
+    /*
+     * Checks: requireOpenSlot returns the slot that starts at the asked time.
+     * How:    For Monday 10:00 we get a slot from 10:00 to 11:00.
+     */
     @Test
     void returnsTheSlotThatStartsExactlyWhenAsked() {
         existing(weekly(1, 10, 0, 60));
@@ -328,6 +408,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(LocalDateTime.of(2026, 11, 16, 11, 0), slot.endsAt());
     }
 
+    /*
+     * Checks: A time that is not an open slot is refused.
+     * How:    It throws ConflictException with SLOT_UNAVAILABLE_MESSAGE.
+     */
     @Test
     void refusesATimeThatIsNotAnOpenSlot() {
         existing(weekly(1, 10, 0, 60));
@@ -339,6 +423,11 @@ class AppointmentScheduleServiceTest {
         assertEquals(AppointmentScheduleService.SLOT_UNAVAILABLE_MESSAGE, error.getMessage());
     }
 
+    /*
+     * Checks: A slot that is taken is refused with the same message.
+     * How:    A booked slot throws ConflictException with SLOT_UNAVAILABLE_MESSAGE, so visitors cannot
+     *   tell why.
+     */
     @Test
     void refusesATakenSlotWithTheSameMessage() {
         existing(weekly(1, 10, 0, 60));
@@ -354,6 +443,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(AppointmentScheduleService.SLOT_UNAVAILABLE_MESSAGE, error.getMessage());
     }
 
+    /*
+     * Checks: A time outside the booking window is refused.
+     * How:    It throws ConflictException.
+     */
     @Test
     void refusesATimeOutsideTheBookingWindow() {
         existing(weekly(1, 10, 0, 60));
@@ -364,6 +457,11 @@ class AppointmentScheduleServiceTest {
 
     // ----------------------------------------------------------- admin list
 
+    /*
+     * Checks: The admin list shows weekly slots first, then one-date slots, and hides past dates.
+     * How:    We give 2 weekly, 3 future/today date slots and 1 past date. The list has 5 items, in
+     *   the order Monday, Tuesday, 2026-11-16, 2026-11-18, 2026-11-25.
+     */
     @Test
     void listsWeeklySlotsBeforeOneDateSlotsAndHidesPastDates() {
         AppointmentAvailability tuesday = weekly(2, 14, 0, 60);
@@ -384,6 +482,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("2026-11-25", list.get(4).date());
     }
 
+    /*
+     * Checks: A slot rule shows its start time, end time and length.
+     * How:    09:30 for 45 minutes gives start 09:30, end 10:15, slotMinutes 45, and no date.
+     */
     @Test
     void showsTheStartAndEndTimeOfASlot() {
         existing(weekly(1, 9, 30, 45));
@@ -398,6 +500,11 @@ class AppointmentScheduleServiceTest {
 
     // -------------------------------------------------------------- add rule
 
+    /*
+     * Checks: Adding a weekly slot works and records the admin.
+     * How:    The new rule has weekday 3 and the right start and end times. The audit trail records
+     *   the admin.
+     */
     @Test
     void addsAWeeklySlotAndRecordsWhoDidIt() {
         AvailabilityRuleResponse added = service.addRule(weeklyRequest(3, "10:00", 60), ADMIN);
@@ -409,6 +516,10 @@ class AppointmentScheduleServiceTest {
         verify(rules).saveAndFlush(any(AppointmentAvailability.class));
     }
 
+    /*
+     * Checks: Adding a one-date slot works.
+     * How:    The new rule has the date and no weekday.
+     */
     @Test
     void addsAOneDateSlot() {
         AvailabilityRuleResponse added =
@@ -418,6 +529,10 @@ class AppointmentScheduleServiceTest {
         assertNull(added.weekday());
     }
 
+    /*
+     * Checks: Spaces around the date and time are accepted.
+     * How:    The saved date and start time are clean.
+     */
     @Test
     void acceptsSurroundingSpacesInTheDateAndTime() {
         AvailabilityRuleResponse added =
@@ -427,6 +542,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("13:00", added.startTime());
     }
 
+    /*
+     * Checks: The date wins when both a date and a weekday are sent.
+     * How:    The rule has the date and no weekday.
+     */
     @Test
     void aDateWinsWhenBothADateAndAWeekdayAreSent() {
         AvailabilityRuleResponse added = service.addRule(
@@ -436,11 +555,19 @@ class AppointmentScheduleServiceTest {
         assertNull(added.weekday());
     }
 
+    /*
+     * Checks: An empty request is refused.
+     * How:    The message is "Choose the day of the week or a date."
+     */
     @Test
     void refusesARequestWithNothingInIt() {
         assertEquals("Choose the day of the week or a date.", invalid(null).getMessage());
     }
 
+    /*
+     * Checks: A missing or out-of-range weekday is refused.
+     * How:    null, 0, 8 and -1 all give "Choose the day of the week or a date."
+     */
     @Test
     void refusesAMissingOrOutOfRangeWeekday() {
         for (Integer weekday : new Integer[] {null, 0, 8, -1}) {
@@ -449,12 +576,20 @@ class AppointmentScheduleServiceTest {
         }
     }
 
+    /*
+     * Checks: A date that is not a date is refused.
+     * How:    "20-11-2026" gives "Enter the date, for example 2026-11-16."
+     */
     @Test
     void refusesADateThatIsNotADate() {
         assertEquals("Enter the date, for example 2026-11-16.",
                 invalid(dateRequest("20-11-2026", "10:00", 60)).getMessage());
     }
 
+    /*
+     * Checks: An empty or wrong start time is refused.
+     * How:    null, empty, "ten", "25:00" and "10.00" give "Enter the start time, for example 10:00."
+     */
     @Test
     void refusesAnEmptyOrWrongStartTime() {
         for (String start : new String[] {null, "", "ten", "25:00", "10.00"}) {
@@ -463,6 +598,11 @@ class AppointmentScheduleServiceTest {
         }
     }
 
+    /*
+     * Checks: A slot length that is not allowed is refused.
+     * How:    null, 0, 15, 20, 46, 135 and 150 minutes give "Choose a slot length from 30 minutes to 2
+     *   hours..."
+     */
     @Test
     void refusesASlotLengthThatIsNotAllowed() {
         for (Integer minutes : new Integer[] {null, 0, 15, 20, 45 + 1, 135, 150}) {
@@ -472,6 +612,10 @@ class AppointmentScheduleServiceTest {
         }
     }
 
+    /*
+     * Checks: Every slot length from 30 to 120 minutes in steps of 15 is accepted.
+     * How:    A loop tries 30, 45, 60, 75, 90, 105 and 120. Each returns the same length.
+     */
     @Test
     void acceptsEverySlotLengthFrom30To120MinutesInStepsOf15() {
         for (int minutes : new int[] {30, 45, 60, 75, 90, 105, 120}) {
@@ -480,12 +624,20 @@ class AppointmentScheduleServiceTest {
         }
     }
 
+    /*
+     * Checks: A slot that runs past midnight is refused.
+     * How:    The message is "A slot must finish before midnight."
+     */
     @Test
     void refusesASlotThatRunsPastMidnight() {
         assertEquals("A slot must finish before midnight.",
                 invalid(weeklyRequest(1, "23:30", 60)).getMessage());
     }
 
+    /*
+     * Checks: A slot that ends exactly at midnight is accepted.
+     * How:    The end time is 00:00.
+     */
     @Test
     void acceptsASlotThatEndsExactlyAtMidnight() {
         AvailabilityRuleResponse added = service.addRule(weeklyRequest(1, "23:00", 60), ADMIN);
@@ -493,6 +645,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("00:00", added.endTime());
     }
 
+    /*
+     * Checks: A date and time that have passed are refused.
+     * How:    The message is "Choose a time that has not passed yet."
+     */
     @Test
     void refusesADateAndTimeThatHavePassed() {
         assertEquals("Choose a time that has not passed yet.",
@@ -501,11 +657,19 @@ class AppointmentScheduleServiceTest {
                 invalid(dateRequest("2026-11-10", "15:00", 60)).getMessage());
     }
 
+    /*
+     * Checks: A date and time one minute from now are accepted.
+     * How:    addRule does not throw.
+     */
     @Test
     void acceptsADateAndTimeOneMinuteFromNow() {
         service.addRule(dateRequest("2026-11-16", "09:01", 30), ADMIN);
     }
 
+    /*
+     * Checks: Nothing is saved when a rule is refused.
+     * How:    saveAndFlush is never called and the admin is not recorded.
+     */
     @Test
     void doesNotSaveAnythingWhenARuleIsRefused() {
         invalid(weeklyRequest(9, "10:00", 60));
@@ -516,6 +680,10 @@ class AppointmentScheduleServiceTest {
 
     // -------------------------------------------------------------- overlaps
 
+    /*
+     * Checks: A weekly slot that overlaps another on the same day is refused.
+     * How:    It throws ConflictException: "This time overlaps another slot on the same day."
+     */
     @Test
     void refusesAWeeklySlotThatOverlapsAnotherOnTheSameDay() {
         existing(weekly(1, 10, 0, 60));
@@ -527,6 +695,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("This time overlaps another slot on the same day.", error.getMessage());
     }
 
+    /*
+     * Checks: Slots that only touch are accepted.
+     * How:    One ends when the next starts. It does not throw.
+     */
     @Test
     void acceptsSlotsThatTouchButDoNotOverlap() {
         existing(weekly(1, 10, 0, 60));
@@ -535,6 +707,10 @@ class AppointmentScheduleServiceTest {
         service.addRule(weeklyRequest(1, "09:00", 60), ADMIN);
     }
 
+    /*
+     * Checks: The same time on another weekday is accepted.
+     * How:    It does not throw.
+     */
     @Test
     void acceptsTheSameTimeOnAnotherWeekday() {
         existing(weekly(1, 10, 0, 60));
@@ -542,6 +718,10 @@ class AppointmentScheduleServiceTest {
         service.addRule(weeklyRequest(2, "10:00", 60), ADMIN);
     }
 
+    /*
+     * Checks: A one-date slot that overlaps a weekly slot on that weekday is refused.
+     * How:    It throws ConflictException.
+     */
     @Test
     void refusesAOneDateSlotThatOverlapsAWeeklySlotOnThatWeekday() {
         existing(weekly(5, 10, 0, 60));   // Fridays
@@ -550,6 +730,10 @@ class AppointmentScheduleServiceTest {
                 () -> service.addRule(dateRequest("2026-11-20", "10:30", 30), ADMIN));
     }
 
+    /*
+     * Checks: A one-date slot that overlaps another on the same date is refused.
+     * How:    It throws ConflictException.
+     */
     @Test
     void refusesAOneDateSlotThatOverlapsAnotherOnTheSameDate() {
         existing(onDate(LocalDate.of(2026, 11, 20), 10, 0, 60));
@@ -558,6 +742,10 @@ class AppointmentScheduleServiceTest {
                 () -> service.addRule(dateRequest("2026-11-20", "10:15", 30), ADMIN));
     }
 
+    /*
+     * Checks: A one-date slot at the same time on another date is accepted.
+     * How:    It does not throw.
+     */
     @Test
     void acceptsAOneDateSlotAtTheSameTimeOnAnotherDate() {
         existing(onDate(LocalDate.of(2026, 11, 20), 10, 0, 60));
@@ -565,6 +753,10 @@ class AppointmentScheduleServiceTest {
         service.addRule(dateRequest("2026-11-21", "10:00", 60), ADMIN);
     }
 
+    /*
+     * Checks: A weekly slot is not blocked by a one-date slot.
+     * How:    Adding a weekly slot next to an existing date slot does not throw.
+     */
     @Test
     void aWeeklySlotIsNotBlockedByAOneDateSlot() {
         existing(onDate(LocalDate.of(2026, 11, 20), 10, 0, 60));
@@ -574,6 +766,10 @@ class AppointmentScheduleServiceTest {
 
     // ------------------------------------------------------------ change rule
 
+    /*
+     * Checks: Changing a slot works and records the admin.
+     * How:    The changed rule has the new weekday and times, and the admin is recorded.
+     */
     @Test
     void changesASlotAndRecordsWhoDidIt() {
         AppointmentAvailability rule = weekly(1, 10, 0, 60);
@@ -589,6 +785,10 @@ class AppointmentScheduleServiceTest {
         verify(auditTrail).actAs(ADMIN);
     }
 
+    /*
+     * Checks: A slot does not count as overlapping itself.
+     * How:    Changing the rule by 15 minutes works.
+     */
     @Test
     void aSlotDoesNotOverlapItself() {
         AppointmentAvailability rule = weekly(1, 10, 0, 60);
@@ -601,6 +801,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("10:15", changed.startTime());
     }
 
+    /*
+     * Checks: A slot cannot be moved onto another slot.
+     * How:    It throws ConflictException.
+     */
     @Test
     void refusesToMoveASlotOntoAnotherSlot() {
         AppointmentAvailability first = weekly(1, 10, 0, 60);
@@ -612,6 +816,10 @@ class AppointmentScheduleServiceTest {
                 () -> service.changeRule(second.getId(), weeklyRequest(1, "10:30", 60), ADMIN));
     }
 
+    /*
+     * Checks: A change with a bad value is refused.
+     * How:    It throws ValidationException.
+     */
     @Test
     void refusesToChangeASlotWithABadValue() {
         AppointmentAvailability rule = weekly(1, 10, 0, 60);
@@ -621,6 +829,10 @@ class AppointmentScheduleServiceTest {
                 () -> service.changeRule(rule.getId(), weeklyRequest(1, "10:00", 20), ADMIN));
     }
 
+    /*
+     * Checks: Changing an unknown slot gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void reportsAnUnknownSlotWhenChanging() {
         when(rules.findById(99L)).thenReturn(Optional.empty());
@@ -631,6 +843,10 @@ class AppointmentScheduleServiceTest {
 
     // ------------------------------------------------------------ remove rule
 
+    /*
+     * Checks: Removing a slot works and records the admin.
+     * How:    The rule is deleted and flushed, and the admin is recorded.
+     */
     @Test
     void removesASlotAndRecordsWhoDidIt() {
         AppointmentAvailability rule = weekly(1, 10, 0, 60);
@@ -643,6 +859,10 @@ class AppointmentScheduleServiceTest {
         verify(rules).flush();
     }
 
+    /*
+     * Checks: Removing an unknown slot gives not found.
+     * How:    It throws ResourceNotFoundException and nothing is deleted.
+     */
     @Test
     void reportsAnUnknownSlotWhenRemoving() {
         when(rules.findById(99L)).thenReturn(Optional.empty());
@@ -654,6 +874,10 @@ class AppointmentScheduleServiceTest {
 
     // ---------------------------------------------------------------- settings
 
+    /*
+     * Checks: The settings are shown.
+     * How:    Hide hours 12, booking window 7 days and time zone America/Toronto.
+     */
     @Test
     void showsTheSettings() {
         settings = settings(12);
@@ -667,6 +891,10 @@ class AppointmentScheduleServiceTest {
         assertEquals("America/Toronto", response.timeZone());
     }
 
+    /*
+     * Checks: The booking window is shown as at least 1 day.
+     * How:    With the window set to 0, the settings show 1.
+     */
     @Test
     void showsAtLeastOneBookingDay() {
         properties.getAppointments().setBookingWindowDays(0);
@@ -674,6 +902,10 @@ class AppointmentScheduleServiceTest {
         assertEquals(1, service.getSettings().bookingWindowDays());
     }
 
+    /*
+     * Checks: Missing settings give not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void reportsMissingSettings() {
         when(settingsRepository.findById(AppointmentSettings.SINGLE_ROW_ID))
@@ -682,6 +914,11 @@ class AppointmentScheduleServiceTest {
         assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.getSettings());
     }
 
+    /*
+     * Checks: The hide hours can be changed.
+     * How:    We set 36. The response and the entity show 36, the admin is recorded and the settings
+     *   are saved.
+     */
     @Test
     void changesTheHideHours() {
         AppointmentSettingsResponse response = service.changeSettings(
@@ -693,6 +930,10 @@ class AppointmentScheduleServiceTest {
         verify(settingsRepository).saveAndFlush(settings);
     }
 
+    /*
+     * Checks: 0 and 168 hide hours are accepted.
+     * How:    Both limits are saved as given.
+     */
     @Test
     void acceptsZeroAnd168HideHours() {
         assertEquals(0, service.changeSettings(new AppointmentSettingsRequest(0), ADMIN)
@@ -701,6 +942,11 @@ class AppointmentScheduleServiceTest {
                 .hideHoursBeforeStart());
     }
 
+    /*
+     * Checks: Hide hours outside 0 to 168 are refused.
+     * How:    Values outside the range throw ValidationException with "Enter a whole number of hours
+     *   from 0 to 168." Nothing is saved.
+     */
     @Test
     void refusesHideHoursOutsideZeroTo168() {
         for (AppointmentSettingsRequest request : new AppointmentSettingsRequest[] {
@@ -719,6 +965,10 @@ class AppointmentScheduleServiceTest {
         verify(settingsRepository, never()).saveAndFlush(any());
     }
 
+    /*
+     * Checks: Changing missing settings gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void reportsMissingSettingsWhenChanging() {
         when(settingsRepository.findForBooking()).thenReturn(Optional.empty());
@@ -727,11 +977,20 @@ class AppointmentScheduleServiceTest {
                 () -> service.changeSettings(new AppointmentSettingsRequest(5), ADMIN));
     }
 
+    /*
+     * Checks: The settings can be locked for booking.
+     * How:    lockForBooking() returns the settings row (used so two bookings cannot happen at the
+     *   same moment).
+     */
     @Test
     void locksTheSettingsForBooking() {
         assertEquals(settings, service.lockForBooking());
     }
 
+    /*
+     * Checks: Locking missing settings gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void reportsMissingSettingsWhenLocking() {
         when(settingsRepository.findForBooking()).thenReturn(Optional.empty());

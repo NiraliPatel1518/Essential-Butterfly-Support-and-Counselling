@@ -54,21 +54,39 @@ class SecurityRulesTest {
 
     // ---------- public URLs: no token needed ----------
 
+    /*
+     * Checks: The public feature list can be opened without logging in.
+     * How:    A small probe controller answers ok on the real URLs, so only SecurityConfig is tested.
+     *   GET /api/features with no token must give 200.
+     */
     @Test
     void publicFeatureList_isOpenWithoutToken() throws Exception {
         mockMvc.perform(get("/api/features")).andExpect(status().isOk());
     }
 
+    /*
+     * Checks: The public list of website updates can be opened without logging in.
+     * How:    GET /api/updates with no token must give 200.
+     */
     @Test
     void publicUpdateList_isOpenWithoutToken() throws Exception {
         mockMvc.perform(get("/api/updates")).andExpect(status().isOk());
     }
 
+    /*
+     * Checks: The login URL is open to everyone.
+     * How:    POST /api/auth/login with no token must give 200 (a person cannot have a token before
+     *   logging in).
+     */
     @Test
     void login_isOpenWithoutToken() throws Exception {
         mockMvc.perform(post("/api/auth/login")).andExpect(status().isOk());
     }
 
+    /*
+     * Checks: Anyone can subscribe to the newsletter without logging in.
+     * How:    POST /api/newsletter/subscribe with no token must give 200.
+     */
     @Test
     void newsletterSubscribe_isOpenWithoutToken() throws Exception {
         mockMvc.perform(post("/api/newsletter/subscribe")).andExpect(status().isOk());
@@ -76,11 +94,19 @@ class SecurityRulesTest {
 
     // ---------- login required ----------
 
+    /*
+     * Checks: The details of one website update need a login.
+     * How:    GET /api/updates/1 with no token must give 401 Unauthorized.
+     */
     @Test
     void updateDetails_needLogin() throws Exception {
         mockMvc.perform(get("/api/updates/1")).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A logged-in client can open the details of one update.
+     * How:    We send a fake JWT with the role ROLE_CLIENT. The answer must be 200.
+     */
     @Test
     void updateDetails_workWithLogin() throws Exception {
         mockMvc.perform(get("/api/updates/1")
@@ -88,6 +114,10 @@ class SecurityRulesTest {
                 .andExpect(status().isOk());
     }
 
+    /*
+     * Checks: The current-user URL needs a login.
+     * How:    GET /api/auth/me with no token must give 401.
+     */
     @Test
     void currentUser_needsLogin() throws Exception {
         mockMvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
@@ -95,11 +125,19 @@ class SecurityRulesTest {
 
     // ---------- admin only ----------
 
+    /*
+     * Checks: An admin URL without a token is refused.
+     * How:    GET /api/admin/ping with no token must give 401 Unauthorized.
+     */
     @Test
     void adminUrl_withoutToken_isUnauthorized() throws Exception {
         mockMvc.perform(get("/api/admin/ping")).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A client cannot open an admin URL.
+     * How:    A JWT with ROLE_CLIENT on /api/admin/ping must give 403 Forbidden.
+     */
     @Test
     void adminUrl_withClientToken_isForbidden() throws Exception {
         mockMvc.perform(get("/api/admin/ping")
@@ -107,6 +145,10 @@ class SecurityRulesTest {
                 .andExpect(status().isForbidden());
     }
 
+    /*
+     * Checks: An admin can open an admin URL.
+     * How:    A JWT with ROLE_ADMIN on /api/admin/ping must give 200.
+     */
     @Test
     void adminUrl_withAdminToken_isAllowed() throws Exception {
         mockMvc.perform(get("/api/admin/ping")
@@ -114,6 +156,10 @@ class SecurityRulesTest {
                 .andExpect(status().isOk());
     }
 
+    /*
+     * Checks: A client cannot send POST requests to admin URLs either.
+     * How:    A POST with ROLE_CLIENT on /api/admin/ping must give 403 Forbidden.
+     */
     @Test
     void adminPost_withClientToken_isForbidden() throws Exception {
         mockMvc.perform(post("/api/admin/ping")

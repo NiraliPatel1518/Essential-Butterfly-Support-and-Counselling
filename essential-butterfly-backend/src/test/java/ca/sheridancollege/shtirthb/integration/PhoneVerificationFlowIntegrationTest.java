@@ -163,6 +163,10 @@ class PhoneVerificationFlowIntegrationTest {
         return clients.findByEmail(EMAIL).orElseThrow();
     }
 
+    /*
+     * Checks: Every phone verification step needs a login.
+     * How:    Status, send, verify and resend are called with no token. Each gives 401.
+     */
     @Test
     void everyPhoneStep_needsALogin() throws Exception {
         mvc.perform(get("/api/phone-verification/status")).andExpect(status().isUnauthorized());
@@ -177,6 +181,10 @@ class PhoneVerificationFlowIntegrationTest {
         mvc.perform(post("/api/phone-verification/resend")).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A new client has no verified phone.
+     * How:    The status shows phoneVerified false, and no phone number or pending number.
+     */
     @Test
     void aNewClient_hasNoVerifiedPhone() throws Exception {
         phoneStatus().andExpect(status().isOk())
@@ -185,6 +193,10 @@ class PhoneVerificationFlowIntegrationTest {
                 .andExpect(jsonPath("$.pendingPhoneNumber").doesNotExist());
     }
 
+    /*
+     * Checks: A phone number without a country code is refused.
+     * How:    "4165551234", "+0123456789" and "abc" each give 400.
+     */
     @Test
     void aPhoneNumberWithoutTheCountryCode_isRejected() throws Exception {
         send("4165551234").andExpect(status().isBadRequest());
@@ -192,6 +204,11 @@ class PhoneVerificationFlowIntegrationTest {
         send("abc").andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: Sending a code uses the (fake local) Twilio Verify API and does not store the code.
+     * How:    A small local HTTP server pretends to be Twilio. After send, the phone is not verified
+     *   yet, the number is saved as pending, and no code hash is stored.
+     */
     @Test
     void sendingACode_usesTheTwilioVerifyApiWithoutStoringTheCode() throws Exception {
         send(NUMBER).andExpect(status().isOk());
@@ -200,6 +217,10 @@ class PhoneVerificationFlowIntegrationTest {
         assertNull(reload().getPhoneVerificationCodeHash());
     }
 
+    /*
+     * Checks: An already verified number cannot be verified again.
+     * How:    The client already has this number. The send gives 409 with "already verified".
+     */
     @Test
     void anAlreadyVerifiedNumber_cannotBeVerifiedAgain() throws Exception {
         jane.setPhoneNumber(NUMBER);
@@ -207,12 +228,21 @@ class PhoneVerificationFlowIntegrationTest {
         send(NUMBER).andExpect(status().isConflict()).andExpect(messageContains("already verified"));
     }
 
+    /*
+     * Checks: Asking again for the same number tells the client to use Resend.
+     * How:    The second send gives 409 with "Resend code".
+     */
     @Test
     void askingForACodeAgainForTheSameNumber_pointsToResend() throws Exception {
         codeWasSentTo(NUMBER);
         send(NUMBER).andExpect(status().isConflict()).andExpect(messageContains("Resend code"));
     }
 
+    /*
+     * Checks: The correct code verifies the phone.
+     * How:    The fake Twilio approves 123456. After verify, the status shows phoneVerified true with
+     *   the number and no pending number.
+     */
     @Test
     void theCorrectCode_verifiesThePhone() throws Exception {
         codeWasSentTo(NUMBER);
@@ -223,6 +253,10 @@ class PhoneVerificationFlowIntegrationTest {
         assertNull(reload().getPhoneVerificationCodeHash());
     }
 
+    /*
+     * Checks: A code cannot be used after it worked.
+     * How:    The second verify gives 400 with "no active phone verification".
+     */
     @Test
     void aCode_cannotBeUsedAfterItWorked() throws Exception {
         codeWasSentTo(NUMBER);
@@ -231,12 +265,20 @@ class PhoneVerificationFlowIntegrationTest {
                 .andExpect(messageContains("no active phone verification"));
     }
 
+    /*
+     * Checks: Verifying without asking for a code first is refused.
+     * How:    The answer is 400 with "no active phone verification".
+     */
     @Test
     void withoutARequestedCode_thereIsNothingToVerify() throws Exception {
         verify(CODE).andExpect(status().isBadRequest())
                 .andExpect(messageContains("no active phone verification"));
     }
 
+    /*
+     * Checks: A code that is not 6 digits is refused.
+     * How:    "12345" and "abcdef" give 400, and the phone is still not verified.
+     */
     @Test
     void aCodeThatIsNotSixDigits_isRejected() throws Exception {
         codeWasSentTo(NUMBER);
@@ -245,6 +287,10 @@ class PhoneVerificationFlowIntegrationTest {
         assertFalse(reload().isPhoneVerified());
     }
 
+    /*
+     * Checks: A wrong code is refused and counted.
+     * How:    The answer says 4 attempts remain, and the attempts counter is 1.
+     */
     @Test
     void aWrongCode_isRejectedAndCounted() throws Exception {
         codeWasSentTo(NUMBER);
@@ -254,6 +300,11 @@ class PhoneVerificationFlowIntegrationTest {
         assertEquals(1, reload().getPhoneVerificationAttempts());
     }
 
+    /*
+     * Checks: After five wrong codes, even the correct code is refused.
+     * How:    We send 5 wrong codes. The 5th says the maximum was reached, and the right code then
+     *   also gives 400. The phone stays unverified.
+     */
     @Test
     void afterFiveWrongCodes_evenTheCorrectCodeIsRefused() throws Exception {
         codeWasSentTo(NUMBER);
@@ -267,6 +318,10 @@ class PhoneVerificationFlowIntegrationTest {
         assertFalse(reload().isPhoneVerified());
     }
 
+    /*
+     * Checks: An expired code is refused.
+     * How:    We set the expiry to one minute ago. The answer is 400 with "expired".
+     */
     @Test
     void anExpiredCode_isRefused() throws Exception {
         codeWasSentTo(NUMBER);
@@ -277,6 +332,12 @@ class PhoneVerificationFlowIntegrationTest {
         assertFalse(reload().isPhoneVerified());
     }
 
+    /*
+     * Checks: A new number replaces the old one only after its code is correct.
+     * How:    The client has an old number. After a code is sent to a new number and a wrong code is
+     *   tried, the old number is still the verified one and the new one is pending. After the
+     *   right code, the new number is verified.
+     */
     @Test
     void aNewNumber_replacesTheOldOneOnlyAfterItsCodeIsCorrect() throws Exception {
         jane.setPhoneNumber(NUMBER);
@@ -291,18 +352,30 @@ class PhoneVerificationFlowIntegrationTest {
                 .andExpect(jsonPath("$.pendingPhoneNumber").doesNotExist());
     }
 
+    /*
+     * Checks: Resend needs a code request first.
+     * How:    The answer is 409 with "request a verification code first".
+     */
     @Test
     void resend_needsACodeToBeRequestedFirst() throws Exception {
         resend().andExpect(status().isConflict())
                 .andExpect(messageContains("request a verification code first"));
     }
 
+    /*
+     * Checks: Resend must wait for the cooldown.
+     * How:    Resending right after the first send gives 409 with "Please wait".
+     */
     @Test
     void resend_mustWaitForTheCooldown() throws Exception {
         codeWasSentTo(NUMBER);
         resend().andExpect(status().isConflict()).andExpect(messageContains("Please wait"));
     }
 
+    /*
+     * Checks: After the cooldown, resend sends another request.
+     * How:    We set the last sent time to 61 seconds ago. Resend gives 200 and the resend count is 1.
+     */
     @Test
     void afterTheCooldown_resendSendsAnotherVerificationRequest() throws Exception {
         codeWasSentTo(NUMBER);
@@ -313,6 +386,11 @@ class PhoneVerificationFlowIntegrationTest {
         assertEquals(1, reload().getPhoneVerificationResendCount());
     }
 
+    /*
+     * Checks: Resend is limited to three times.
+     * How:    We set the resend count to 3. The next resend gives 409 with "maximum number of resend
+     *   requests".
+     */
     @Test
     void resend_isLimitedToThreeTimes() throws Exception {
         codeWasSentTo(NUMBER);
@@ -324,6 +402,10 @@ class PhoneVerificationFlowIntegrationTest {
                 .andExpect(messageContains("maximum number of resend requests"));
     }
 
+    /*
+     * Checks: Resend is refused after five wrong codes.
+     * How:    We set the attempts to 5. Resend gives 409 with "maximum number of incorrect attempts".
+     */
     @Test
     void resend_isRefusedAfterFiveWrongCodes() throws Exception {
         codeWasSentTo(NUMBER);

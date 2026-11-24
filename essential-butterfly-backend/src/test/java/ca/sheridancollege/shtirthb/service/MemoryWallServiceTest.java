@@ -126,6 +126,11 @@ class MemoryWallServiceTest {
 
     // ------------------------------------------------------- the public wall
 
+    /*
+     * Checks: The public wall groups photos by upload month.
+     * How:    Mockito fakes. Photos from November and October 2026 come back as 2 groups, newest month
+     *   first (2026-11 "November 2026" with 2 photos, then 2026-10).
+     */
     @Test void thePublicWallGroupsPhotosByUploadMonth() {
         when(photos.findAllPublic()).thenReturn(List.of(
                 publishedPhoto(1, LocalDateTime.parse("2026-11-10T10:00:00")),
@@ -143,12 +148,20 @@ class MemoryWallServiceTest {
         assertEquals(1, months.get(1).photos().size());
     }
 
+    /*
+     * Checks: The public wall is empty when nothing is published.
+     * How:    The repository returns no photos, so the wall list is empty.
+     */
     @Test void thePublicWallIsEmptyWhenNothingIsPublished() {
         when(photos.findAllPublic()).thenReturn(List.of());
 
         assertTrue(service.getPublicWall().isEmpty());
     }
 
+    /*
+     * Checks: A public photo uses its description as the alt text.
+     * How:    The shown photo has altText "Casey at the lake" and the upload date "November 10, 2026".
+     */
     @Test void aPublicPhotoUsesItsDescriptionAsTheAlternativeText() {
         MemoryWallPhoto photo = photo(1, LocalDateTime.parse("2026-11-10T10:00:00"), "Casey at the lake");
         photo.publish(NOW);
@@ -160,6 +173,10 @@ class MemoryWallServiceTest {
         assertEquals("November 10, 2026", shown.uploadedOn());
     }
 
+    /*
+     * Checks: A photo with no description gets a plain alt text.
+     * How:    The alt text is "Memory Wall photo from November 10, 2026".
+     */
     @Test void aPhotoWithoutADescriptionGetsAPlainFallbackAlternativeText() {
         when(photos.findAllPublic()).thenReturn(List.of(publishedPhoto(1, LocalDateTime.parse("2026-11-10T10:00:00"))));
 
@@ -167,6 +184,11 @@ class MemoryWallServiceTest {
                 service.getPublicWall().get(0).photos().get(0).altText());
     }
 
+    /*
+     * Checks: The wall gives not found while the Memory Wall switch is off.
+     * How:    The feature is disabled. getPublicWall throws ResourceNotFoundException ("Page not
+     *   found.") and the photo repository is never used.
+     */
     @Test void theWallIsNotFoundWhileTheMemoryWallSwitchIsOff() {
         when(features.findByFeatureKey("MEMORY_WALL"))
                 .thenReturn(Optional.of(new FeatureVisibility("MEMORY_WALL", "Memory Wall", false, 1)));
@@ -177,6 +199,10 @@ class MemoryWallServiceTest {
         verifyNoInteractions(photos);
     }
 
+    /*
+     * Checks: The wall gives not found when there is no switch record.
+     * How:    The feature repository returns nothing, so it throws ResourceNotFoundException.
+     */
     @Test void theWallIsNotFoundWhenThereIsNoSwitchRecordAtAll() {
         when(features.findByFeatureKey("MEMORY_WALL")).thenReturn(Optional.empty());
 
@@ -185,6 +211,10 @@ class MemoryWallServiceTest {
 
     // ------------------------------------------------------------- images
 
+    /*
+     * Checks: A published photo's image comes from the storage.
+     * How:    The fake storage returns bytes {1,2}. The image has image/png and the same bytes.
+     */
     @Test void aPublishedPhotosImageComesFromStorage() {
         MemoryWallPhoto photo = publishedPhoto(1, NOW);
         when(photos.findPublicById(1L)).thenReturn(Optional.of(photo));
@@ -196,6 +226,10 @@ class MemoryWallServiceTest {
         assertArrayEquals(new byte[] {1, 2}, image.content());
     }
 
+    /*
+     * Checks: An unpublished photo's image is not found for visitors.
+     * How:    It throws ResourceNotFoundException ("Photo not found.").
+     */
     @Test void anUnpublishedPhotosImageIsNotFoundForVisitors() {
         when(photos.findPublicById(2L)).thenReturn(Optional.empty());
 
@@ -204,6 +238,10 @@ class MemoryWallServiceTest {
         assertEquals("Photo not found.", thrown.getMessage());
     }
 
+    /*
+     * Checks: The public image is not found while the switch is off.
+     * How:    It throws ResourceNotFoundException and neither the repository nor the storage is used.
+     */
     @Test void thePublicImageIsNotFoundWhileTheSwitchIsOff() {
         when(features.findByFeatureKey("MEMORY_WALL")).thenReturn(Optional.empty());
 
@@ -211,6 +249,10 @@ class MemoryWallServiceTest {
         verifyNoInteractions(photos, storage);
     }
 
+    /*
+     * Checks: The admin can see any photo's image.
+     * How:    getAdminImage returns the stored bytes, even for a photo that is not published.
+     */
     @Test void theAdminCanSeeAnyPhotosImage() {
         when(photos.findWithTestimonial(1L)).thenReturn(Optional.of(photo(1, NOW, null)));
         when(storage.load("memory-wall/p1.png")).thenReturn(new byte[] {3});
@@ -218,12 +260,21 @@ class MemoryWallServiceTest {
         assertArrayEquals(new byte[] {3}, service.getAdminImage(1L).content());
     }
 
+    /*
+     * Checks: The admin image for an unknown photo gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test void theAdminImageIsNotFoundForAnUnknownPhoto() {
         when(photos.findWithTestimonial(9L)).thenReturn(Optional.empty());
 
         assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.getAdminImage(9L));
     }
 
+    /*
+     * Checks: A testimonial photo is read from its testimonial.
+     * How:    The image comes from the data URL saved in the testimonial (image/png and its bytes),
+     *   and the storage is never used.
+     */
     @Test void aTestimonialPhotoIsReadFromItsTestimonial() {
         MemoryWallPhoto photo = testimonialPhoto(4, "APPROVED", true, "Alex");
         when(photos.findWithTestimonial(4L)).thenReturn(Optional.of(photo));
@@ -235,6 +286,10 @@ class MemoryWallServiceTest {
         verifyNoInteractions(storage);
     }
 
+    /*
+     * Checks: A testimonial photo with a bad position is not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test void aTestimonialPhotoWithABadPositionIsNotFound() {
         MemoryWallPhoto photo = testimonialPhoto(4, "APPROVED", true, "Alex");
         when(photo.getPhotoOrder()).thenReturn(5);
@@ -245,6 +300,10 @@ class MemoryWallServiceTest {
 
     // ----------------------------------------------------------- overview
 
+    /*
+     * Checks: The overview lists photos and summarises the limits.
+     * How:    The summary shows total 2, max 3, remaining uploads 1 and published 1.
+     */
     @Test void theOverviewListsPhotosAndSummarisesTheLimits() {
         MemoryWallPhoto pending = photo(1, NOW, null);
         MemoryWallPhoto published = publishedPhoto(2, NOW);
@@ -264,6 +323,10 @@ class MemoryWallServiceTest {
         assertEquals("PNG or JPEG", summary.acceptedFormats());
     }
 
+    /*
+     * Checks: Remaining uploads never go below zero.
+     * How:    With more photos than the limit, remainingUploads is 0.
+     */
     @Test void remainingUploadsNeverGoBelowZero() {
         when(photos.findAllForAdmin()).thenReturn(List.of(
                 photo(1, NOW, null), photo(2, NOW, null), photo(3, NOW, null), photo(4, NOW, null)));
@@ -271,6 +334,11 @@ class MemoryWallServiceTest {
         assertEquals(0, service.getOverview().summary().remainingUploads());
     }
 
+    /*
+     * Checks: An admin photo is labelled as uploaded by the Administrator.
+     * How:    uploadedBy is "Administrator", the file name is kept, canPublish is true and there is no
+     *   block reason or published date.
+     */
     @Test void anAdministratorPhotoIsLabelledAsUploadedByTheAdministrator() {
         when(photos.findAllForAdmin()).thenReturn(List.of(photo(1, NOW, null)));
 
@@ -283,6 +351,11 @@ class MemoryWallServiceTest {
         assertNull(item.publishedAt());
     }
 
+    /*
+     * Checks: A photo from an approved testimonial may be published.
+     * How:    uploadedBy is "Customer: Alex", canPublish is true, and the testimonial status is
+     *   APPROVED.
+     */
     @Test void aTestimonialPhotoThatIsApprovedMayBePublished() {
         MemoryWallPhoto wallPhoto = testimonialPhoto(4, "APPROVED", true, "Alex");
         when(photos.findAllForAdmin()).thenReturn(List.of(wallPhoto));
@@ -295,6 +368,10 @@ class MemoryWallServiceTest {
         assertEquals("APPROVED", item.testimonialStatus());
     }
 
+    /*
+     * Checks: A photo from a testimonial that is not approved is blocked.
+     * How:    canPublish is false, with the message to approve the testimonial first.
+     */
     @Test void aTestimonialPhotoThatIsNotApprovedIsBlocked() {
         MemoryWallPhoto wallPhoto = testimonialPhoto(4, "PENDING", true, "Alex");
         when(photos.findAllForAdmin()).thenReturn(List.of(wallPhoto));
@@ -306,6 +383,10 @@ class MemoryWallServiceTest {
                 item.publishBlockedReason());
     }
 
+    /*
+     * Checks: A testimonial photo without publication consent is blocked.
+     * How:    canPublish is false.
+     */
     @Test void aTestimonialPhotoWithoutPublicationConsentIsBlocked() {
         MemoryWallPhoto wallPhoto = testimonialPhoto(4, "APPROVED", false, "Alex");
         when(photos.findAllForAdmin()).thenReturn(List.of(wallPhoto));
@@ -329,6 +410,11 @@ class MemoryWallServiceTest {
         when(adminUsers.findByEmail(ADMIN)).thenReturn(Optional.of(admin));
     }
 
+    /*
+     * Checks: An upload stores the file and saves a PENDING_REVIEW photo.
+     * How:    storage.store() gets a key starting with memory-wall/ and ending with .png, the bytes
+     *   and image/png. The saved photo has status PENDING_REVIEW.
+     */
     @Test void uploadStoresTheFileAndSavesAPendingPhoto() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN)).thenReturn(validImage());
@@ -355,6 +441,11 @@ class MemoryWallServiceTest {
         verify(photos).lockForChanges(anyLong());
     }
 
+    /*
+     * Checks: An upload is refused when the wall is full.
+     * How:    With a limit of 3 photos already reached, it throws BusinessRuleException. The storage
+     *   is not used and nothing is saved.
+     */
     @Test void uploadRefusesWhenTheWallIsFull() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN)).thenReturn(validImage());
@@ -369,6 +460,11 @@ class MemoryWallServiceTest {
         verify(photos, never()).saveAndFlush(any());
     }
 
+    /*
+     * Checks: An upload with a too-long description is refused.
+     * How:    It throws ValidationException ("Please keep the description under 200 characters.") and
+     *   the storage is not used.
+     */
     @Test void uploadRefusesATooLongDescription() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN)).thenReturn(validImage());
@@ -380,6 +476,10 @@ class MemoryWallServiceTest {
         verifyNoInteractions(storage);
     }
 
+    /*
+     * Checks: A blank description is saved as none.
+     * How:    The saved photo has a null description.
+     */
     @Test void uploadTreatsABlankDescriptionAsNone() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN)).thenReturn(validImage());
@@ -393,6 +493,10 @@ class MemoryWallServiceTest {
         assertNull(saved.getValue().getDescription());
     }
 
+    /*
+     * Checks: An upload stops when the file is not acceptable.
+     * How:    The validator throws ValidationException. The storage and the repository are not used.
+     */
     @Test void uploadStopsWhenTheFileIsNotAcceptable() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN))
@@ -403,6 +507,11 @@ class MemoryWallServiceTest {
         verify(photos, never()).saveAndFlush(any());
     }
 
+    /*
+     * Checks: A stored file is removed again if the transaction rolls back.
+     * How:    We finish the (fake) transaction with rollback. storage.delete() is called with the same
+     *   key. This keeps files and database in step.
+     */
     @Test void aStoredFileIsRemovedAgainWhenTheTransactionRollsBack() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN)).thenReturn(validImage());
@@ -418,6 +527,10 @@ class MemoryWallServiceTest {
         verify(storage).delete(key.getValue());
     }
 
+    /*
+     * Checks: A stored file is kept when the transaction commits.
+     * How:    After a commit, storage.delete() is never called.
+     */
     @Test void aStoredFileIsKeptWhenTheTransactionCommits() {
         MockMultipartFile file = file();
         when(validator.validate(file, ADMIN)).thenReturn(validImage());
@@ -433,6 +546,11 @@ class MemoryWallServiceTest {
 
     // -------------------------------------------------- change description
 
+    /*
+     * Checks: Changing the description saves the trimmed text.
+     * How:    The photo and the response have "New words". The admin is recorded and the photo is
+     *   saved.
+     */
     @Test void changingTheDescriptionSavesTheTrimmedText() {
         MemoryWallPhoto photo = photo(1, NOW, "Old");
         when(photos.findWithTestimonial(1L)).thenReturn(Optional.of(photo));
@@ -446,6 +564,10 @@ class MemoryWallServiceTest {
         verify(photos).saveAndFlush(photo);
     }
 
+    /*
+     * Checks: Changing the description to nothing removes it.
+     * How:    A blank or null description makes the description null.
+     */
     @Test void changingTheDescriptionToNothingRemovesIt() {
         MemoryWallPhoto photo = photo(1, NOW, "Old");
         when(photos.findWithTestimonial(1L)).thenReturn(Optional.of(photo));
@@ -458,6 +580,10 @@ class MemoryWallServiceTest {
         assertNull(photo.getDescription());
     }
 
+    /*
+     * Checks: A too-long description is refused.
+     * How:    It throws ValidationException.
+     */
     @Test void aTooLongDescriptionIsRefused() {
         when(photos.findWithTestimonial(1L)).thenReturn(Optional.of(photo(1, NOW, null)));
 
@@ -465,6 +591,10 @@ class MemoryWallServiceTest {
                 () -> service.changeDescription(1L, new MemoryWallDescriptionRequest("x".repeat(201)), ADMIN));
     }
 
+    /*
+     * Checks: Changing the description of an unknown photo gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test void changingTheDescriptionOfAnUnknownPhotoIsNotFound() {
         when(photos.findWithTestimonial(9L)).thenReturn(Optional.empty());
 
@@ -474,6 +604,11 @@ class MemoryWallServiceTest {
 
     // ------------------------------------------------------- save selection
 
+    /*
+     * Checks: The selected photos are published and the others are taken off.
+     * How:    A pending photo and an already published photo are selected and end up published. A
+     *   photo that was published but not selected becomes UNPUBLISHED. All are saved together.
+     */
     @Test void theSelectedPhotosArePublishedAndTheOthersAreTakenOff() {
         MemoryWallPhoto pending = photo(1, NOW, null);
         MemoryWallPhoto alreadyPublished = publishedPhoto(2, NOW);
@@ -492,6 +627,10 @@ class MemoryWallServiceTest {
         assertEquals(3, overview.photos().size());
     }
 
+    /*
+     * Checks: A photo that was never published stays pending when not selected.
+     * How:    Its status is still PENDING_REVIEW.
+     */
     @Test void aPhotoThatWasNeverPublishedStaysPendingWhenNotSelected() {
         MemoryWallPhoto pending = photo(1, NOW, null);
         when(photos.findAllForAdmin()).thenReturn(List.of(pending));
@@ -501,6 +640,10 @@ class MemoryWallServiceTest {
         assertEquals(MemoryWallPhoto.PENDING_REVIEW, pending.getStatus());
     }
 
+    /*
+     * Checks: A selection with more than the public limit is refused.
+     * How:    It throws BusinessRuleException ("Only 2 photos can be shown...") and nothing is saved.
+     */
     @Test void saveSelectionRefusesMoreThanTheLimitOfPublicPhotos() {
         var thrown = assertThrows(AppExceptions.BusinessRuleException.class,
                 () -> service.saveSelection(new MemoryWallSelectionRequest(List.of(1L, 2L, 3L)), ADMIN));
@@ -510,6 +653,10 @@ class MemoryWallServiceTest {
         verify(photos, never()).saveAllAndFlush(anyList());
     }
 
+    /*
+     * Checks: A repeated photo id is counted once.
+     * How:    The same id twice publishes the photo once.
+     */
     @Test void aRepeatedPhotoIdIsCountedOnce() {
         MemoryWallPhoto one = photo(1, NOW, null);
         when(photos.findAllForAdmin()).thenReturn(List.of(one));
@@ -519,6 +666,10 @@ class MemoryWallServiceTest {
         assertTrue(one.isPublished());
     }
 
+    /*
+     * Checks: An empty or missing selection unpublishes everything.
+     * How:    A published photo becomes not published with both an empty list and null.
+     */
     @Test void emptyOrMissingSelectionsUnpublishEverything() {
         MemoryWallPhoto published = publishedPhoto(1, NOW);
         when(photos.findAllForAdmin()).thenReturn(List.of(published));
@@ -531,6 +682,11 @@ class MemoryWallServiceTest {
         assertFalse(published.isPublished());
     }
 
+    /*
+     * Checks: A selected photo that no longer exists stops the whole save.
+     * How:    It throws ValidationException ("One of the selected photos no longer exists..."), the
+     *   other photo stays unpublished and nothing is saved.
+     */
     @Test void aSelectedPhotoThatNoLongerExistsStopsTheWholeSave() {
         MemoryWallPhoto one = photo(1, NOW, null);
         when(photos.findAllForAdmin()).thenReturn(List.of(one));
@@ -543,6 +699,10 @@ class MemoryWallServiceTest {
         verify(photos, never()).saveAllAndFlush(anyList());
     }
 
+    /*
+     * Checks: A photo whose testimonial is not approved cannot be published.
+     * How:    It throws BusinessRuleException, publish() is never called and nothing is saved.
+     */
     @Test void aPhotoWhoseTestimonialIsNotApprovedCannotBePublished() {
         MemoryWallPhoto blocked = testimonialPhoto(4, "PENDING", true, "Alex");
         when(photos.findAllForAdmin()).thenReturn(List.of(blocked));
@@ -558,6 +718,12 @@ class MemoryWallServiceTest {
 
     // ------------------------------------------------------------- delete
 
+    /*
+     * Checks: Delete removes the record first and the file after the commit.
+     * How:    The admin is recorded, the photo is deleted and flushed, and the file is not deleted
+     *   until we finish the fake transaction with commit. Then storage.delete() runs with the
+     *   right key.
+     */
     @Test void deleteRemovesTheRecordAndThenTheFileAfterCommit() {
         MemoryWallPhoto photo = photo(1, NOW, null);
         when(photos.findWithTestimonial(1L)).thenReturn(Optional.of(photo));
@@ -574,6 +740,10 @@ class MemoryWallServiceTest {
         verify(storage).delete("memory-wall/p1.png");
     }
 
+    /*
+     * Checks: The file is kept when the delete is rolled back.
+     * How:    After a rollback, storage.delete() is never called.
+     */
     @Test void theFileIsKeptWhenTheDeleteIsRolledBack() {
         when(photos.findWithTestimonial(1L)).thenReturn(Optional.of(photo(1, NOW, null)));
 
@@ -583,6 +753,10 @@ class MemoryWallServiceTest {
         verify(storage, never()).delete(anyString());
     }
 
+    /*
+     * Checks: Deleting an unknown photo gives not found.
+     * How:    It throws ResourceNotFoundException and nothing is deleted.
+     */
     @Test void deletingAnUnknownPhotoIsNotFound() {
         when(photos.findWithTestimonial(9L)).thenReturn(Optional.empty());
 

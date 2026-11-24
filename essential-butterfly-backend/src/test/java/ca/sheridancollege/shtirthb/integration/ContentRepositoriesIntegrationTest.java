@@ -72,6 +72,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
 
     // ---------- testimonials ----------
 
+    /*
+     * Checks: A client's testimonial query returns only their own, newest first.
+     * How:    Ann has two testimonials and Bob has one. findAllByClientEmailOrderByCreatedAtDesc for
+     *   Ann returns Ann second, then Ann first.
+     */
     @Test
     void aClientSeesOnlyTheirOwnTestimonialsNewestFirst() {
         ClientUser ann = client("ann@mail.com");
@@ -87,6 +92,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertEquals(List.of("Ann second", "Ann first"), names(result));
     }
 
+    /*
+     * Checks: The pending testimonial query lists only PENDING ones, oldest first.
+     * How:    Two pending and one approved are saved. The query for PENDING returns the two pending,
+     *   oldest first.
+     */
     @Test
     void listsPendingTestimonialsOldestFirst() {
         ClientUser owner = client("pending@mail.com");
@@ -100,6 +110,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertEquals(List.of("Pending one", "Pending two"), pending);
     }
 
+    /*
+     * Checks: The public query returns only approved testimonials with consent and display turned on.
+     * How:    We save five testimonials, four of which fail one rule (not displayed, no consent, or
+     *   pending). The query returns only the two valid ones, newest first.
+     */
     @Test
     void publicListShowsOnlyApprovedConsentedAndDisplayedTestimonials() {
         ClientUser owner = client("public@mail.com");
@@ -120,6 +135,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertEquals(List.of("Shown second", "Shown first"), result);
 }
 
+    /*
+     * Checks: The home page query gives at most two featured testimonials, newest approved first.
+     * How:    We save featured A and B, one not featured and one without consent. The top-2 query
+     *   returns B then A, and the featured count is 2.
+     */
     @Test
     void homepageGetsAtMostTwoFeaturedTestimonialsNewestApprovedFirst() {
         ClientUser owner = client("home@mail.com");
@@ -145,6 +165,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
             .countByFeaturedOnHomeTrueAndStatusAndPublicationConsentTrue("APPROVED"));
 }
 
+    /*
+     * Checks: The photos of a testimonial are saved and loaded back.
+     * How:    We save two photo names, flush and clear the entity manager (so data is read from the
+     *   database), and load it again.
+     */
     @Test
     void savesTestimonialPhotos() {
         ClientUser owner = client("photos@mail.com");
@@ -160,6 +185,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
 
     // ---------- feature visibility ----------
 
+    /*
+     * Checks: Features are listed in display order.
+     * How:    We save three TEST_ features in a mixed order. The query returns them as A, B, C by
+     *   their display order number.
+     */
     @Test
     void listsFeaturesInDisplayOrder() {
         features.save(new FeatureVisibility("TEST_C", "C", true, 102));
@@ -174,6 +204,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertEquals(List.of("TEST_A", "TEST_B", "TEST_C"), keys);
     }
 
+    /*
+     * Checks: A feature can be found by its key.
+     * How:    We save TEST_FIND and read its label and enabled flag. A missing key gives an empty
+     *   result.
+     */
     @Test
     void findsAFeatureByItsKey() {
         features.save(new FeatureVisibility("TEST_FIND", "Find me", false, 110));
@@ -185,6 +220,10 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertTrue(features.findByFeatureKey("TEST_MISSING").isEmpty());
     }
 
+    /*
+     * Checks: The database refuses two features with the same key.
+     * How:    The second save with TEST_DUP throws DataIntegrityViolationException.
+     */
     @Test
     void databaseRejectsTwoFeaturesWithTheSameKey() {
         features.save(new FeatureVisibility("TEST_DUP", "First", true, 120));
@@ -195,6 +234,10 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
 
     // ---------- website updates ----------
 
+    /*
+     * Checks: The public updates query shows only published updates, newest first.
+     * How:    We save old (published), draft, and new (published). The query returns new, then old.
+     */
     @Test
     void publicListShowsOnlyPublishedUpdatesNewestFirst() {
         updates.save(new WebsiteUpdate("Test update old", "Content", true));
@@ -211,6 +254,10 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertEquals(List.of("Test update new", "Test update old"), titles);
     }
 
+    /*
+     * Checks: The admin updates query shows both published and unpublished updates.
+     * How:    We save one visible and one hidden update. The admin query returns 2.
+     */
     @Test
     void adminListShowsPublishedAndUnpublishedUpdates() {
         updates.save(new WebsiteUpdate("Test update visible", "Content", true));
@@ -224,6 +271,10 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertEquals(2, titles.size());
     }
 
+    /*
+     * Checks: An update can be found by id only when it is published.
+     * How:    findByIdAndPublishedTrue finds the published one and returns empty for the draft.
+     */
     @Test
     void findsAnUpdateByIdOnlyWhenItIsPublished() {
         WebsiteUpdate published = updates.save(new WebsiteUpdate("Test update live", "Content", true));
@@ -233,6 +284,11 @@ class ContentRepositoriesIntegrationTest extends RepositoryIntegrationTestBase {
         assertTrue(updates.findByIdAndPublishedTrue(draft.getId()).isEmpty());
     }
 
+    /*
+     * Checks: The photos and social links of an update are saved and loaded back.
+     * How:    We save two photos and two links, clear the entity manager, load it again, and compare
+     *   the lists.
+     */
     @Test
     void savesUpdatePhotosAndSocialLinks() {
         WebsiteUpdate update = new WebsiteUpdate("Test update media", "Content", true);

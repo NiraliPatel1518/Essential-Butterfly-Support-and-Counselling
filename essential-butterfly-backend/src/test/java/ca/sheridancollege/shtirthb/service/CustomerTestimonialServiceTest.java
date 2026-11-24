@@ -25,6 +25,11 @@ class CustomerTestimonialServiceTest {
     CustomerTestimonialService service;
     @BeforeEach void setUp() { service = new CustomerTestimonialService(testimonials, clients, features); }
 
+    /*
+     * Checks: A client's testimonial is saved with the trimmed name and the right content.
+     * How:    We mock the client lookup and save. The service is called with " Jane ". We verify
+     *   save() got a testimonial with the trimmed name and content.
+     */
     @Test void submitCreatesPendingTestimonialForAuthenticatedClient() {
         ClientUser client = new ClientUser("Jane", "jane@mail.com", "HASH");
         when(clients.findByEmail("jane@mail.com")).thenReturn(Optional.of(client));
@@ -34,11 +39,19 @@ class CustomerTestimonialServiceTest {
         verify(testimonials).save(argThat(t -> t.getDisplayName().equals("Jane") && t.getContent().equals("This is a helpful testimonial.") && "PENDING".equals(t.getStatus())));
     }
 
+    /*
+     * Checks: A testimonial without publication consent is refused.
+     * How:    Consent false throws ValidationException.
+     */
     @Test void submitRequiresPublicationConsent() {
         assertThrows(AppExceptions.ValidationException.class, () -> service.submit("jane@mail.com", request("Jane", "A sufficiently long testimonial.", false)));
         verifyNoInteractions(clients, testimonials);
     }
 
+    /*
+     * Checks: Too-short text and more than three photos are refused.
+     * How:    "Too short" and four photos each throw ValidationException. Neither repository is used.
+     */
     @Test void submitRejectsShortContentAndMoreThanThreePhotos() {
         assertThrows(AppExceptions.ValidationException.class, () -> service.submit("jane@mail.com", request("Jane", "Too short", true)));
         TestimonialRequest r = request("Jane", "This testimonial is long enough.", true); r.setPhotos(List.of("a", "b", "c", "d"));
@@ -46,12 +59,21 @@ class CustomerTestimonialServiceTest {
         verifyNoInteractions(clients, testimonials);
     }
 
+    /*
+     * Checks: A client account that does not exist is refused.
+     * How:    findByEmail returns empty, so the service throws ResourceNotFoundException.
+     */
     @Test void submitRejectsMissingClientAccount() {
         when(clients.findByEmail("missing@mail.com")).thenReturn(Optional.empty());
         assertThrows(AppExceptions.ResourceNotFoundException.class, () -> service.submit("missing@mail.com", request("Jane", "This testimonial is long enough.", true)));
         verify(testimonials, never()).save(any());
     }
 
+    /*
+     * Checks: Public testimonials are empty when the feature is off.
+     * How:    The public list and the featured list are both empty and the testimonials repository is
+     *   never used.
+     */
     @Test void publicTestimonialsAreHiddenWhenFeatureDisabled() {
         when(features.findByFeatureKey("TESTIMONIALS")).thenReturn(Optional.empty());
         assertTrue(service.publicList().isEmpty());

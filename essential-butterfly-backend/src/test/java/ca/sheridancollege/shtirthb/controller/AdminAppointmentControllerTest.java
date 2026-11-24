@@ -43,6 +43,10 @@ class AdminAppointmentControllerTest {
 
     // ------------------------------------------------- weekly availability
 
+    /*
+     * Checks: The controller returns the list of availability rules.
+     * How:    The fake schedule service returns a list. The controller answers 200 with the same list.
+     */
     @Test void returnsTheAvailabilityRules() {
         List<AvailabilityRuleResponse> rules = List.of(mock(AvailabilityRuleResponse.class));
         when(schedule.getRules()).thenReturn(rules);
@@ -53,6 +57,11 @@ class AdminAppointmentControllerTest {
         assertSame(rules, response.getBody());
     }
 
+    /*
+     * Checks: Adding an availability rule answers 201 Created.
+     * How:    The controller passes the request and the admin's email to the service, and returns the
+     *   new rule.
+     */
     @Test void addRuleReturnsCreated() {
         AvailabilityRuleRequest request = new AvailabilityRuleRequest(1, null, "10:00", 60);
         AvailabilityRuleResponse expected = mock(AvailabilityRuleResponse.class);
@@ -65,6 +74,10 @@ class AdminAppointmentControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: Changing a rule uses the rule id from the URL and answers 200.
+     * How:    The service is stubbed for id 4. The controller must return its answer.
+     */
     @Test void changeRuleUsesTheIdAndReturnsOk() {
         AvailabilityRuleRequest request = new AvailabilityRuleRequest(2, null, "11:00", 30);
         AvailabilityRuleResponse expected = mock(AvailabilityRuleResponse.class);
@@ -77,6 +90,10 @@ class AdminAppointmentControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: Removing a rule answers 204 No Content.
+     * How:    The service removeRule is verified to be called with id 4 and the admin's email.
+     */
     @Test void removeRuleReturnsNoContent() {
         signedIn();
 
@@ -88,6 +105,10 @@ class AdminAppointmentControllerTest {
 
     // ----------------------------------------------------------- settings
 
+    /*
+     * Checks: The controller returns the appointment settings.
+     * How:    The fake service returns a settings object. The answer is 200 with the same object.
+     */
     @Test void returnsTheSettings() {
         AppointmentSettingsResponse settings = mock(AppointmentSettingsResponse.class);
         when(schedule.getSettings()).thenReturn(settings);
@@ -98,6 +119,11 @@ class AdminAppointmentControllerTest {
         assertSame(settings, response.getBody());
     }
 
+    /*
+     * Checks: Changing the settings returns the new settings.
+     * How:    The service gets the request and the admin's email, and the controller returns what it
+     *   gives back.
+     */
     @Test void changeSettingsReturnsTheNewSettings() {
         AppointmentSettingsRequest request = new AppointmentSettingsRequest(4);
         AppointmentSettingsResponse expected = mock(AppointmentSettingsResponse.class);
@@ -112,6 +138,11 @@ class AdminAppointmentControllerTest {
 
     // ------------------------------------------------------- appointments
 
+    /*
+     * Checks: The list passes the search text and the status filter to the service.
+     * How:    We call list with "ann" and "REQUESTED". The service is stubbed for exactly those two
+     *   values.
+     */
     @Test void listPassesTheSearchAndStatusFilters() {
         List<AdminAppointmentResponse> list = List.of(mock(AdminAppointmentResponse.class));
         when(appointments.adminList("ann", "REQUESTED")).thenReturn(list);
@@ -122,6 +153,10 @@ class AdminAppointmentControllerTest {
         assertSame(list, response.getBody());
     }
 
+    /*
+     * Checks: The list without filters asks the service for everything.
+     * How:    We call list with null and null, and verify the service was called with null and null.
+     */
     @Test void listWithoutFiltersAsksForEverything() {
         when(appointments.adminList(null, null)).thenReturn(List.of());
 
@@ -130,6 +165,11 @@ class AdminAppointmentControllerTest {
         verify(appointments).adminList(null, null);
     }
 
+    /*
+     * Checks: Confirming uses the appointment id and the admin's email.
+     * How:    The fake workflow service is stubbed for id 9 and returns an action result. The
+     *   controller answers 200 with it.
+     */
     @Test void confirmUsesTheIdAndTheAdministrator() {
         AppointmentActionResponse expected = mock(AppointmentActionResponse.class);
         signedIn();
@@ -141,6 +181,11 @@ class AdminAppointmentControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: Declining passes the reason to the workflow service.
+     * How:    The reason "Not available" is sent, and verify checks the service got id 9, that reason
+     *   and the admin email.
+     */
     @Test void declinePassesTheReason() {
         AppointmentActionResponse expected = mock(AppointmentActionResponse.class);
         signedIn();
@@ -153,6 +198,10 @@ class AdminAppointmentControllerTest {
         verify(workflow).decline(9L, "Not available", ADMIN);
     }
 
+    /*
+     * Checks: Cancelling passes the reason to the workflow service.
+     * How:    The reason "Emergency" is sent, and verify checks the service got it.
+     */
     @Test void cancelPassesTheReason() {
         AppointmentActionResponse expected = mock(AppointmentActionResponse.class);
         signedIn();
@@ -165,6 +214,10 @@ class AdminAppointmentControllerTest {
         verify(workflow).cancel(9L, "Emergency", ADMIN);
     }
 
+    /*
+     * Checks: Adding to Google Calendar uses the appointment id and the admin's email.
+     * How:    The fake workflow is stubbed for id 9. The controller answers 200 with its result.
+     */
     @Test void addToCalendarUsesTheIdAndTheAdministrator() {
         AppointmentActionResponse expected = mock(AppointmentActionResponse.class);
         signedIn();
@@ -176,6 +229,11 @@ class AdminAppointmentControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: Sending an invitation passes the meeting link to the service.
+     * How:    We send a link on id 9. The service must be called with that id, the link and the admin
+     *   email.
+     */
     @Test void sendInvitationPassesTheMeetingLink() {
         AppointmentActionResponse expected = mock(AppointmentActionResponse.class);
         signedIn();
@@ -189,6 +247,10 @@ class AdminAppointmentControllerTest {
         verify(workflow).sendInvitation(9L, "https://meet.example.org/abc", ADMIN);
     }
 
+    /*
+     * Checks: Resending an invitation uses the appointment id and the admin's email.
+     * How:    The fake workflow is stubbed for id 9. The controller returns the result with 200.
+     */
     @Test void resendInvitationUsesTheIdAndTheAdministrator() {
         AppointmentActionResponse expected = mock(AppointmentActionResponse.class);
         signedIn();
@@ -200,6 +262,11 @@ class AdminAppointmentControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: Saving feedback returns the updated appointment.
+     * How:    We send feedback and a private note. The fake service returns the updated appointment,
+     *   and the controller answers 200 with it.
+     */
     @Test void saveFeedbackReturnsTheUpdatedAppointment() {
         AppointmentFeedbackRequest request = new AppointmentFeedbackRequest("Went well", "Private note");
         AdminAppointmentResponse expected = mock(AdminAppointmentResponse.class);
@@ -212,6 +279,11 @@ class AdminAppointmentControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: An error from the workflow service reaches the caller unchanged.
+     * How:    The service throws IllegalStateException with "Already confirmed.". The controller
+     *   throws the same message.
+     */
     @Test void workflowErrorsAreNotHidden() {
         signedIn();
         when(workflow.confirm(9L, ADMIN)).thenThrow(new IllegalStateException("Already confirmed."));

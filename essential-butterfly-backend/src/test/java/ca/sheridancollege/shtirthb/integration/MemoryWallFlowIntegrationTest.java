@@ -185,6 +185,12 @@ class MemoryWallFlowIntegrationTest {
 
     // ------------------------------------------------------------- upload
 
+    /*
+     * Checks: A new photo waits for review and is not public.
+     * How:    The admin uploads a PNG with a description that has extra spaces. The answer is 201 with
+     *   status PENDING_REVIEW, source ADMIN_UPLOAD, the file name, content type image/png, the
+     *   size, a trimmed description and no published date. The public wall is still empty.
+     */
     @Test
     @DisplayName("A new photo waits for review and is not public")
     void upload_startsPending() throws Exception {
@@ -204,6 +210,11 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: A JPEG photo is stored as image/jpeg.
+     * How:    We upload JPEG bytes with no description. The content type is image/jpeg and there is no
+     *   description.
+     */
     @Test
     @DisplayName("JPEG photos are stored as JPEG")
     void upload_acceptsJpeg() throws Exception {
@@ -213,6 +224,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.description").doesNotExist());
     }
 
+    /*
+     * Checks: A blank description is stored as no description.
+     * How:    We send three spaces. The answer has no description field.
+     */
     @Test
     @DisplayName("A blank description is stored as no description")
     void upload_blankDescriptionIsNone() throws Exception {
@@ -221,6 +236,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.description").doesNotExist());
     }
 
+    /*
+     * Checks: A description of 200 characters is fine, and 201 is refused.
+     * How:    The 200-character upload gives 201 Created. The 201-character upload gives 400.
+     */
     @Test
     @DisplayName("A description of 200 characters is fine; 201 is refused")
     void upload_descriptionLimit() throws Exception {
@@ -228,6 +247,11 @@ class MemoryWallFlowIntegrationTest {
         upload(photo("b.png", PNG), "x".repeat(201)).andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: The photo file is really written to the storage folder.
+     * How:    We count the files in the temporary folder before and after an upload. The count goes up
+     *   by 1.
+     */
     @Test
     @DisplayName("The photo file is written to the storage folder")
     void upload_storesTheFile() throws Exception {
@@ -238,6 +262,10 @@ class MemoryWallFlowIntegrationTest {
         assertEquals(before + 1, filesOnDisk().size());
     }
 
+    /*
+     * Checks: An upload with no file is refused.
+     * How:    The answer is 400 with the message "Choose a photo to upload."
+     */
     @Test
     @DisplayName("No file returns 400")
     void upload_withoutAFile() throws Exception {
@@ -246,6 +274,11 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Choose a photo to upload."));
     }
 
+    /*
+     * Checks: A fake photo is refused and recorded as a security event.
+     * How:    A text file named fake.png gives 400, and the number of SECURITY_UNSAFE_FILE_REJECTED
+     *   rows in the audit_log table goes up.
+     */
     @Test
     @DisplayName("A fake photo is refused with 400 and logged as a security event")
     void upload_fakePhotoIsRefusedAndLogged() throws Exception {
@@ -257,6 +290,11 @@ class MemoryWallFlowIntegrationTest {
         assertTrue(events("SECURITY_UNSAFE_FILE_REJECTED") > before);
     }
 
+    /*
+     * Checks: Programs and web pages are refused and recorded.
+     * How:    setup.exe (it starts with MZ) and photo.html.png both give 400, and the security event
+     *   count goes up.
+     */
     @Test
     @DisplayName("Programs and web pages are refused with 400 and logged")
     void upload_programsAreRefusedAndLogged() throws Exception {
@@ -270,6 +308,11 @@ class MemoryWallFlowIntegrationTest {
         assertTrue(events("SECURITY_UNSAFE_FILE_REJECTED") > before);
     }
 
+    /*
+     * Checks: A format that is not allowed is refused.
+     * How:    photo.gif gives 400 with "This file format is not supported. Please select a valid
+     *   image."
+     */
     @Test
     @DisplayName("A format that is not allowed is refused with 400")
     void upload_wrongFormatIsRefused() throws Exception {
@@ -281,6 +324,10 @@ class MemoryWallFlowIntegrationTest {
 
     // ------------------------------------------------- review and publish
 
+    /*
+     * Checks: A pending photo is hidden from visitors, including its picture.
+     * How:    After an upload, the public wall has 0 items, and the public image URL gives 404.
+     */
     @Test
     @DisplayName("A pending photo is hidden from visitors, picture included")
     void pendingPhoto_isHidden() throws Exception {
@@ -293,6 +340,12 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: Selecting a photo puts it on the public wall, grouped by month.
+     * How:    We upload and select it. The summary shows 1 published photo. The public wall has 1
+     *   month with a key and a label, and one photo with the right id and its description as alt
+     *   text.
+     */
     @Test
     @DisplayName("Selecting a photo puts it on the public wall, grouped by month")
     void selection_publishesAPhoto() throws Exception {
@@ -311,6 +364,11 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].photos[0].altText").value("Spring trip"));
     }
 
+    /*
+     * Checks: A published photo's picture is public, safe and cacheable.
+     * How:    The image URL gives 200 with image/png, X-Content-Type-Options nosniff, a public
+     *   Cache-Control header, and the same bytes.
+     */
     @Test
     @DisplayName("A published photo's picture is public, safe and cacheable")
     void publishedPhoto_pictureIsPublic() throws Exception {
@@ -326,6 +384,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(content().bytes(PNG));
     }
 
+    /*
+     * Checks: A photo with no description gets a plain alt text for screen readers.
+     * How:    The public wall's alt text starts with "Memory Wall photo from ".
+     */
     @Test
     @DisplayName("A photo without a description gets a plain fallback for screen readers")
     void publishedPhoto_hasAFallbackAltText() throws Exception {
@@ -337,6 +399,11 @@ class MemoryWallFlowIntegrationTest {
                         .value(org.hamcrest.Matchers.startsWith("Memory Wall photo from ")));
     }
 
+    /*
+     * Checks: Saving a selection without a photo takes that photo off the wall.
+     * How:    We publish two photos, then save a selection with only the second. The wall has 1 photo,
+     *   and the first photo's image gives 404.
+     */
     @Test
     @DisplayName("Saving a selection without a photo takes it off the wall")
     void selection_unpublishesWhatIsLeftOut() throws Exception {
@@ -355,6 +422,11 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: An empty selection empties the public wall and marks the photos UNPUBLISHED.
+     * How:    We publish one photo and then save an empty selection. The public wall is empty, and the
+     *   admin view shows UNPUBLISHED.
+     */
     @Test
     @DisplayName("An empty selection empties the public wall and marks photos unpublished")
     void selection_emptyClearsTheWall() throws Exception {
@@ -370,6 +442,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.photos[0].status").value("UNPUBLISHED"));
     }
 
+    /*
+     * Checks: Photos that were never selected stay pending.
+     * How:    We upload two and select one. The admin view has 1 PENDING_REVIEW and 1 PUBLISHED.
+     */
     @Test
     @DisplayName("Photos that were never selected stay pending")
     void selection_leavesOtherPhotosPending() throws Exception {
@@ -385,6 +461,10 @@ class MemoryWallFlowIntegrationTest {
                         org.hamcrest.Matchers.hasSize(1)));
     }
 
+    /*
+     * Checks: Selecting a photo that does not exist gives 400 and changes nothing.
+     * How:    We select a real id and 999999. The answer is 400 and the public wall is still empty.
+     */
     @Test
     @DisplayName("Selecting a photo that does not exist returns 400 and changes nothing")
     void selection_unknownPhotoIsRefused() throws Exception {
@@ -396,6 +476,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: A repeated or null id in the selection is counted once.
+     * How:    We send the same id twice and a null. The summary shows 1 published photo.
+     */
     @Test
     @DisplayName("Repeating a photo in the selection counts it once")
     void selection_ignoresRepeatsAndNulls() throws Exception {
@@ -411,6 +495,10 @@ class MemoryWallFlowIntegrationTest {
 
     // ------------------------------------------------------ edit and delete
 
+    /*
+     * Checks: The admin can change a photo's description.
+     * How:    We send a new description with spaces around it. The answer shows the trimmed text.
+     */
     @Test
     @DisplayName("The admin can change a photo's description")
     void description_canBeChanged() throws Exception {
@@ -424,6 +512,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.description").value("New words"));
     }
 
+    /*
+     * Checks: A description can be removed, and a too-long one is refused.
+     * How:    An empty description removes it (200). A 201-character description gives 400.
+     */
     @Test
     @DisplayName("A description can be removed, and a too-long one is refused")
     void description_canBeClearedButNotTooLong() throws Exception {
@@ -443,6 +535,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: Changing the description of an unknown photo gives 404.
+     * How:    We use photo id 999999.
+     */
     @Test
     @DisplayName("Changing the description of an unknown photo returns 404")
     void description_unknownPhoto() throws Exception {
@@ -453,6 +549,11 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: Deleting a photo removes it everywhere.
+     * How:    After a delete (204), the public wall is empty and both the public and the admin image
+     *   URLs give 404.
+     */
     @Test
     @DisplayName("Deleting a photo removes it everywhere")
     void delete_removesThePhoto() throws Exception {
@@ -472,6 +573,10 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: Deleting an unknown photo gives 404.
+     * How:    We delete id 999999.
+     */
     @Test
     @DisplayName("Deleting an unknown photo returns 404")
     void delete_unknownPhoto() throws Exception {
@@ -482,6 +587,12 @@ class MemoryWallFlowIntegrationTest {
 
     // ---------------------------------------------------------- admin view
 
+    /*
+     * Checks: The admin sees every photo, even pending ones, with the limits.
+     * How:    The overview has 1 photo, and the summary shows total 1, max 150, remaining uploads 149,
+     *   published 0, max published 120, the storage used, the 5 MB limit and the accepted
+     *   formats.
+     */
     @Test
     @DisplayName("The admin sees every photo, even pending ones, with the limits")
     void adminOverview_showsPhotosAndLimits() throws Exception {
@@ -502,6 +613,11 @@ class MemoryWallFlowIntegrationTest {
                 .andExpect(jsonPath("$.summary.allowedExtensions.length()").value(4));
     }
 
+    /*
+     * Checks: The admin can see the picture of a pending photo.
+     * How:    The admin image URL gives 200 with image/png, nosniff, Cache-Control no-store and the
+     *   same bytes.
+     */
     @Test
     @DisplayName("The admin can see the picture of a pending photo")
     void adminImage_worksForPendingPhotos() throws Exception {
@@ -519,6 +635,11 @@ class MemoryWallFlowIntegrationTest {
 
     // ------------------------------------------------------ feature switch
 
+    /*
+     * Checks: With the feature switched off, visitors see nothing, but the admin can still manage it.
+     * How:    We publish a photo, then turn MEMORY_WALL off. The public wall and image give 404. The
+     *   admin overview still shows 1 photo, and an admin upload still works.
+     */
     @Test
     @DisplayName("With the feature switched off, visitors see nothing, but the admin can still manage")
     void featureOff_hidesTheWallFromVisitors() throws Exception {
@@ -536,6 +657,10 @@ class MemoryWallFlowIntegrationTest {
         upload(photo("b.png", PNG), null).andExpect(status().isCreated());
     }
 
+    /*
+     * Checks: Switching the feature back on shows the wall again.
+     * How:    We switch the feature off and on again. The public wall shows the photo.
+     */
     @Test
     @DisplayName("Switching the feature back on shows the wall again")
     void featureBackOn_showsTheWallAgain() throws Exception {
@@ -552,12 +677,21 @@ class MemoryWallFlowIntegrationTest {
 
     // ------------------------------------------------------- access rules
 
+    /*
+     * Checks: Visitors need no login to see the wall.
+     * How:    GET /api/memory-wall with no token gives 200.
+     */
     @Test
     @DisplayName("Visitors need no login for the wall and published pictures")
     void publicRoutes_needNoLogin() throws Exception {
         mvc.perform(get("/api/memory-wall")).andExpect(status().isOk());
     }
 
+    /*
+     * Checks: The admin URLs need a token (401).
+     * How:    We try six admin URLs (view, image, upload, selection, description, delete) with no
+     *   token. Each gives 401.
+     */
     @Test
     @DisplayName("Admin routes need a token (401)")
     void adminRoutes_needAToken() throws Exception {
@@ -574,6 +708,10 @@ class MemoryWallFlowIntegrationTest {
         mvc.perform(delete("/api/admin/memory-wall/photos/1")).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: The admin URLs refuse a client (403).
+     * How:    With a client token, view, upload, selection and delete each give 403.
+     */
     @Test
     @DisplayName("Admin routes refuse a client (403)")
     void adminRoutes_refuseAClient() throws Exception {
@@ -593,6 +731,12 @@ class MemoryWallFlowIntegrationTest {
 
     // ------------------------------------------------------------ audit log
 
+    /*
+     * Checks: Database triggers record every Memory Wall change in the audit log.
+     * How:    We upload, publish, change the description, unpublish and delete one photo. The audit
+     *   log text must contain MEMORY_WALL_PHOTO_ADDED, _PUBLISHED, _UPDATED, _UNPUBLISHED and
+     *   _DELETED.
+     */
     @Test
     @DisplayName("Database triggers record every Memory Wall change in the audit log")
     void changes_areWrittenToTheAuditLog() throws Exception {

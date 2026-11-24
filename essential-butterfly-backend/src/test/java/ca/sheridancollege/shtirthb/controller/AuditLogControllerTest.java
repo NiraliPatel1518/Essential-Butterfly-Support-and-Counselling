@@ -21,6 +21,11 @@ class AuditLogControllerTest {
     @Mock AuditTrailService auditTrail;
     @InjectMocks AuditLogController controller;
 
+    /*
+     * Checks: The recent activity log is returned with status 200.
+     * How:    The fake service returns one log entry for a limit of 50. The controller returns the
+     *   same list.
+     */
     @Test void returnsRecentActivityWithOkStatus() {
         List<AuditLogResponse> entries = List.of(
                 new AuditLogResponse(1L, "2026-11-10 14:30:00", "CONTENT_PUBLISHED",
@@ -33,6 +38,10 @@ class AuditLogControllerTest {
         assertSame(entries, response.getBody());
     }
 
+    /*
+     * Checks: The limit asked for is passed to the service.
+     * How:    We ask for 10 and verify the service was called with 10.
+     */
     @Test void passesTheRequestedLimitToTheService() {
         when(auditTrail.recentContentActivity(10)).thenReturn(List.of());
 
@@ -41,6 +50,10 @@ class AuditLogControllerTest {
         verify(auditTrail).recentContentActivity(10);
     }
 
+    /*
+     * Checks: An empty list is returned when nothing was recorded.
+     * How:    The fake service returns an empty list, and the controller body is empty.
+     */
     @Test void returnsAnEmptyListWhenNothingWasRecorded() {
         when(auditTrail.recentContentActivity(50)).thenReturn(List.of());
 

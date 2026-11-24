@@ -22,6 +22,11 @@ class CustomerTestimonialControllerTest {
     @Mock Authentication authentication;
     @InjectMocks CustomerTestimonialController controller;
 
+    /*
+     * Checks: A signed-in client can submit a testimonial.
+     * How:    The service submit is called with client@example.com and the request, and the controller
+     *   returns its result.
+     */
     @Test void submitsForAuthenticatedClient() {
         when(authentication.getName()).thenReturn("client@example.com");
         var request = mock(TestimonialRequest.class);
@@ -30,15 +35,27 @@ class CustomerTestimonialControllerTest {
         assertSame(expected, controller.submit(request, authentication));
         verify(service).submit("client@example.com", request);
     }
+    /*
+     * Checks: A client sees their own testimonials.
+     * How:    The service mine is called with the client's email and returns an empty list.
+     */
     @Test void listsCurrentClientsTestimonials() {
         when(authentication.getName()).thenReturn("client@example.com");
         when(service.mine("client@example.com")).thenReturn(List.of());
         assertTrue(controller.mine(authentication).isEmpty());
     }
+    /*
+     * Checks: The public list of testimonials is returned.
+     * How:    The fake service returns an empty list, and the controller returns it.
+     */
     @Test void listsPublicTestimonials() {
         when(service.publicList()).thenReturn(List.of());
         assertTrue(controller.publicList().isEmpty());
     }
+    /*
+     * Checks: The list of featured testimonials is returned.
+     * How:    The fake service returns an empty list, and the controller returns it.
+     */
     @Test void listsFeaturedTestimonials() {
         when(service.featured()).thenReturn(List.of());
         assertTrue(controller.featured().isEmpty());

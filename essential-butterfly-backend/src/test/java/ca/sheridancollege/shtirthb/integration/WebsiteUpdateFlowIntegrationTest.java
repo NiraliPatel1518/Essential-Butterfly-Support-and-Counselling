@@ -115,6 +115,11 @@ class WebsiteUpdateFlowIntegrationTest {
 
     // ------------------------------------------------------------- admin creates
 
+    /*
+     * Checks: The admin can create an update.
+     * How:    Title and content are trimmed. The answer is 201 with published true, 1 photo and the
+     *   social link. The database has 1 update.
+     */
     @Test
     void admin_canCreateAnUpdate() throws Exception {
         create(json("  Summer news  ", "  We have new hours.  ", "true", "[\"" + PHOTO + "\"]",
@@ -129,6 +134,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(1, updates.count());
     }
 
+    /*
+     * Checks: Creating an update needs an admin login.
+     * How:    No token gives 401. A client token gives 403. Nothing is saved.
+     */
     @Test
     void creatingNeedsAnAdminLogin() throws Exception {
         String body = json("Summer news", "News.", "true", "[]", "[]");
@@ -145,6 +154,11 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(0, updates.count());
     }
 
+    /*
+     * Checks: An update needs a title, content and a publishing status.
+     * How:    An empty title, an empty content and a missing published field each give 400. Nothing is
+     *   saved.
+     */
     @Test
     void anUpdateNeedsATitleContentAndPublishingStatus() throws Exception {
         create(json("", "News.", "true", "[]", "[]")).andExpect(status().isBadRequest());
@@ -154,6 +168,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(0, updates.count());
     }
 
+    /*
+     * Checks: A title longer than 180 characters is refused.
+     * How:    A 181-character title gives 400.
+     */
     @Test
     void aTitleOver180Characters_isRejected() throws Exception {
         create(json("a".repeat(181), "News.", "true", "[]", "[]"))
@@ -162,6 +180,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(0, updates.count());
     }
 
+    /*
+     * Checks: Only five photos are allowed.
+     * How:    Six photos give 400 and nothing is saved.
+     */
     @Test
     void onlyFivePhotosAreAllowed() throws Exception {
         String photos = "[" + String.join(",", Collections.nCopies(6, "\"" + PHOTO + "\"")) + "]";
@@ -171,6 +193,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(0, updates.count());
     }
 
+    /*
+     * Checks: Photos must be JPEG, PNG or WEBP.
+     * How:    A GIF data URL gives 400.
+     */
     @Test
     void photosMustBeJpegPngOrWebp() throws Exception {
         create(json("Title", "News.", "true",
@@ -183,6 +209,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(0, updates.count());
     }
 
+    /*
+     * Checks: Only five social links are allowed.
+     * How:    Six links give 400 and nothing is saved.
+     */
     @Test
     void onlyFiveLinksAreAllowed() throws Exception {
         String links = "[" + String.join(",",
@@ -193,6 +223,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals(0, updates.count());
     }
 
+    /*
+     * Checks: Links must start with http or https.
+     * How:    An ftp link gives 400.
+     */
     @Test
     void linksMustStartWithHttpOrHttps() throws Exception {
         create(json("Title", "News.", "true", "[]", "[\"ftp://example.com\"]"))
@@ -206,6 +240,10 @@ class WebsiteUpdateFlowIntegrationTest {
 
     // -------------------------------------------------------- what visitors see
 
+    /*
+     * Checks: Visitors see only published updates.
+     * How:    We create one published and one draft. The public list has 1 item, the published one.
+     */
     @Test
     void visitors_seeOnlyPublishedUpdates() throws Exception {
         createUpdate("Public news", true);
@@ -216,6 +254,11 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].title").value("Public news"));
     }
 
+    /*
+     * Checks: The public list shows a short preview, not the full text.
+     * How:    We create an update with 250 characters of content and check that the list shows a
+     *   shorter preview.
+     */
     @Test
     void thePublicListShowsAPreviewNotTheFullText() throws Exception {
         create(json("Long news", "a".repeat(250), "true", "[]", "[]"))
@@ -225,6 +268,11 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].content").doesNotExist());
     }
 
+    /*
+     * Checks: The cover image is the first photo.
+     * How:    We create one update with a photo and one without. The list shows no cover image for the
+     *   one without, and the photo as the cover for the other.
+     */
     @Test
     void theCoverImageIsTheFirstPhoto() throws Exception {
         create(json("With photo", "News.", "true", "[\"" + PHOTO + "\"]", "[]"))
@@ -241,6 +289,10 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(jsonPath("$[1].coverImage").value(PHOTO));
     }
 
+    /*
+     * Checks: The full update needs a login.
+     * How:    No token gives 401. A client token gives 200 with the full title and content.
+     */
     @Test
     void theFullUpdate_needsALogin() throws Exception {
         createUpdate("Public news", true);
@@ -255,6 +307,10 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(jsonPath("$.content").value("Some news for everyone."));
     }
 
+    /*
+     * Checks: A draft cannot be opened by a client.
+     * How:    A client token on a draft id gives 404.
+     */
     @Test
     void aDraft_cannotBeOpenedByAClient() throws Exception {
         createUpdate("Secret draft", false);
@@ -267,6 +323,10 @@ class WebsiteUpdateFlowIntegrationTest {
 
     // ---------------------------------------------------------------- admin list
 
+    /*
+     * Checks: The admin also sees drafts.
+     * How:    The admin list includes the draft update.
+     */
     @Test
     void admin_seesDraftsToo() throws Exception {
         createUpdate("Public news", true);
@@ -277,6 +337,10 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(2));
     }
 
+    /*
+     * Checks: The admin list is not for visitors or clients.
+     * How:    No token gives 401. A client token gives 403.
+     */
     @Test
     void theAdminList_isNotForVisitorsOrClients() throws Exception {
         mvc.perform(get("/api/admin/updates")).andExpect(status().isUnauthorized());
@@ -288,6 +352,10 @@ class WebsiteUpdateFlowIntegrationTest {
 
     // -------------------------------------------------------------- edit and publish
 
+    /*
+     * Checks: The admin can edit an update.
+     * How:    A PUT with new text gives 200, and the new title and content are saved.
+     */
     @Test
     void admin_canEditAnUpdate() throws Exception {
         createUpdate("Old title", true);
@@ -302,6 +370,10 @@ class WebsiteUpdateFlowIntegrationTest {
         assertEquals("New text.", saved.getContent());
     }
 
+    /*
+     * Checks: Publishing a draft makes it visible.
+     * How:    The public list is empty. After an edit with published true, the public list has 1 item.
+     */
     @Test
     void publishingADraft_makesItVisible() throws Exception {
         createUpdate("Soon public", false);
@@ -314,6 +386,10 @@ class WebsiteUpdateFlowIntegrationTest {
         publicList().andExpect(jsonPath("$.length()").value(1));
     }
 
+    /*
+     * Checks: Unpublishing hides an update again.
+     * How:    After an edit with published false, the public list is empty.
+     */
     @Test
     void unpublishing_hidesItAgain() throws Exception {
         createUpdate("Public news", true);
@@ -329,12 +405,20 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: Editing an update that does not exist gives 404.
+     * How:    We use id 999999.
+     */
     @Test
     void editingAMissingUpdate_isNotFound() throws Exception {
         edit(999999, json("Title", "News.", "true", "[]", "[]"))
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: An edit with a bad photo is refused.
+     * How:    A photo value that is not a data URL gives 400.
+     */
     @Test
     void anEditWithABadPhoto_isRejected() throws Exception {
         createUpdate("Old title", true);
@@ -348,6 +432,10 @@ class WebsiteUpdateFlowIntegrationTest {
 
     // ------------------------------------------------------------------- delete
 
+    /*
+     * Checks: The admin can delete an update.
+     * How:    Delete gives 204. The update is gone from the database and from the public list.
+     */
     @Test
     void admin_canDeleteAnUpdate() throws Exception {
         createUpdate("Old news", true);
@@ -361,6 +449,10 @@ class WebsiteUpdateFlowIntegrationTest {
         publicList().andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: Deleting an update that does not exist gives 404.
+     * How:    We use id 999999.
+     */
     @Test
     void deletingAMissingUpdate_isNotFound() throws Exception {
         mvc.perform(delete("/api/admin/updates/999999")
@@ -368,6 +460,10 @@ class WebsiteUpdateFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: Deleting needs an admin login.
+     * How:    No token gives 401, and a client token gives 403. The update is still there.
+     */
     @Test
     void deleting_needsAnAdminLogin() throws Exception {
         createUpdate("Old news", true);
@@ -385,6 +481,11 @@ class WebsiteUpdateFlowIntegrationTest {
 
     // ----------------------------------------------------- website feature switch
 
+    /*
+     * Checks: When the admin turns updates off, visitors and clients see none.
+     * How:    We turn the UPDATES feature off. The public list becomes empty, and the full update URL
+     *   no longer shows the update.
+     */
     @Test
     void whenTheAdminTurnsUpdatesOff_visitorsAndClientsSeeNone() throws Exception {
         createUpdate("Public news", true);

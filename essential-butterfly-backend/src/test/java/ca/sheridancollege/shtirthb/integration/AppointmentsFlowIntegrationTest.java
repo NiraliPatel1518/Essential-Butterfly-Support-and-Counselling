@@ -219,6 +219,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ============================================================ public slots
 
+    /*
+     * Checks: A visitor with no login can see the open appointment slots.
+     * How:    The admin creates a 10:00 slot. Then we ask the public list as a visitor. The list must
+     *   contain 10:00, and 11:00, which is the end time of the same one-hour slot.
+     */
     @Test
     @DisplayName("Visitors can see open slots without signing in")
     void visitorsSeeOpenSlots() throws Exception {
@@ -230,6 +235,11 @@ class AppointmentsFlowIntegrationTest {
         assertTrue(json.contains(slot("11:00")), json);
     }
 
+    /*
+     * Checks: The public slot list never shows who booked.
+     * How:    A client books the 10:00 slot. We read the public list again and check that neither her
+     *   name nor her email is in it. This is a privacy check.
+     */
     @Test
     @DisplayName("The open slot list never shows who booked")
     void slotListHidesClientDetails() throws Exception {
@@ -242,6 +252,11 @@ class AppointmentsFlowIntegrationTest {
         assertFalse(json.contains("ava@test.com"), json);
     }
 
+    /*
+     * Checks: A booked slot is removed from the public list.
+     * How:    We check the slot is in the list, book it as a client, and check it is gone. This stops
+     *   two people booking the same time.
+     */
     @Test
     @DisplayName("A booked slot disappears from the public list")
     void bookedSlotDisappears() throws Exception {
@@ -253,6 +268,11 @@ class AppointmentsFlowIntegrationTest {
         assertFalse(openSlotsJson().contains(slot("10:00")));
     }
 
+    /*
+     * Checks: A slot that is too far in the future is not offered.
+     * How:    The admin adds a slot 60 days from now. It is outside the booking window, so the public
+     *   list must not contain that date.
+     */
     @Test
     @DisplayName("A slot outside the booking window is not offered")
     void farAwaySlotIsNotOffered() throws Exception {
@@ -262,6 +282,12 @@ class AppointmentsFlowIntegrationTest {
         assertFalse(openSlotsJson().contains(far.toString()));
     }
 
+    /*
+     * Checks: Turning the appointment feature off hides all slots and blocks booking.
+     * How:    The admin sends the feature list with APPOINTMENTS set to false. The public list must
+     *   then be empty, and a booking must be refused with 409 and the message that booking is
+     *   not available.
+     */
     @Test
     @DisplayName("Switching the feature off empties the public list and blocks booking")
     void featureSwitchOffHidesEverything() throws Exception {
@@ -282,6 +308,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================================ booking
 
+    /*
+     * Checks: A client can book an open slot, and it starts as REQUESTED.
+     * How:    We book the 10:00 slot as a signed-in client. The answer must be 201 Created, with
+     *   status REQUESTED and the correct start and end times.
+     */
     @Test
     @DisplayName("A client books an open slot and it starts as REQUESTED")
     void clientBooksASlot() throws Exception {
@@ -294,6 +325,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.endsAt").value(at("11:00").substring(0, 16)));
     }
 
+    /*
+     * Checks: Two clients cannot book the same slot (no double booking).
+     * How:    Ava books 10:00. Ben tries the same time and must get 409 Conflict with the message that
+     *   the time is no longer available.
+     */
     @Test
     @DisplayName("Two clients cannot book the same slot")
     void secondClientCannotBookTheSameSlot() throws Exception {
@@ -306,6 +342,10 @@ class AppointmentsFlowIntegrationTest {
                         "This appointment time is no longer available. Please select another time."));
     }
 
+    /*
+     * Checks: A time that does not match an open slot is refused.
+     * How:    Only 10:00 is open. Booking 10:30 must be refused with 409 Conflict.
+     */
     @Test
     @DisplayName("A time that is not an open slot is refused")
     void timeThatIsNotASlotIsRefused() throws Exception {
@@ -314,6 +354,11 @@ class AppointmentsFlowIntegrationTest {
         book(ava(), at("10:30")).andExpect(status().isConflict());
     }
 
+    /*
+     * Checks: A start time that cannot be read is a validation error.
+     * How:    We send the text "tomorrow" instead of a date and time. The server must answer 400 with
+     *   the message to choose a time from the list.
+     */
     @Test
     @DisplayName("An unreadable start time is a validation error")
     void unreadableStartTime() throws Exception {
@@ -322,6 +367,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Choose an appointment time from the list."));
     }
 
+    /*
+     * Checks: Booking needs a signed-in client.
+     * How:    We send a booking request with no login token. The server must answer 401 Unauthorized.
+     */
     @Test
     @DisplayName("Booking needs a signed-in client")
     void bookingNeedsSignIn() throws Exception {
@@ -331,12 +380,22 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: An administrator cannot use the client booking endpoint.
+     * How:    We book with an admin token. The server must answer 403 Forbidden, because this action
+     *   is only for clients.
+     */
     @Test
     @DisplayName("An administrator cannot use the client booking endpoint")
     void adminCannotBookAsClient() throws Exception {
         book(admin(), at("10:00")).andExpect(status().isForbidden());
     }
 
+    /*
+     * Checks: A client whose email is not verified cannot book.
+     * How:    We create a client with a not-verified email and try to book. The server must refuse
+     *   with a 4xx error, and the slot must still be open afterwards.
+     */
     @Test
     @DisplayName("A client with an unverified email cannot book")
     void unverifiedEmailCannotBook() throws Exception {
@@ -353,6 +412,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ============================================================ my bookings
 
+    /*
+     * Checks: A client sees only their own bookings.
+     * How:    Ava books a slot. Her My Bookings list has 1 item with status REQUESTED. Ben's list for
+     *   the same call is empty.
+     */
     @Test
     @DisplayName("A client sees only their own bookings")
     void clientSeesOnlyOwnBookings() throws Exception {
@@ -370,6 +434,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: My Bookings needs a signed-in client.
+     * How:    With no token the server answers 401. With an admin token it answers 403.
+     */
     @Test
     @DisplayName("My bookings needs a signed-in client")
     void myBookingsNeedsSignIn() throws Exception {
@@ -381,6 +449,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ============================================================= admin list
 
+    /*
+     * Checks: The administrator sees every booking with the client details.
+     * How:    After Ava books, the admin list shows her name and email, status REQUESTED, canCancel
+     *   true and started false.
+     */
     @Test
     @DisplayName("The administrator sees every booking with client details")
     void adminListsBookings() throws Exception {
@@ -396,6 +469,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].started").value(false));
     }
 
+    /*
+     * Checks: The admin list can be filtered by status and searched by client.
+     * How:    We filter by REQUESTED (1 result) and CONFIRMED (0 results). We search "AVA" (1 result,
+     *   capital letters do not matter) and "nobody-here" (0 results).
+     */
     @Test
     @DisplayName("The list can be filtered by status and searched by client")
     void adminFiltersAndSearches() throws Exception {
@@ -420,6 +498,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: The symbols % and _ in a search are matched as normal characters.
+     * How:    In database searches these symbols can act as wildcards. Searching "%" or "_va" must
+     *   return 0 results, so the search cannot be abused.
+     */
     @Test
     @DisplayName("A search with % or _ is matched literally")
     void searchSymbolsAreLiteral() throws Exception {
@@ -434,6 +517,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    /*
+     * Checks: An unknown status filter is a validation error.
+     * How:    We filter by PENDING, which is not a real status. The server must answer 400 with the
+     *   message to choose a valid status.
+     */
     @Test
     @DisplayName("An unknown status filter is a validation error")
     void unknownStatusFilter() throws Exception {
@@ -443,6 +531,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Choose a valid appointment status."));
     }
 
+    /*
+     * Checks: Only an administrator can list appointments.
+     * How:    No token gives 401. A client token gives 403.
+     */
     @Test
     @DisplayName("Only an administrator can list appointments")
     void adminListIsProtected() throws Exception {
@@ -454,6 +546,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================================ confirm
 
+    /*
+     * Checks: Accepting a request confirms it and warns that Google Calendar is not connected.
+     * How:    The fake calendar says it is not configured. The admin confirms. Status becomes
+     *   CONFIRMED, calendarEventAdded is false, and a warning is shown.
+     */
     @Test
     @DisplayName("Accepting a request confirms it and warns that Calendar is not connected")
     void confirmWithoutCalendar() throws Exception {
@@ -467,6 +564,11 @@ class AppointmentsFlowIntegrationTest {
                         org.hamcrest.Matchers.containsString("Google Calendar is not connected")));
     }
 
+    /*
+     * Checks: Accepting a request adds a Calendar event when Calendar is connected.
+     * How:    The fake calendar says it is configured and returns an event id. After the admin
+     *   confirms, calendarEventAdded is true and there is no warning.
+     */
     @Test
     @DisplayName("Accepting a request adds a Calendar event when Calendar is connected")
     void confirmWithCalendar() throws Exception {
@@ -482,6 +584,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.warning").doesNotExist());
     }
 
+    /*
+     * Checks: A Calendar problem does not stop the confirmation.
+     * How:    The fake calendar returns the error "Quota exceeded". The appointment is still
+     *   CONFIRMED, calendarEventAdded is false, and the warning shows the problem.
+     */
     @Test
     @DisplayName("A Calendar problem keeps the appointment confirmed and shows a warning")
     void confirmWhenCalendarFails() throws Exception {
@@ -498,6 +605,11 @@ class AppointmentsFlowIntegrationTest {
                         org.hamcrest.Matchers.containsString("Quota exceeded")));
     }
 
+    /*
+     * Checks: A confirmed appointment can be added to Calendar later.
+     * How:    We confirm first (Calendar not connected). Then the fake calendar is switched to
+     *   connected, and the admin calls the calendar endpoint. calendarEventAdded becomes true.
+     */
     @Test
     @DisplayName("A confirmed appointment can be added to Calendar later")
     void addToCalendarLater() throws Exception {
@@ -512,6 +624,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.appointment.calendarEventAdded").value(true));
     }
 
+    /*
+     * Checks: A request that is not confirmed cannot be added to Calendar.
+     * How:    We call the calendar endpoint on a REQUESTED appointment. The server must answer 409
+     *   with the message that only a confirmed appointment can be added.
+     */
     @Test
     @DisplayName("A request that is not confirmed cannot be added to Calendar")
     void cannotAddRequestedToCalendar() throws Exception {
@@ -523,6 +640,11 @@ class AppointmentsFlowIntegrationTest {
                         "Only a confirmed appointment can be added to the calendar."));
     }
 
+    /*
+     * Checks: An appointment cannot be accepted twice.
+     * How:    We confirm an appointment that is already CONFIRMED. The server must answer 409 with the
+     *   message that only a requested appointment can be accepted.
+     */
     @Test
     @DisplayName("An appointment cannot be accepted twice")
     void cannotConfirmTwice() throws Exception {
@@ -534,6 +656,10 @@ class AppointmentsFlowIntegrationTest {
                         .value("Only a requested appointment can be accepted."));
     }
 
+    /*
+     * Checks: Confirming an appointment that does not exist gives 404.
+     * How:    We confirm the id 999999, which does not exist. The server must answer 404 Not Found.
+     */
     @Test
     @DisplayName("Confirming an appointment that does not exist is a 404")
     void confirmUnknownAppointment() throws Exception {
@@ -541,6 +667,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: A client cannot accept an appointment.
+     * How:    A client token gives 403 Forbidden, and no token gives 401 Unauthorized.
+     */
     @Test
     @DisplayName("A client cannot accept an appointment")
     void clientCannotConfirm() throws Exception {
@@ -555,6 +685,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================================ decline
 
+    /*
+     * Checks: Declining needs a reason.
+     * How:    We send a reason made only of spaces. The server must answer 400 with the message asking
+     *   for a short reason.
+     */
     @Test
     @DisplayName("Declining needs a reason")
     void declineNeedsAReason() throws Exception {
@@ -566,6 +701,11 @@ class AppointmentsFlowIntegrationTest {
                         .value("Enter a short reason for declining this request."));
     }
 
+    /*
+     * Checks: A declined request shows its reason to the client and frees the slot.
+     * How:    The admin declines with a reason. The status becomes DECLINED. The client sees the same
+     *   reason in My Bookings, and the slot is back in the public list.
+     */
     @Test
     @DisplayName("A declined request shows its reason to the client and frees the slot")
     void declineFreesTheSlot() throws Exception {
@@ -585,6 +725,10 @@ class AppointmentsFlowIntegrationTest {
         assertTrue(openSlotsJson().contains(slot("10:00")));
     }
 
+    /*
+     * Checks: A confirmed appointment cannot be declined.
+     * How:    We try to decline a CONFIRMED appointment. The server must answer 409 Conflict.
+     */
     @Test
     @DisplayName("A confirmed appointment cannot be declined")
     void cannotDeclineConfirmed() throws Exception {
@@ -596,6 +740,12 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================================= cancel
 
+    /*
+     * Checks: Cancelling a confirmed appointment removes its Calendar event and frees the slot.
+     * How:    The fake calendar creates event-9 and agrees to delete it. After the cancel, the status
+     *   is CANCELLED with the reason, there is no warning, deleteEvent was called once, and the
+     *   slot is open again.
+     */
     @Test
     @DisplayName("Cancelling a confirmed appointment removes its Calendar event and frees the slot")
     void cancelRemovesCalendarEvent() throws Exception {
@@ -616,6 +766,11 @@ class AppointmentsFlowIntegrationTest {
         assertTrue(openSlotsJson().contains(slot("10:00")));
     }
 
+    /*
+     * Checks: If the Calendar event cannot be removed, the cancel still works and shows a warning.
+     * How:    The fake calendar refuses to delete the event. The appointment is still CANCELLED, and
+     *   the warning says the event could not be removed.
+     */
     @Test
     @DisplayName("If the Calendar event cannot be removed the cancel still works and warns")
     void cancelWarnsWhenCalendarRemovalFails() throws Exception {
@@ -632,6 +787,10 @@ class AppointmentsFlowIntegrationTest {
                         org.hamcrest.Matchers.containsString("could not be removed")));
     }
 
+    /*
+     * Checks: A requested appointment can be cancelled without a reason.
+     * How:    We cancel with the reason set to null. The status becomes CANCELLED.
+     */
     @Test
     @DisplayName("A requested appointment can be cancelled without a reason")
     void cancelRequestedWithoutReason() throws Exception {
@@ -642,6 +801,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.appointment.status").value("CANCELLED"));
     }
 
+    /*
+     * Checks: An appointment that is already cancelled cannot be cancelled again.
+     * How:    We cancel it once (OK), then again. The second call must answer 409 with the message
+     *   that it can no longer be cancelled.
+     */
     @Test
     @DisplayName("A cancelled or declined appointment cannot be cancelled again")
     void cannotCancelTwice() throws Exception {
@@ -655,6 +819,11 @@ class AppointmentsFlowIntegrationTest {
                         .value("This appointment can no longer be cancelled."));
     }
 
+    /*
+     * Checks: An appointment that has already started cannot be cancelled.
+     * How:    startedAppointment() writes a confirmed appointment that began an hour ago straight into
+     *   the database. The cancel must answer 409 with the message that it has started.
+     */
     @Test
     @DisplayName("An appointment that has started cannot be cancelled")
     void cannotCancelStarted() throws Exception {
@@ -668,6 +837,12 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================== meeting link, invitation
 
+    /*
+     * Checks: The invitation saves the meeting link and emails it to the client.
+     * How:    The admin saves a link on a confirmed appointment. The link and invitationSentAt are
+     *   saved, there is no warning, the fake mail sender was called with the right name, email
+     *   and link, and the client can see the link in My Bookings.
+     */
     @Test
     @DisplayName("The invitation saves the link and e-mails it")
     void invitationSavesAndSendsTheLink() throws Exception {
@@ -688,6 +863,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].meetingLink").value(LINK));
     }
 
+    /*
+     * Checks: If the email fails, the link stays saved and a warning is shown.
+     * How:    The fake mail sender returns false. The link is saved, invitationSentAt stays empty, and
+     *   the warning says the email could not be sent.
+     */
     @Test
     @DisplayName("If the e-mail fails the link stays saved and a warning is shown")
     void invitationKeepsTheLinkWhenEmailFails() throws Exception {
@@ -703,6 +883,11 @@ class AppointmentsFlowIntegrationTest {
                         org.hamcrest.Matchers.containsString("email could not be sent")));
     }
 
+    /*
+     * Checks: The invitation can be sent again.
+     * How:    The first email fails. Then the fake mail sender is changed to succeed, and the admin
+     *   calls resend. invitationSentAt is now filled and there is no warning.
+     */
     @Test
     @DisplayName("The invitation can be sent again")
     void invitationCanBeResent() throws Exception {
@@ -719,6 +904,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.warning").doesNotExist());
     }
 
+    /*
+     * Checks: Resending needs a saved link.
+     * How:    We call resend with no link saved. The server must answer 409 with the message to add a
+     *   meeting link first.
+     */
     @Test
     @DisplayName("Resending needs a saved link")
     void resendNeedsALink() throws Exception {
@@ -729,6 +919,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Add a meeting link first."));
     }
 
+    /*
+     * Checks: A meeting link must start with https://
+     * How:    We try three bad links in a loop: an http link, a javascript link, and an empty text.
+     *   Each must give 400. This blocks unsafe links.
+     */
     @Test
     @DisplayName("A meeting link must start with https://")
     void linkMustBeHttps() throws Exception {
@@ -741,6 +936,10 @@ class AppointmentsFlowIntegrationTest {
         }
     }
 
+    /*
+     * Checks: A link can only be added to a confirmed appointment.
+     * How:    We try to save a link on a REQUESTED appointment. The server must answer 409 Conflict.
+     */
     @Test
     @DisplayName("A link can only be added to a confirmed appointment")
     void linkNeedsAConfirmedAppointment() throws Exception {
@@ -751,6 +950,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    /*
+     * Checks: A client cannot send an invitation.
+     * How:    A client token on the invitation endpoint must give 403 Forbidden.
+     */
     @Test
     @DisplayName("A client cannot send an invitation")
     void clientCannotSendInvitation() throws Exception {
@@ -765,6 +968,12 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================================ feedback
 
+    /*
+     * Checks: Feedback is shown to the client, but the private note never is.
+     * How:    The admin saves feedback and a private note on a started appointment. The client's My
+     *   Bookings shows the feedback, and the text of the private note and the word privateNotes
+     *   are not in the answer.
+     */
     @Test
     @DisplayName("Feedback is shown to the client but the private note never is")
     void feedbackVisibleNoteHidden() throws Exception {
@@ -786,6 +995,11 @@ class AppointmentsFlowIntegrationTest {
         assertFalse(clientView.contains("privateNotes"), clientView);
     }
 
+    /*
+     * Checks: Feedback and the private note can be saved one at a time.
+     * How:    We save only feedback, then only the note. After the second save, both values are
+     *   present, so one save does not erase the other.
+     */
     @Test
     @DisplayName("Feedback and the private note can be saved one at a time")
     void feedbackAndNoteSavedSeparately() throws Exception {
@@ -800,6 +1014,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.privateNotes").value("A note"));
     }
 
+    /*
+     * Checks: Feedback cannot be written before the appointment starts.
+     * How:    We write feedback on a confirmed appointment tomorrow. The server must answer 409 with
+     *   the message that feedback can be written once it has started.
+     */
     @Test
     @DisplayName("Feedback cannot be written before the appointment starts")
     void feedbackNeedsAStartedAppointment() throws Exception {
@@ -811,6 +1030,11 @@ class AppointmentsFlowIntegrationTest {
                         "Feedback can be written once a confirmed appointment has started."));
     }
 
+    /*
+     * Checks: Empty feedback and feedback that is too long are refused.
+     * How:    An empty request and a request with only spaces both give 400. A text of 4001 characters
+     *   gives 400 with the 4000-character limit message.
+     */
     @Test
     @DisplayName("Empty and too long feedback are refused")
     void feedbackValidation() throws Exception {
@@ -830,6 +1054,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Please keep this under 4000 characters."));
     }
 
+    /*
+     * Checks: A client cannot write feedback.
+     * How:    A client token on the feedback endpoint must give 403 Forbidden.
+     */
     @Test
     @DisplayName("A client cannot write feedback")
     void clientCannotWriteFeedback() throws Exception {
@@ -844,6 +1072,12 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================== availability rules
 
+    /*
+     * Checks: The admin can add, list, change and remove a one-date slot.
+     * How:    We add a slot at 10:00 and see it in the admin list with end time 11:00. We change it to
+     *   14:00 for 90 minutes (end time 15:30). We delete it (204), and 14:00 is no longer in the
+     *   public list.
+     */
     @Test
     @DisplayName("The administrator can add, list, change and remove a one-date slot")
     void ruleLifecycle() throws Exception {
@@ -869,6 +1103,11 @@ class AppointmentsFlowIntegrationTest {
         assertFalse(openSlotsJson().contains(slot("14:00")));
     }
 
+    /*
+     * Checks: A weekly slot repeats and is offered inside the booking window.
+     * How:    The admin adds a weekly rule for tomorrow's weekday at 16:00. The public list must
+     *   contain tomorrow at 16:00.
+     */
     @Test
     @DisplayName("A weekly slot repeats and is offered inside the booking window")
     void weeklySlotIsOffered() throws Exception {
@@ -882,6 +1121,11 @@ class AppointmentsFlowIntegrationTest {
         assertTrue(openSlotsJson().contains(slot("16:00")));
     }
 
+    /*
+     * Checks: Two slots that overlap on the same day are refused.
+     * How:    A slot at 10:00 for 60 minutes exists. Adding 10:30 on the same day must give 409 with
+     *   the overlap message.
+     */
     @Test
     @DisplayName("Overlapping slots on the same day are refused")
     void overlappingSlotsAreRefused() throws Exception {
@@ -893,6 +1137,12 @@ class AppointmentsFlowIntegrationTest {
                         .value("This time overlaps another slot on the same day."));
     }
 
+    /*
+     * Checks: Bad slot input is refused with a clear message.
+     * How:    We try: a time written as "10am", a 20-minute slot, a 200-minute slot, a date in the
+     *   past, and a rule with no weekday or date. Each must give 400, and the past date and
+     *   missing day have their own messages.
+     */
     @Test
     @DisplayName("Bad slot input is refused with a clear message")
     void badSlotInput() throws Exception {
@@ -911,6 +1161,10 @@ class AppointmentsFlowIntegrationTest {
                         .value("Choose the day of the week or a date."));
     }
 
+    /*
+     * Checks: Changing or removing a slot that does not exist gives 404.
+     * How:    We update and delete the id 999999. Both must answer 404 Not Found.
+     */
     @Test
     @DisplayName("Changing or removing a slot that does not exist is a 404")
     void unknownRule() throws Exception {
@@ -923,6 +1177,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: Only an administrator can manage availability.
+     * How:    No token gives 401 when listing. A client token gives 403 when adding a slot.
+     */
     @Test
     @DisplayName("Only an administrator can manage availability")
     void availabilityIsProtected() throws Exception {
@@ -938,6 +1196,11 @@ class AppointmentsFlowIntegrationTest {
 
     // ================================================================ settings
 
+    /*
+     * Checks: The hide-before-start setting can be read and changed.
+     * How:    The admin sets it to 24 hours. Reading it back shows 24 and the time zone
+     *   America/Toronto.
+     */
     @Test
     @DisplayName("The hide-before-start setting can be read and changed")
     void settingsRoundTrip() throws Exception {
@@ -952,6 +1215,11 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(jsonPath("$.timeZone").value("America/Toronto"));
     }
 
+    /*
+     * Checks: A slot closer than the hide setting is not offered and cannot be booked.
+     * How:    The slot is first in the list. The admin sets the hide time to 168 hours (7 days). Now
+     *   the slot is gone from the list, and booking it gives 409.
+     */
     @Test
     @DisplayName("A slot that is closer than the hide setting is not offered or bookable")
     void hideSettingRemovesNearSlots() throws Exception {
@@ -965,6 +1233,10 @@ class AppointmentsFlowIntegrationTest {
         book(ava(), at("10:00")).andExpect(status().isConflict());
     }
 
+    /*
+     * Checks: The hide setting only accepts 0 to 168 hours.
+     * How:    169 and -1 give 400. The limits 0 and 168 are accepted with 200.
+     */
     @Test
     @DisplayName("The hide setting only accepts 0 to 168 hours")
     void settingsValidation() throws Exception {
@@ -978,6 +1250,10 @@ class AppointmentsFlowIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /*
+     * Checks: Only an administrator can change the settings.
+     * How:    A client token on the settings endpoint must give 403 Forbidden.
+     */
     @Test
     @DisplayName("Only an administrator can change the settings")
     void settingsAreProtected() throws Exception {

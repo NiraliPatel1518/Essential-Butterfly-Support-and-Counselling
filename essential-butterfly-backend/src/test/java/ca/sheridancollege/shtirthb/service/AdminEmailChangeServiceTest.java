@@ -91,6 +91,10 @@ class AdminEmailChangeServiceTest {
 
     // ---------------------------------------------------------------- profile
 
+    /*
+     * Checks: The profile shows the admin's name and email.
+     * How:    Mockito fake repository. getProfile returns "Admin" and the admin email.
+     */
     @Test
     void getProfile_returnsTheNameAndEmail() {
         adminExists();
@@ -101,6 +105,10 @@ class AdminEmailChangeServiceTest {
         assertEquals(CURRENT, profile.email());
     }
 
+    /*
+     * Checks: An unknown admin gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void getProfile_throwsError_whenAdminDoesNotExist() {
         when(admins.findByEmail(CURRENT)).thenReturn(Optional.empty());
@@ -111,6 +119,10 @@ class AdminEmailChangeServiceTest {
 
     // ---------------------------------------------------------- request change
 
+    /*
+     * Checks: Changing to the current email is refused.
+     * How:    It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void requestEmailChange_throwsError_whenNewEmailIsTheCurrentEmail() {
         adminExists();
@@ -121,6 +133,10 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: An email used by another admin is refused.
+     * How:    existsByEmail is true. It throws ConflictException and no mail is sent.
+     */
     @Test
     void requestEmailChange_throwsError_whenAnotherAdminUsesTheEmail() {
         adminExists();
@@ -132,6 +148,10 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: An email used by a client is refused.
+     * How:    The client repository says it exists. It throws ConflictException and no mail is sent.
+     */
     @Test
     void requestEmailChange_throwsError_whenAClientUsesTheEmail() {
         adminExists();
@@ -144,6 +164,11 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Asking again for the same address is refused.
+     * How:    A change is already pending for that address. The message says "already been sent" and
+     *   no mail is sent.
+     */
     @Test
     void requestEmailChange_throwsError_whenACodeWasAlreadySentToThatAddress() {
         pendingChange();
@@ -157,6 +182,12 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: A code is emailed to the new address, and the login email stays the same.
+     * How:    We pass " New@Test.com ". The login email is unchanged, the pending email is
+     *   new@test.com, the hash is stored, counters are 0, the expiry is about 10 minutes away,
+     *   one mail is sent and the admin is saved.
+     */
     @Test
     void requestEmailChange_emailsACodeToTheNewAddress_withoutChangingTheLoginEmail() {
         mailWillBeSent();
@@ -176,6 +207,11 @@ class AdminEmailChangeServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: Nothing is saved when the email cannot be sent.
+     * How:    The fake sender throws. It throws ServiceUnavailableException and save() is never
+     *   called.
+     */
     @Test
     void requestEmailChange_doesNotSaveAnything_whenTheEmailCannotBeSent() {
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
@@ -191,6 +227,10 @@ class AdminEmailChangeServiceTest {
 
     // ------------------------------------------------------------ verify change
 
+    /*
+     * Checks: Verifying without a request is refused.
+     * How:    The message contains "no active email change".
+     */
     @Test
     void verifyEmailChange_throwsError_whenNoChangeWasRequested() {
         adminExists();
@@ -202,6 +242,10 @@ class AdminEmailChangeServiceTest {
         assertTrue(error.getMessage().contains("no active email change"));
     }
 
+    /*
+     * Checks: An expired code is refused.
+     * How:    The expiry is one minute ago. The message says expired.
+     */
     @Test
     void verifyEmailChange_throwsError_whenTheCodeHasExpired() {
         pendingChange();
@@ -215,6 +259,11 @@ class AdminEmailChangeServiceTest {
         assertTrue(error.getMessage().contains("expired"));
     }
 
+    /*
+     * Checks: After five used attempts the change is cancelled.
+     * How:    The pending email and hash become null, the login email is unchanged, and the admin is
+     *   saved.
+     */
     @Test
     void verifyEmailChange_cancelsTheChange_whenFiveAttemptsWereAlreadyUsed() {
         pendingChange();
@@ -230,6 +279,11 @@ class AdminEmailChangeServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: A wrong code is counted and the message says how many tries are left.
+     * How:    The message says "4 attempt(s) remaining", the attempts are 1, the pending email stays,
+     *   and the admin is saved.
+     */
     @Test
     void verifyEmailChange_countsTheWrongCodeAndSaysHowManyAttemptsAreLeft() {
         pendingChange();
@@ -246,6 +300,11 @@ class AdminEmailChangeServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: The fifth wrong code cancels the change.
+     * How:    With 4 attempts already, a wrong code gives the message "current email address has not
+     *   changed". The pending email is null and the login email is unchanged.
+     */
     @Test
     void verifyEmailChange_cancelsTheChange_onTheFifthWrongCode() {
         pendingChange();
@@ -263,6 +322,11 @@ class AdminEmailChangeServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: The right code replaces the login email.
+     * How:    The encoder says it matches. The email becomes the new one, and the pending email, hash,
+     *   expiry and attempts are cleared and saved.
+     */
     @Test
     void verifyEmailChange_replacesTheLoginEmail_whenCodeIsCorrect() {
         pendingChange();
@@ -282,6 +346,11 @@ class AdminEmailChangeServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: It is refused if someone took the email in the meantime.
+     * How:    The code is right, but a client now uses the email. It throws ConflictException, the
+     *   email is unchanged, and nothing is saved.
+     */
     @Test
     void verifyEmailChange_throwsError_whenSomeoneTookTheEmailInTheMeantime() {
         pendingChange();
@@ -298,6 +367,10 @@ class AdminEmailChangeServiceTest {
 
     // ----------------------------------------------------------------- resend
 
+    /*
+     * Checks: Resend without a request is refused.
+     * How:    It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void resendEmailChangeOtp_throwsError_whenNoChangeWasRequested() {
         adminExists();
@@ -308,6 +381,10 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Resend after five wrong attempts is refused.
+     * How:    It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void resendEmailChangeOtp_throwsError_whenFiveAttemptsWereAlreadyUsed() {
         pendingChange();
@@ -320,6 +397,10 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: A fourth resend is refused.
+     * How:    The resend count is 3. The message says "maximum number of resend requests".
+     */
     @Test
     void resendEmailChangeOtp_throwsError_afterTheThirdResend() {
         pendingChange();
@@ -334,6 +415,10 @@ class AdminEmailChangeServiceTest {
         assertTrue(error.getMessage().contains("maximum number of resend requests"));
     }
 
+    /*
+     * Checks: Resend within 60 seconds is refused.
+     * How:    The message starts with "Please wait" and no mail is sent.
+     */
     @Test
     void resendEmailChangeOtp_throwsError_whenTheFirstWaitOf60SecondsIsNotOver() {
         pendingChange();
@@ -348,6 +433,11 @@ class AdminEmailChangeServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: After the wait, resend sends a new code and counts it.
+     * How:    The last send was 61 seconds ago. The resend count is 1, the hash is updated, one mail
+     *   is sent and the admin is saved.
+     */
     @Test
     void resendEmailChangeOtp_sendsANewCodeAndCountsIt_whenTheWaitIsOver() {
         mailWillBeSent();

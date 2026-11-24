@@ -137,6 +137,10 @@ class AdminAccountFlowIntegrationTest {
 
     // -------------------------------------------------------------- protection
 
+    /*
+     * Checks: The admin account page needs an admin login.
+     * How:    No token gives 401. A client token gives 403.
+     */
     @Test
     void theAdminAccountPage_needsAnAdminLogin() throws Exception {
         mvc.perform(get("/api/admin-account/profile")).andExpect(status().isUnauthorized());
@@ -148,6 +152,10 @@ class AdminAccountFlowIntegrationTest {
 
     // ----------------------------------------------------------------- profile
 
+    /*
+     * Checks: The admin can see their own profile.
+     * How:    The profile URL returns the name Administrator and the admin's email.
+     */
     @Test
     void admin_seesTheirProfile() throws Exception {
         profile(adminToken)
@@ -158,6 +166,11 @@ class AdminAccountFlowIntegrationTest {
 
     // ---------------------------------------------------- asking to change email
 
+    /*
+     * Checks: Asking to change the email sends a code to the new address only.
+     * How:    The fake mail sender is called once, and its recipient is the new email. The login email
+     *   in the database does not change yet, and the new one is saved as the pending email.
+     */
     @Test
     void asking_emailsACodeToTheNewAddressOnly() throws Exception {
         requestChange(NEW_EMAIL).andExpect(status().isOk());
@@ -171,6 +184,10 @@ class AdminAccountFlowIntegrationTest {
         assertEquals(NEW_EMAIL, admin().getPendingEmail());
     }
 
+    /*
+     * Checks: The new email is stored in lower case.
+     * How:    We ask with New.Admin@Mail.COM. The pending email is new.admin@mail.com.
+     */
     @Test
     void theNewEmailIsStoredInLowerCase() throws Exception {
         requestChange("New.Admin@Mail.COM").andExpect(status().isOk());
@@ -178,6 +195,10 @@ class AdminAccountFlowIntegrationTest {
         assertEquals(NEW_EMAIL, admin().getPendingEmail());
     }
 
+    /*
+     * Checks: An invalid new email is refused.
+     * How:    The answer is 400 and no email is sent.
+     */
     @Test
     void anInvalidEmail_isRejected() throws Exception {
         requestChange("not-an-email").andExpect(status().isBadRequest());
@@ -185,6 +206,10 @@ class AdminAccountFlowIntegrationTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Changing to the current email is refused.
+     * How:    The answer is 409 with "same as your current email", and no email is sent.
+     */
     @Test
     void theSameEmail_isRefused() throws Exception {
         requestChange(ADMIN_EMAIL)
@@ -194,6 +219,10 @@ class AdminAccountFlowIntegrationTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: An email that a client already uses is refused.
+     * How:    We save a client first. The answer is 409 and no email is sent.
+     */
     @Test
     void anEmailUsedByAClient_isRefused() throws Exception {
         clients.save(new ClientUser("Jane Lee", "jane@mail.com", "hash"));
@@ -205,6 +234,11 @@ class AdminAccountFlowIntegrationTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Asking twice for the same address tells the admin to use Resend.
+     * How:    The second request gives 409 with "Use Resend code", and only one email was sent in
+     *   total.
+     */
     @Test
     void askingTwiceForTheSameAddress_pointsToResend() throws Exception {
         requestChange(NEW_EMAIL).andExpect(status().isOk());
@@ -218,6 +252,11 @@ class AdminAccountFlowIntegrationTest {
 
     // ----------------------------------------------------------- entering the code
 
+    /*
+     * Checks: The right code changes the email and gives a new token.
+     * How:    We set a code we know. After verify, the admin is found by the new email and has no
+     *   pending email. The new token opens the profile with the new email.
+     */
     @Test
     void theCorrectCode_changesTheEmailAndReturnsAFreshToken() throws Exception {
         requestWithKnownCode();
@@ -237,6 +276,11 @@ class AdminAccountFlowIntegrationTest {
                 .andExpect(jsonPath("$.email").value(NEW_EMAIL));
     }
 
+    /*
+     * Checks: After the change, the old token no longer finds the account.
+     * How:    The profile with the old token answers 404, because the old email does not exist
+     *   anymore.
+     */
     @Test
     void afterTheChange_theOldLoginTokenNoLongerFindsTheAccount() throws Exception {
         requestWithKnownCode();
@@ -245,6 +289,11 @@ class AdminAccountFlowIntegrationTest {
         profile(adminToken).andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: A code cannot be used twice.
+     * How:    After a successful verify, a second verify gives 400 with "no active email change
+     *   request".
+     */
     @Test
     void aCode_cannotBeUsedTwice() throws Exception {
         requestWithKnownCode();
@@ -258,6 +307,10 @@ class AdminAccountFlowIntegrationTest {
                 .andExpect(messageContains("no active email change request"));
     }
 
+    /*
+     * Checks: Verifying without a request is refused.
+     * How:    The answer is 400 with "no active email change request".
+     */
     @Test
     void withoutARequest_thereIsNothingToVerify() throws Exception {
         verifyChange(CODE)
@@ -265,6 +318,10 @@ class AdminAccountFlowIntegrationTest {
                 .andExpect(messageContains("no active email change request"));
     }
 
+    /*
+     * Checks: A code that is not 6 digits is refused.
+     * How:    "12345" and "abcdef" both give 400, and the email is not changed.
+     */
     @Test
     void aCodeThatIsNotSixDigits_isRejected() throws Exception {
         requestWithKnownCode();
@@ -275,6 +332,10 @@ class AdminAccountFlowIntegrationTest {
         assertEquals(ADMIN_EMAIL, admin().getEmail());
     }
 
+    /*
+     * Checks: A wrong code is refused and counted.
+     * How:    The answer says 4 attempts remain, and the attempts counter in the database is 1.
+     */
     @Test
     void aWrongCode_isRejectedAndCounted() throws Exception {
         requestWithKnownCode();
@@ -287,6 +348,11 @@ class AdminAccountFlowIntegrationTest {
         assertEquals(1, admin().getEmailChangeOtpAttempts());
     }
 
+    /*
+     * Checks: After five wrong codes the request is cancelled.
+     * How:    We send 4 wrong codes, then a 5th. The message says the email has not changed, the
+     *   pending email is empty, and even the right code now gives "no active request".
+     */
     @Test
     void afterFiveWrongCodes_theRequestIsCancelledAndTheEmailStaysTheSame() throws Exception {
         requestWithKnownCode();
@@ -307,6 +373,11 @@ class AdminAccountFlowIntegrationTest {
                 .andExpect(messageContains("no active email change request"));
     }
 
+    /*
+     * Checks: An expired code is refused.
+     * How:    We set the expiry to one minute ago. The answer is 400 with "expired", and the email
+     *   does not change.
+     */
     @Test
     void anExpiredCode_isRefused() throws Exception {
         requestWithKnownCode();
@@ -323,12 +394,21 @@ class AdminAccountFlowIntegrationTest {
 
     // ------------------------------------------------------------------ resend
 
+    /*
+     * Checks: Resend needs an active request first.
+     * How:    The answer is 409 with "no active email change request".
+     */
     @Test
     void resend_needsARequestFirst() throws Exception {
         resend().andExpect(status().isConflict())
                 .andExpect(messageContains("no active email change request"));
     }
 
+    /*
+     * Checks: Resend must wait for the cooldown.
+     * How:    Resend right after the request gives 409 with "Please wait", and still only one email
+     *   was sent.
+     */
     @Test
     void resend_mustWaitForTheCooldown() throws Exception {
         requestChange(NEW_EMAIL).andExpect(status().isOk());
@@ -339,6 +419,11 @@ class AdminAccountFlowIntegrationTest {
         verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: After the cooldown, resend emails a new code.
+     * How:    We set the last sent time to 61 seconds ago. Resend gives 200, 2 emails were sent in
+     *   total, and the resend count is 1.
+     */
     @Test
     void afterTheCooldown_resendEmailsANewCode() throws Exception {
         requestChange(NEW_EMAIL).andExpect(status().isOk());
@@ -352,6 +437,11 @@ class AdminAccountFlowIntegrationTest {
         assertEquals(1, admin().getEmailChangeOtpResendCount());
     }
 
+    /*
+     * Checks: Resend is limited to three times.
+     * How:    We set the resend count to 3. The next resend gives 409 with "maximum number of resend
+     *   requests".
+     */
     @Test
     void resend_isLimitedToThreeTimes() throws Exception {
         requestChange(NEW_EMAIL).andExpect(status().isOk());

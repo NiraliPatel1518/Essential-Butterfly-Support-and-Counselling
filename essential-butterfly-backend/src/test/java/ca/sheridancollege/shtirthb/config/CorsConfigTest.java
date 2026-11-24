@@ -20,6 +20,11 @@ class CorsConfigTest {
                 .getCorsConfigurations().get("/**");
     }
 
+    /*
+     * Checks: The CORS rules from the settings are applied to every URL (/**).
+     * How:    We set one origin, four methods, two headers and credentials on. We build the CorsConfig
+     *   and read the rule for /**. It must contain exactly those values.
+     */
     @Test
     void appliesTheConfiguredCorsRulesToEveryPath() {
         AppProperties properties = new AppProperties();
@@ -37,6 +42,11 @@ class CorsConfigTest {
         assertEquals(Boolean.TRUE, configuration.getAllowCredentials());
     }
 
+    /*
+     * Checks: Only the listed website address is allowed to call the API.
+     * How:    checkOrigin returns the origin when it is listed (localhost:5173) and null for an
+     *   unknown one (evil.example.com), so other sites are blocked.
+     */
     @Test
     void allowsOnlyTheListedOrigin() {
         AppProperties properties = new AppProperties();
@@ -51,6 +61,10 @@ class CorsConfigTest {
         assertEquals(null, configuration.checkOrigin("https://evil.example.com"));
     }
 
+    /*
+     * Checks: Sending cookies and credentials can be turned off.
+     * How:    We set allowCredentials to false and check the built rule says false.
+     */
     @Test
     void canTurnCredentialsOff() {
         AppProperties properties = new AppProperties();

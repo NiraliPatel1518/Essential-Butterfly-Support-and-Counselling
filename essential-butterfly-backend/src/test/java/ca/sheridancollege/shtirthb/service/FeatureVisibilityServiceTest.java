@@ -20,6 +20,11 @@ class FeatureVisibilityServiceTest {
     FeatureVisibilityService service;
     @BeforeEach void setUp() { service = new FeatureVisibilityService(repository); }
 
+    /*
+     * Checks: When no features exist, the five default features are created.
+     * How:    Unit test with a mock repository that finds nothing. getFeatures() must call save() five
+     *   times.
+     */
     @Test void getFeaturesSeedsAllFiveFeatureDefaults() {
         when(repository.findByFeatureKey(anyString())).thenReturn(Optional.empty());
         when(repository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of());
@@ -27,6 +32,11 @@ class FeatureVisibilityServiceTest {
         verify(repository, times(5)).save(any(FeatureVisibility.class));
     }
 
+    /*
+     * Checks: An empty or incomplete feature list is refused.
+     * How:    An empty list and a list with only NEWSLETTER both throw ValidationException, and the
+     *   repository is never used.
+     */
     @Test void updateRejectsMissingOrIncompleteFeatureSet() {
         assertThrows(AppExceptions.ValidationException.class, () -> service.updateFeatures(List.of()));
         List<FeatureVisibilityRequest> invalid = List.of(request("NEWSLETTER", true));
@@ -34,6 +44,11 @@ class FeatureVisibilityServiceTest {
         verifyNoInteractions(repository);
     }
 
+    /*
+     * Checks: An unknown feature key is refused.
+     * How:    The list has OTHER instead of MEMORY_WALL. It throws ValidationException and the
+     *   repository is never used.
+     */
     @Test void updateRejectsUnknownFeatureKey() {
         List<FeatureVisibilityRequest> requests = List.of(
             request("NEWSLETTER", true), request("TESTIMONIALS", true),
@@ -43,6 +58,11 @@ class FeatureVisibilityServiceTest {
         verifyNoInteractions(repository);
     }
 
+    /*
+     * Checks: A feature with no on/off value is refused.
+     * How:    MEMORY_WALL has enabled = null. It throws ValidationException and the repository is
+     *   never used.
+     */
     @Test void updateRejectsNullVisibility() {
         List<FeatureVisibilityRequest> requests = List.of(
             request("NEWSLETTER", true), request("TESTIMONIALS", true),

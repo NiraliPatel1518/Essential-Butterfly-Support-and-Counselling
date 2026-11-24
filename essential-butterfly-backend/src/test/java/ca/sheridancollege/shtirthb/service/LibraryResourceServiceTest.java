@@ -135,6 +135,11 @@ class LibraryResourceServiceTest {
 
     // -------------------------------------------------------------- public
 
+    /*
+     * Checks: The public list returns the published resources.
+     * How:    Mockito fake repositories. One published link resource comes back with its title, type
+     *   LINK, the link list and a published date.
+     */
     @Test
     void getPublicResources_returnsThePublishedResources() {
         LibraryResource guide = existing(1, "Guide", LINK_A);
@@ -150,6 +155,11 @@ class LibraryResourceServiceTest {
         assertNotNull(result.get(0).publishedAt());
     }
 
+    /*
+     * Checks: A published file resource can be downloaded.
+     * How:    The download has the file name, application/pdf, the stored bytes, and inline true (a
+     *   PDF opens in the browser).
+     */
     @Test
     void getPublicDownload_returnsTheFileOfAPublishedResource() {
         LibraryResource pdf = existingFile(5, "Guide", "guide.pdf", "application/pdf");
@@ -165,6 +175,10 @@ class LibraryResourceServiceTest {
         assertTrue(download.inline());
     }
 
+    /*
+     * Checks: Word files are downloaded instead of shown in the browser.
+     * How:    For a DOCX, inline is false.
+     */
     @Test
     void getPublicDownload_downloadsWordFilesInsteadOfShowingThem() {
         String docx = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -176,6 +190,10 @@ class LibraryResourceServiceTest {
         assertFalse(service.getPublicDownload(6L).inline());
     }
 
+    /*
+     * Checks: A download of an unpublished resource gives not found.
+     * How:    It throws ResourceNotFoundException and the file repository is never used.
+     */
     @Test
     void getPublicDownload_throwsError_whenTheResourceIsNotPublished() {
         when(resources.findByIdAndStatus(5L, "PUBLISHED")).thenReturn(Optional.empty());
@@ -186,6 +204,10 @@ class LibraryResourceServiceTest {
         verifyNoInteractions(files);
     }
 
+    /*
+     * Checks: A download of a link-only resource gives not found.
+     * How:    It throws ResourceNotFoundException and the file repository is never used.
+     */
     @Test
     void getPublicDownload_throwsError_whenTheResourceIsOnlyALink() {
         LibraryResource link = existing(5, "Guide", LINK_A);
@@ -197,6 +219,10 @@ class LibraryResourceServiceTest {
         verifyNoInteractions(files);
     }
 
+    /*
+     * Checks: A missing stored file gives not found.
+     * How:    The file repository returns nothing, so it throws ResourceNotFoundException.
+     */
     @Test
     void getPublicDownload_throwsError_whenTheStoredFileIsMissing() {
         LibraryResource pdf = existingFile(5, "Guide", "guide.pdf", "application/pdf");
@@ -209,6 +235,10 @@ class LibraryResourceServiceTest {
 
     // --------------------------------------------------------------- admin
 
+    /*
+     * Checks: The admin list shows everything that was not removed.
+     * How:    The list has 1 item with status DRAFT.
+     */
     @Test
     void getAdminResources_listsEverythingThatWasNotRemoved() {
         LibraryResource draft = existing(1, "Draft guide", LINK_A);
@@ -221,6 +251,10 @@ class LibraryResourceServiceTest {
         assertEquals("DRAFT", result.get(0).status());
     }
 
+    /*
+     * Checks: The upload rules come from the validator.
+     * How:    getUploadRules() returns the same object as the validator.
+     */
     @Test
     void getUploadRules_comesFromTheValidator() {
         UploadRulesResponse rules = new UploadRulesResponse(
@@ -232,6 +266,10 @@ class LibraryResourceServiceTest {
 
     // -------------------------------------------------------------- create
 
+    /*
+     * Checks: A new link resource is saved as a DRAFT.
+     * How:    The result has the title, status DRAFT, type LINK, the link, and no published date.
+     */
     @Test
     void create_savesALinkResourceAsADraft() {
         linksAreSafe();
@@ -249,6 +287,10 @@ class LibraryResourceServiceTest {
         verifyNoInteractions(files);
     }
 
+    /*
+     * Checks: Creating with publish makes the resource public.
+     * How:    The status is PUBLISHED and there is a published date.
+     */
     @Test
     void create_withPublish_makesTheResourcePublic() {
         linksAreSafe();
@@ -261,6 +303,10 @@ class LibraryResourceServiceTest {
         assertNotNull(result.publishedAt());
     }
 
+    /*
+     * Checks: Spaces around the text fields are removed.
+     * How:    Title, description and category are trimmed.
+     */
     @Test
     void create_trimsTheTextFields() {
         linksAreSafe();
@@ -275,6 +321,10 @@ class LibraryResourceServiceTest {
         assertEquals("Parenting", result.category());
     }
 
+    /*
+     * Checks: Links are read one per line, ignoring blank lines and repeats.
+     * How:    The result has the two different links. The validator checked each link once (2 calls).
+     */
     @Test
     void create_readsOneLinkPerLine_andIgnoresBlankLinesAndRepeats() {
         linksAreSafe();
@@ -289,6 +339,11 @@ class LibraryResourceServiceTest {
         verify(validator, times(2)).validateLink(anyString(), eq(ADMIN));
     }
 
+    /*
+     * Checks: An uploaded file is saved together with the resource.
+     * How:    The result has type FILE, the file name, the content type and the size. The file
+     *   repository saved the file.
+     */
     @Test
     void create_savesAnUploadedFileTogetherWithTheResource() {
         saveReturnsTheSameResource();
@@ -310,6 +365,10 @@ class LibraryResourceServiceTest {
         assertArrayEquals(content, saved.getValue().getContent());
     }
 
+    /*
+     * Checks: An image with alternative text is accepted.
+     * How:    The result has the alt text.
+     */
     @Test
     void create_acceptsAnImageThatHasAlternativeText() {
         saveReturnsTheSameResource();
@@ -324,6 +383,11 @@ class LibraryResourceServiceTest {
         assertEquals("A butterfly on a flower", result.altText());
     }
 
+    /*
+     * Checks: An image without alternative text is refused.
+     * How:    The message starts with "Required content is missing: alternative text." and nothing is
+     *   saved.
+     */
     @Test
     void create_refusesAnImageWithoutAlternativeText() {
         byte[] content = {1, 2};
@@ -337,6 +401,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: The error names every missing part before any file is checked.
+     * How:    The message lists title, short description, category and link or document. The validator
+     *   is not used and nothing is saved.
+     */
     @Test
     void create_namesEveryMissingPart_beforeCheckingAnyFile() {
         String message = createError(
@@ -348,6 +417,10 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A missing request is refused.
+     * How:    A null request throws ValidationException and nothing is saved.
+     */
     @Test
     void create_refusesAMissingRequest() {
         assertThrows(AppExceptions.ValidationException.class,
@@ -356,6 +429,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: Text that is too long is refused.
+     * How:    A title over 80, a description over 300, a category over 40 and an alt text over 150
+     *   characters each give their own message. Nothing is saved.
+     */
     @Test
     void create_refusesTextThatIsTooLong() {
         assertEquals("The title must be 80 characters or fewer.",
@@ -372,6 +450,10 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: The maximum lengths are accepted.
+     * How:    Fields at exactly the limits do not throw.
+     */
     @Test
     void create_acceptsTheMaximumLengths() {
         linksAreSafe();
@@ -382,6 +464,11 @@ class LibraryResourceServiceTest {
                 null, ADMIN));
     }
 
+    /*
+     * Checks: More than five links are refused.
+     * How:    The message is "You can add up to 5 links to one resource." The validator is not used
+     *   and nothing is saved.
+     */
     @Test
     void create_refusesMoreThanFiveLinks() {
         String sixLinks = String.join("\n",
@@ -395,6 +482,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: Nothing is saved when a link is not safe.
+     * How:    The validator throws for the link ("This link was rejected."). The error is passed up
+     *   and nothing is saved.
+     */
     @Test
     void create_savesNothing_whenALinkIsNotSafe() {
         when(validator.validateLink(anyString(), eq(ADMIN)))
@@ -406,6 +498,10 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: Nothing is saved when the file is not safe.
+     * How:    The validator throws for the file ("This file was rejected."). Nothing is saved.
+     */
     @Test
     void create_savesNothing_whenTheFileIsNotSafe() {
         MockMultipartFile file = upload("virus.exe", new byte[] {1});
@@ -418,6 +514,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A duplicate title is refused, whatever the capital letters.
+     * How:    The repository already has the title. It throws ConflictException ("same title or link
+     *   already exists") and nothing is saved.
+     */
     @Test
     void create_refusesADuplicateTitle_inAnyCapitalisation() {
         linksAreSafe();
@@ -432,6 +533,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: A duplicate link is refused.
+     * How:    Another resource already uses the link. It throws ConflictException that names that
+     *   resource, and nothing is saved.
+     */
     @Test
     void create_refusesADuplicateLink() {
         linksAreSafe();
@@ -448,6 +554,10 @@ class LibraryResourceServiceTest {
 
     // -------------------------------------------------------------- update
 
+    /*
+     * Checks: Updating an unknown resource gives not found.
+     * How:    It throws ResourceNotFoundException and nothing is saved.
+     */
     @Test
     void update_throwsError_whenTheResourceDoesNotExist() {
         when(resources.findByIdAndStatusNot(5L, "DELETED")).thenReturn(Optional.empty());
@@ -458,6 +568,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: An update changes the text and the status.
+     * How:    The result has the same id, the new title, the new description and status PUBLISHED. The
+     *   admin is recorded.
+     */
     @Test
     void update_changesTheTextAndStatus() {
         LibraryResource resource = existing(5, "Guide", LINK_A);
@@ -475,6 +590,10 @@ class LibraryResourceServiceTest {
         verify(auditTrail).actAs(ADMIN);
     }
 
+    /*
+     * Checks: A resource may keep its own title and link on update.
+     * How:    The duplicate check ignores the resource itself, so it does not throw.
+     */
     @Test
     void update_allowsAResourceToKeepItsOwnTitleAndLink() {
         LibraryResource resource = existing(5, "Guide", LINK_A);
@@ -490,6 +609,10 @@ class LibraryResourceServiceTest {
                 service.update(5L, linkRequest("Guide", LINK_A, true), null, ADMIN));
     }
 
+    /*
+     * Checks: An update cannot use the title of a different resource.
+     * How:    It throws ConflictException and nothing is saved.
+     */
     @Test
     void update_refusesTheTitleOfADifferentResource() {
         LibraryResource resource = existing(5, "Guide", LINK_A);
@@ -504,6 +627,10 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: The links stay as they are when no links are sent.
+     * How:    The result keeps the old link and the validator is never asked to check a link.
+     */
     @Test
     void update_leavesTheLinksAsTheyAre_whenNoLinksAreSent() {
         LibraryResource resource = existing(5, "Guide", LINK_A);
@@ -517,6 +644,10 @@ class LibraryResourceServiceTest {
         verify(validator, never()).validateLink(any(), any());
     }
 
+    /*
+     * Checks: The last link cannot be removed when there is no document.
+     * How:    The message is "Required content is missing: link or document." and nothing is saved.
+     */
     @Test
     void update_refusesToRemoveTheLastLink_whenThereIsNoDocument() {
         LibraryResource resource = existing(5, "Guide", LINK_A);
@@ -530,6 +661,11 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: The existing file is kept when no new file is sent.
+     * How:    The result still shows guide.pdf and type FILE. The file repository and the file
+     *   validator are not used.
+     */
     @Test
     void update_keepsTheExistingFile_whenNoNewFileIsSent() {
         LibraryResource resource = existingFile(5, "Guide", "guide.pdf", "application/pdf");
@@ -545,6 +681,11 @@ class LibraryResourceServiceTest {
         verify(validator, never()).validateFile(any(), any());
     }
 
+    /*
+     * Checks: A new file replaces the old one.
+     * How:    The result shows new.pdf with size 3. The new file is saved and the old one is not
+     *   deleted separately.
+     */
     @Test
     void update_replacesTheFileWithANewOne() {
         LibraryResource resource = existingFile(5, "Guide", "old.pdf", "application/pdf");
@@ -564,6 +705,10 @@ class LibraryResourceServiceTest {
         verify(files, never()).deleteById(any());
     }
 
+    /*
+     * Checks: The file is removed when the admin asks.
+     * How:    The result has no file name and type LINK. deleteById(5) is called.
+     */
     @Test
     void update_removesTheFile_whenTheAdminAsksForIt() {
         LibraryResource resource = existingFile(5, "Guide", "guide.pdf", "application/pdf");
@@ -580,6 +725,10 @@ class LibraryResourceServiceTest {
         verify(files).deleteById(5L);
     }
 
+    /*
+     * Checks: The only document cannot be removed when there is no link.
+     * How:    The message is "Required content is missing: link or document." and nothing is saved.
+     */
     @Test
     void update_refusesToRemoveTheOnlyDocument_whenThereIsNoLink() {
         LibraryResource resource = existingFile(5, "Guide", "guide.pdf", "application/pdf");
@@ -593,6 +742,10 @@ class LibraryResourceServiceTest {
         assertNothingWasSaved();
     }
 
+    /*
+     * Checks: An existing image cannot lose its alternative text.
+     * How:    The message mentions "alternative text" and nothing is saved.
+     */
     @Test
     void update_refusesAnExistingImageThatLostItsAlternativeText() {
         LibraryResource resource = existingFile(5, "Poster", "photo.png", "image/png");
@@ -608,6 +761,11 @@ class LibraryResourceServiceTest {
 
     // -------------------------------------------------------------- remove
 
+    /*
+     * Checks: Removing marks the resource DELETED and deletes its file.
+     * How:    The status is DELETED. The admin is recorded, the resource is saved and deleteById(5) is
+     *   called.
+     */
     @Test
     void remove_marksTheResourceAsDeletedAndDeletesItsFile() {
         LibraryResource resource = existingFile(5, "Guide", "guide.pdf", "application/pdf");
@@ -621,6 +779,10 @@ class LibraryResourceServiceTest {
         verify(files).deleteById(5L);
     }
 
+    /*
+     * Checks: Removing an unknown resource gives not found.
+     * How:    It throws ResourceNotFoundException and nothing is saved, deleted or recorded.
+     */
     @Test
     void remove_throwsError_whenTheResourceDoesNotExist() {
         when(resources.findByIdAndStatusNot(5L, "DELETED")).thenReturn(Optional.empty());

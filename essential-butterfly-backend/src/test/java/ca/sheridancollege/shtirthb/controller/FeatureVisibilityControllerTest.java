@@ -21,15 +21,28 @@ class FeatureVisibilityControllerTest {
     @Mock FeatureVisibilityService service;
     @InjectMocks FeatureVisibilityController controller;
 
+    /*
+     * Checks: The public feature list is returned with 200.
+     * How:    The fake service getFeatures is called and the status is 200.
+     */
     @Test void returnsPublicFeatureList() {
         when(service.getFeatures()).thenReturn(List.of());
         assertEquals(HttpStatus.OK, controller.getPublicFeatures().getStatusCode());
         verify(service).getFeatures();
     }
+    /*
+     * Checks: The admin feature list is returned with 200.
+     * How:    The same service call is used and the status is 200.
+     */
     @Test void returnsAdminFeatureList() {
         when(service.getFeatures()).thenReturn(List.of());
         assertEquals(HttpStatus.OK, controller.getAdminFeatures().getStatusCode());
     }
+    /*
+     * Checks: The admin can update the feature switches.
+     * How:    The list of requests is passed to service.updateFeatures. The status is 200 and the call
+     *   is verified.
+     */
     @Test void updatesFeatureVisibility() {
         List<FeatureVisibilityRequest> requests = List.of(mock(FeatureVisibilityRequest.class));
         when(service.updateFeatures(requests)).thenReturn(List.of());

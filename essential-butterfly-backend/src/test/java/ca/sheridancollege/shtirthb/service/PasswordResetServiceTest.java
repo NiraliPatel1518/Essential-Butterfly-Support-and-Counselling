@@ -51,6 +51,12 @@ class PasswordResetServiceTest {
         }
     }
 
+    /*
+     * Checks: A reset request creates a hashed client token that expires in 30 minutes.
+     * How:    Mockito fakes. We capture the saved token: type CLIENT, right owner, a 64-character
+     *   hash, an expiry about 30 minutes away, and not used. Older active tokens for that client
+     *   are revoked.
+     */
     @Test
     void requestResetCreatesHashedClientTokenWithThirtyMinuteExpiry() {
         ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");
@@ -72,6 +78,11 @@ class PasswordResetServiceTest {
         verify(tokens).revokeActiveForClient(eq(client), any(LocalDateTime.class));
     }
 
+    /*
+     * Checks: A reset request for an admin creates an admin token.
+     * How:    The saved token is linked to the admin with type ADMIN and a 64-character hash. Older
+     *   admin tokens are revoked.
+     */
     @Test
     void requestResetCreatesAdminToken() {
         AdminUser admin = new AdminUser("Admin", "admin@mail.com", "OLD");
@@ -86,6 +97,10 @@ class PasswordResetServiceTest {
         verify(tokens).revokeActiveForAdmin(eq(admin), any(LocalDateTime.class));
     }
 
+    /*
+     * Checks: An unknown email, or an email that is both client and admin, creates no token.
+     * How:    save() is never called in either case.
+     */
     @Test
     void requestResetDoesNothingForUnknownOrAmbiguousEmail() {
         when(clients.findByEmail("unknown@mail.com")).thenReturn(Optional.empty());
@@ -99,6 +114,11 @@ class PasswordResetServiceTest {
         verify(tokens, never()).save(any());
     }
 
+    /*
+     * Checks: A reset sets the client's new password and marks the token used.
+     * How:    We find the token by the hash of the raw token. The password becomes the encoded value,
+     *   the token is used, and both are saved.
+     */
     @Test
     void resetUpdatesClientPasswordAndConsumesMatchingHashedToken() {
         String rawToken = "client-reset-token";
@@ -114,6 +134,10 @@ class PasswordResetServiceTest {
         verify(tokens).save(token);
     }
 
+    /*
+     * Checks: An admin reset sets the new password and clears the lock.
+     * How:    Failed attempts go to 0, the lock time becomes null, and the token is marked used.
+     */
     @Test
     void resetUpdatesAdminAndClearsLockout() {
         String rawToken = "admin-reset-token";
@@ -133,6 +157,11 @@ class PasswordResetServiceTest {
         verify(tokens).save(token);
     }
 
+    /*
+     * Checks: A bad token or a short password is refused.
+     * How:    A null token, a short password, an unknown token, a used token and an expired token all
+     *   return false. The encoder is never used and nothing is saved.
+     */
     @Test
     void resetRejectsMissingUnknownUsedExpiredAndShortTokens() {
         assertFalse(service.resetPassword(null, "NewPassword123"));
@@ -154,6 +183,11 @@ class PasswordResetServiceTest {
         verify(admins, never()).save(any());
     }
 
+    /*
+     * Checks: The reset link is emailed to the client.
+     * How:    The mail service gets the client's email, a link that starts with
+     *   http://localhost:5173/reset-password?token=, and 30 minutes.
+     */
     @Test
     void requestResetEmailsTheLinkToTheClient() {
         ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");
@@ -167,6 +201,10 @@ class PasswordResetServiceTest {
         assertTrue(link.getValue().startsWith("http://localhost:5173/reset-password?token="));
     }
 
+    /*
+     * Checks: The emailed link matches the saved token.
+     * How:    We cut the raw token out of the link, hash it, and compare with the saved hash.
+     */
     @Test
     void theEmailedLinkMatchesTheTokenThatWasSaved() {
         ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");
@@ -183,6 +221,10 @@ class PasswordResetServiceTest {
         assertEquals(hash(rawToken), saved.getValue().getTokenHash());
     }
 
+    /*
+     * Checks: The reset link is emailed to the admin.
+     * How:    The mail service gets the admin's email and a reset link.
+     */
     @Test
     void requestResetEmailsTheLinkToTheAdmin() {
         AdminUser admin = new AdminUser("Admin", "admin@mail.com", "OLD");
@@ -194,6 +236,10 @@ class PasswordResetServiceTest {
         verify(mailService).sendResetLink(eq("admin@mail.com"), argThat(link -> link.contains("/reset-password?token=")), eq(30));
     }
 
+    /*
+     * Checks: No email is sent for an unknown or ambiguous email.
+     * How:    The mail service is never used.
+     */
     @Test
     void requestResetSendsNoEmailForUnknownOrAmbiguousEmail() {
         when(clients.findByEmail("unknown@mail.com")).thenReturn(Optional.empty());
@@ -208,6 +254,10 @@ class PasswordResetServiceTest {
         verifyNoInteractions(mailService);
     }
 
+    /*
+     * Checks: The token is still saved when the email cannot be sent.
+     * How:    The mail service returns false. save() is still called.
+     */
     @Test
     void theTokenIsStillSavedWhenTheEmailCannotBeSent() {
         ClientUser client = new ClientUser("Jane", "jane@mail.com", "OLD");

@@ -44,6 +44,12 @@ class GlobalExceptionHandlerTest {
                 getClass().getDeclaredMethod("sample", String.class), 0);
     }
 
+    /*
+     * Checks: An application exception becomes the right status and a full error body.
+     * How:    We call the handler with a ResourceNotFoundException. The answer is 404, success is
+     *   false, and the body has the message, the exception name, the path /api/test, the method
+     *   POST and a timestamp.
+     */
     @Test
     void applicationExceptionGivesTheMappedStatusAndAClearBody() {
         ResponseEntity<ErrorResponse> response = handler.handleApplicationException(
@@ -61,6 +67,10 @@ class GlobalExceptionHandlerTest {
         assertEquals("POST", body.error().method());
     }
 
+    /*
+     * Checks: Each exception type gets its own HTTP status from the handler.
+     * How:    We send six exception types and check 401, 423, 409, 400, 503 and 403.
+     */
     @Test
     void eachApplicationExceptionUsesItsOwnStatus() {
         assertEquals(HttpStatus.UNAUTHORIZED, handler
@@ -83,6 +93,10 @@ class GlobalExceptionHandlerTest {
                 .getStatusCode());
     }
 
+    /*
+     * Checks: The stack trace is not included in the error body by default.
+     * How:    The error object's stack field must be null.
+     */
     @Test
     void stackTraceIsHiddenByDefault() {
         ErrorResponse body = handler.handleApplicationException(
@@ -91,6 +105,11 @@ class GlobalExceptionHandlerTest {
         assertNull(body.error().stack());
     }
 
+    /*
+     * Checks: The stack trace is included only when the includeStacktrace setting is on.
+     * How:    ReflectionTestUtils sets the setting to true. The stack field then must exist and
+     *   contain ValidationException.
+     */
     @Test
     void stackTraceIsIncludedOnlyWhenSwitchedOn() {
         ReflectionTestUtils.setField(handler, "includeStacktrace", true);
@@ -102,6 +121,11 @@ class GlobalExceptionHandlerTest {
         assertTrue(body.error().stack().contains("ValidationException"));
     }
 
+    /*
+     * Checks: An invalid form field gives a message with the field name.
+     * How:    We build a binding result with an error on the field email. The answer is 400 with
+     *   "email: must not be blank" and the error name ValidationError.
+     */
     @Test
     void invalidFieldGivesFieldNameAndMessage() throws Exception {
         BeanPropertyBindingResult errors =
@@ -116,6 +140,10 @@ class GlobalExceptionHandlerTest {
         assertEquals("ValidationError", response.getBody().error().name());
     }
 
+    /*
+     * Checks: A validation failure with no field errors gives a generic message.
+     * How:    The message must be "Please check the submitted information."
+     */
     @Test
     void validationWithoutFieldErrorsGivesAGenericMessage() throws Exception {
         BeanPropertyBindingResult errors =
@@ -128,6 +156,11 @@ class GlobalExceptionHandlerTest {
                 response.getBody().message());
     }
 
+    /*
+     * Checks: A request body that cannot be read gives HTTP 400.
+     * How:    We pass a HttpMessageNotReadableException. The message says the body is missing or
+     *   invalid, and the error name is InvalidRequestBody.
+     */
     @Test
     void unreadableBodyGivesBadRequest() {
         HttpMessageNotReadableException exception = new HttpMessageNotReadableException(
@@ -142,6 +175,11 @@ class GlobalExceptionHandlerTest {
         assertEquals("InvalidRequestBody", response.getBody().error().name());
     }
 
+    /*
+     * Checks: A parameter of the wrong type gives HTTP 400.
+     * How:    We pass "abc" where an Integer id is expected. The status is 400 and the error name is
+     *   InvalidParameter.
+     */
     @Test
     void wrongParameterTypeGivesBadRequest() throws Exception {
         MethodArgumentTypeMismatchException exception =
@@ -155,6 +193,10 @@ class GlobalExceptionHandlerTest {
         assertEquals("InvalidParameter", response.getBody().error().name());
     }
 
+    /*
+     * Checks: An old-style ResponseStatusException keeps its status and reason.
+     * How:    A 403 with the reason "Not allowed" returns 403 with the same message.
+     */
     @Test
     void legacyResponseStatusExceptionKeepsItsStatusAndReason() {
         ResponseEntity<ErrorResponse> response = handler.handleLegacyException(
@@ -165,6 +207,10 @@ class GlobalExceptionHandlerTest {
         assertEquals("LegacyHttpException", response.getBody().error().name());
     }
 
+    /*
+     * Checks: An old-style exception with no reason gets a default message.
+     * How:    A 404 with no reason returns 404 and "The request could not be completed."
+     */
     @Test
     void legacyExceptionWithoutReasonGetsADefaultMessage() {
         ResponseEntity<ErrorResponse> response = handler.handleLegacyException(
@@ -175,6 +221,11 @@ class GlobalExceptionHandlerTest {
                 response.getBody().message());
     }
 
+    /*
+     * Checks: An unexpected error gives HTTP 500 and does not leak details.
+     * How:    The exception text contains a fake secret (hunter2). The answer is a general message,
+     *   and it does not contain hunter2 or a stack trace.
+     */
     @Test
     void unexpectedErrorGives500WithoutLeakingDetails() {
         ResponseEntity<ErrorResponse> response = handler.handleUnexpectedException(

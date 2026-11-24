@@ -189,6 +189,12 @@ class PasswordResetFlowIntegrationTest {
 
     // -------------------------------------------------------- asking for a reset
 
+    /*
+     * Checks: Asking for a reset creates a one-time token that lasts 30 minutes.
+     * How:    The answer is the same generic text. In the database there is one token with type
+     *   CLIENT, the right owner, a 64-character hash, used false, and an expiry about 30 minutes
+     *   away.
+     */
     @Test
     void asking_createsAOneTimeTokenThatLastsThirtyMinutes() throws Exception {
         forgot(EMAIL)
@@ -205,6 +211,11 @@ class PasswordResetFlowIntegrationTest {
         assertTrue(token.getExpiresAt().isBefore(LocalDateTime.now().plusMinutes(31)));
     }
 
+    /*
+     * Checks: An unknown email gets the same answer and no token.
+     * How:    The answer is identical to the known-email answer (so nobody can guess which emails
+     *   exist), and the token table is empty.
+     */
     @Test
     void anUnknownEmail_getsTheSameAnswerAndNoToken() throws Exception {
         // The answer must not reveal whether an account exists.
@@ -215,6 +226,10 @@ class PasswordResetFlowIntegrationTest {
         assertEquals(0, tokens.count());
     }
 
+    /*
+     * Checks: An invalid email is refused.
+     * How:    "not-an-email" gives 400.
+     */
     @Test
     void anInvalidEmail_isRejected() throws Exception {
         forgot("not-an-email").andExpect(status().isBadRequest());
@@ -222,6 +237,10 @@ class PasswordResetFlowIntegrationTest {
         assertEquals(0, tokens.count());
     }
 
+    /*
+     * Checks: Spaces and capital letters in the email do not matter.
+     * How:    We send " JANE@Mail.COM ". It works and exactly 1 token is created.
+     */
     @Test
     void theEmailIsTrimmedAndCaseDoesNotMatter() throws Exception {
         forgot("  JANE@Mail.COM ").andExpect(status().isOk());
@@ -229,6 +248,10 @@ class PasswordResetFlowIntegrationTest {
         assertEquals(1, tokens.count());
     }
 
+    /*
+     * Checks: An admin email gets an admin token.
+     * How:    The saved token has the type ADMIN and is linked to the admin account.
+     */
     @Test
     void anAdminEmail_getsAnAdminToken() throws Exception {
         AdminUser admin = admins.findByEmail("admin@test.com").orElseThrow();
@@ -240,6 +263,11 @@ class PasswordResetFlowIntegrationTest {
         assertEquals(admin.getId(), token.getAdminUser().getId());
     }
 
+    /*
+     * Checks: The reset link is emailed to the account owner.
+     * How:    We capture the fake email. It has one recipient (the owner), the right sender and
+     *   subject, and the text says the link expires in 30 minutes.
+     */
     @Test
     void asking_emailsTheResetLinkToTheAccountOwner() throws Exception {
         forgot(EMAIL).andExpect(status().isOk());
@@ -252,6 +280,11 @@ class PasswordResetFlowIntegrationTest {
         assertTrue(textOf(mail).contains("expires in 30 minutes"));
     }
 
+    /*
+     * Checks: The link in the email matches the token in the database.
+     * How:    We take the raw token from the email, hash it, and compare with the stored hash (the
+     *   database never keeps the raw token).
+     */
     @Test
     void theEmailedLinkMatchesTheTokenInTheDatabase() throws Exception {
         String rawToken = requestedClientToken();
@@ -259,6 +292,10 @@ class PasswordResetFlowIntegrationTest {
         assertEquals(hash(rawToken), onlyToken().getTokenHash());
     }
 
+    /*
+     * Checks: An admin also gets the reset link by email.
+     * How:    The raw token from the admin email, once hashed, equals the stored hash.
+     */
     @Test
     void anAdminEmail_getsTheResetLinkToo() throws Exception {
         String rawToken = requestedToken("admin@test.com");
@@ -266,6 +303,10 @@ class PasswordResetFlowIntegrationTest {
         assertEquals(hash(rawToken), onlyToken().getTokenHash());
     }
 
+    /*
+     * Checks: An unknown email gets no mail.
+     * How:    The answer is 200 and the fake mail sender is never called.
+     */
     @Test
     void anUnknownEmail_getsNoMail() throws Exception {
         forgot("nobody@mail.com").andExpect(status().isOk());
@@ -273,6 +314,11 @@ class PasswordResetFlowIntegrationTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: The reset link is not printed to the console.
+     * How:    We catch System.out during the request. The output must not contain
+     *   /reset-password?token=.
+     */
     @Test
     void theLinkIsNotPrintedToTheConsole() throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -287,6 +333,11 @@ class PasswordResetFlowIntegrationTest {
         assertFalse(output.toString(StandardCharsets.UTF_8).contains("/reset-password?token="));
     }
 
+    /*
+     * Checks: If the email fails to send, the answer is the same and the token is kept.
+     * How:    The fake sender throws MailSendException. The answer is still the generic one and 1
+     *   token is saved.
+     */
     @Test
     void aFailedEmail_stillGivesTheSameAnswerAndKeepsTheToken() throws Exception {
         doThrow(new MailSendException("mail server is down")).when(mailSender).send(any(MimeMessage.class));
@@ -300,6 +351,11 @@ class PasswordResetFlowIntegrationTest {
 
     // --------------------------------------------------------- setting the new one
 
+    /*
+     * Checks: With the token, the client can set a new password and log in with it.
+     * How:    The reset answers "Password reset successfully." and then a login with the new password
+     *   gives 200.
+     */
     @Test
     void withTheToken_theClientCanSetANewPasswordAndLogInWithIt() throws Exception {
         String token = requestedClientToken();
@@ -311,6 +367,10 @@ class PasswordResetFlowIntegrationTest {
         login(EMAIL, NEW_PASSWORD).andExpect(status().isOk());
     }
 
+    /*
+     * Checks: After the reset, the old password stops working.
+     * How:    A login with the old password gives 401.
+     */
     @Test
     void afterTheReset_theOldPasswordNoLongerWorks() throws Exception {
         String token = requestedClientToken();
@@ -319,6 +379,10 @@ class PasswordResetFlowIntegrationTest {
         login(EMAIL, OLD_PASSWORD).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: The new password is stored hashed.
+     * How:    The saved password is not the plain text, and the BCrypt encoder says it matches.
+     */
     @Test
     void theNewPassword_isStoredHashed() throws Exception {
         String token = requestedClientToken();
@@ -329,6 +393,11 @@ class PasswordResetFlowIntegrationTest {
         assertTrue(encoder.matches(NEW_PASSWORD, stored));
     }
 
+    /*
+     * Checks: A token can only be used once.
+     * How:    After the first reset the token is marked used. The second reset gives 400 with
+     *   "Invalid, expired, or already used reset token." and the password stays the same.
+     */
     @Test
     void aToken_canOnlyBeUsedOnce() throws Exception {
         String token = requestedClientToken();
@@ -342,6 +411,10 @@ class PasswordResetFlowIntegrationTest {
         assertTrue(clientPasswordIs(NEW_PASSWORD));
     }
 
+    /*
+     * Checks: An unknown token is refused.
+     * How:    A made-up token gives 400 with the same message, and the old password still works.
+     */
     @Test
     void anUnknownToken_isRejected() throws Exception {
         reset("not-a-real-token", NEW_PASSWORD, NEW_PASSWORD)
@@ -351,6 +424,11 @@ class PasswordResetFlowIntegrationTest {
         assertTrue(clientPasswordIs(OLD_PASSWORD));
     }
 
+    /*
+     * Checks: An expired token is refused.
+     * How:    We save a token that expired one minute ago. The reset gives 400 and the password is
+     *   unchanged.
+     */
     @Test
     void anExpiredToken_isRejected() throws Exception {
         ClientUser client = clients.findByEmail(EMAIL).orElseThrow();
@@ -380,6 +458,11 @@ class PasswordResetFlowIntegrationTest {
     assertTrue(clientPasswordIs(OLD_PASSWORD));
 }
 
+    /*
+     * Checks: Passwords that do not match change nothing and the token stays usable.
+     * How:    The answer is 400 with "Passwords do not match." The old password still works and the
+     *   token is not used. A correct second try works.
+     */
     @Test
     void passwordsThatDoNotMatch_changeNothingAndKeepTheTokenUsable() throws Exception {
         String token = requestedClientToken();
@@ -395,6 +478,10 @@ class PasswordResetFlowIntegrationTest {
         reset(token, NEW_PASSWORD, NEW_PASSWORD).andExpect(status().isOk());
     }
 
+    /*
+     * Checks: A short password is refused and the token stays usable.
+     * How:    "short1" gives 400, the password is unchanged, and the token is not used.
+     */
     @Test
     void aShortPassword_isRejectedAndKeepsTheTokenUsable() throws Exception {
         String token = requestedClientToken();
@@ -405,6 +492,10 @@ class PasswordResetFlowIntegrationTest {
         assertFalse(onlyToken().isUsed());
     }
 
+    /*
+     * Checks: Missing fields are refused.
+     * How:    An empty JSON body gives 400.
+     */
     @Test
     void missingFields_areRejected() throws Exception {
         mvc.perform(post("/api/password/reset")
@@ -415,6 +506,11 @@ class PasswordResetFlowIntegrationTest {
 
     // ------------------------------------------------------------------- admins
 
+    /*
+     * Checks: An admin reset clears the login lock, and the new password works.
+     * How:    The admin has 5 failed attempts and is locked. After the reset the attempts are 0, the
+     *   lock is empty, and the new password works.
+     */
     @Test
     void anAdminReset_clearsTheLoginLockAndTheNewPasswordWorks() throws Exception {
         AdminUser admin = admins.findByEmail("admin@test.com").orElseThrow();

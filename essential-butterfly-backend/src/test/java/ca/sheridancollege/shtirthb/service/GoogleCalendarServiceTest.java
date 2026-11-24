@@ -101,10 +101,19 @@ class GoogleCalendarServiceTest {
 
     // ---------------------------------------------------------- configured
 
+    /*
+     * Checks: The service is configured when all three secrets exist.
+     * How:    A small fake Google web server runs in the test (no real Google). With client id, client
+     *   secret and refresh token set, isConfigured() is true.
+     */
     @Test void isConfiguredWhenAllThreeSecretsArePresent() {
         assertTrue(service().isConfigured());
     }
 
+    /*
+     * Checks: The service is not configured when a secret is missing.
+     * How:    isConfigured() is false.
+     */
     @Test void isNotConfiguredWhenASecretIsMissing() {
         properties.getGoogleCalendar().setRefreshToken("");
 
@@ -113,6 +122,10 @@ class GoogleCalendarServiceTest {
 
     // --------------------------------------------------------- createEvent
 
+    /*
+     * Checks: An event is created and its id is returned.
+     * How:    The fake Google returns event-1. The result says added, with that id and no problem.
+     */
     @Test void createsAnEventAndReturnsItsId() {
         var result = service().createEvent("Appointment: Ann", "Client: Ann", START, END);
 
@@ -121,6 +134,11 @@ class GoogleCalendarServiceTest {
         assertNull(result.problem());
     }
 
+    /*
+     * Checks: The service signs in with the refresh token and then creates the event.
+     * How:    The fake Google saw 2 requests. First a POST to /token with grant_type, refresh_token
+     *   and client_id. Then a POST to the events URL with the bearer token.
+     */
     @Test void signsInWithTheRefreshTokenThenCreatesTheEvent() {
         service().createEvent("Appointment: Ann", "Client: Ann", START, END);
 
@@ -138,6 +156,11 @@ class GoogleCalendarServiceTest {
         assertEquals("Bearer token-123", event.authorization());
     }
 
+    /*
+     * Checks: The event has the title, the times and the clinic time zone.
+     * How:    The request body contains the summary, the description, and start and end times with
+     *   America/Toronto.
+     */
     @Test void theEventCarriesTheTitleTheTimesAndTheClinicTimeZone() {
         service().createEvent("Appointment: Ann", "Client: Ann", START, END);
 
@@ -148,6 +171,10 @@ class GoogleCalendarServiceTest {
         assertTrue(body.contains("\"end\":{\"dateTime\":\"2026-11-16T11:00:00\",\"timeZone\":\"America/Toronto\"}"));
     }
 
+    /*
+     * Checks: Times with zero seconds still include the seconds.
+     * How:    The body contains 09:30:00 and 10:00:00.
+     */
     @Test void timesWithZeroSecondsStillSendTheSeconds() {
         service().createEvent("T", "D", LocalDateTime.parse("2026-11-16T09:30"), LocalDateTime.parse("2026-11-16T10:00"));
 
@@ -156,6 +183,10 @@ class GoogleCalendarServiceTest {
         assertTrue(body.contains("2026-11-16T10:00:00"));
     }
 
+    /*
+     * Checks: The event asks for a popup and an email reminder.
+     * How:    The body has useDefault false, a popup at 30 minutes and an email at 60 minutes.
+     */
     @Test void theEventAsksForAPopupAndAnEmailReminder() {
         service().createEvent("T", "D", START, END);
 
@@ -165,6 +196,10 @@ class GoogleCalendarServiceTest {
         assertTrue(body.contains("{\"method\":\"email\",\"minutes\":60}"));
     }
 
+    /*
+     * Checks: Special characters in the text are escaped.
+     * How:    Quotes, new lines and backslashes are escaped in the JSON body.
+     */
     @Test void specialCharactersInTheTextAreEscaped() {
         service().createEvent("Say \"hi\"", "Line one\nLine two\\ end", START, END);
 
@@ -173,6 +208,10 @@ class GoogleCalendarServiceTest {
         assertTrue(body.contains("Line one\\nLine two\\\\ end"));
     }
 
+    /*
+     * Checks: The configured calendar is used and its name is URL-encoded.
+     * How:    A calendar id with @ becomes %40 in the URL.
+     */
     @Test void usesTheConfiguredCalendarAndEncodesItsName() {
         properties.getGoogleCalendar().setCalendarId("clinic@example.org");
 
@@ -181,6 +220,10 @@ class GoogleCalendarServiceTest {
         assertEquals("/calendar/calendars/clinic%40example.org/events", seen.get(1).path());
     }
 
+    /*
+     * Checks: Google is not contacted when not configured.
+     * How:    The result says "Google Calendar is not connected." and the fake Google saw no requests.
+     */
     @Test void doesNotContactGoogleWhenNotConfigured() {
         properties.getGoogleCalendar().setClientId("");
 
@@ -191,6 +234,10 @@ class GoogleCalendarServiceTest {
         assertTrue(seen.isEmpty());
     }
 
+    /*
+     * Checks: A Google error is explained with Google's own message.
+     * How:    A 403 with a message gives "HTTP 403: Calendar API has not been used."
+     */
     @Test void explainsAGoogleErrorUsingGooglesOwnWords() {
         eventStatus = 403;
         eventBody = "{\"error\":{\"code\":403,\"message\":\"Calendar API has not been used.\"}}";
@@ -202,6 +249,10 @@ class GoogleCalendarServiceTest {
         assertEquals("HTTP 403: Calendar API has not been used.", result.problem());
     }
 
+    /*
+     * Checks: The error code is used when Google gives no message.
+     * How:    The result is "HTTP 400: invalid_request".
+     */
     @Test void usesTheErrorCodeWhenGoogleGivesNoMessage() {
         eventStatus = 400;
         eventBody = "{\"error\":\"invalid_request\"}";
@@ -211,6 +262,10 @@ class GoogleCalendarServiceTest {
         assertEquals("HTTP 400: invalid_request", result.problem());
     }
 
+    /*
+     * Checks: "no details" is shown when Google explains nothing.
+     * How:    The result is "HTTP 500: no details".
+     */
     @Test void saysNoDetailsWhenGoogleExplainsNothing() {
         eventStatus = 500;
         eventBody = "oops";
@@ -220,6 +275,10 @@ class GoogleCalendarServiceTest {
         assertEquals("HTTP 500: no details", result.problem());
     }
 
+    /*
+     * Checks: It reports when Google returns no event id.
+     * How:    The result is "Google did not return an event id."
+     */
     @Test void reportsWhenGoogleReturnsNoEventId() {
         eventBody = "{\"status\":\"confirmed\"}";
 
@@ -229,6 +288,11 @@ class GoogleCalendarServiceTest {
         assertEquals("Google did not return an event id.", result.problem());
     }
 
+    /*
+     * Checks: It reports when Google refuses the sign-in.
+     * How:    The problem says "Google refused the sign-in. HTTP 400: Token has been revoked." and
+     *   only 1 request was made.
+     */
     @Test void reportsWhenGoogleRefusesTheSignIn() {
         tokenStatus = 400;
         tokenBody = "{\"error\":\"invalid_grant\",\"error_description\":\"Token has been revoked.\"}";
@@ -240,6 +304,10 @@ class GoogleCalendarServiceTest {
         assertEquals(1, seen.size());
     }
 
+    /*
+     * Checks: It reports when the sign-in answer has no access token.
+     * How:    The problem starts with "Google refused the sign-in."
+     */
     @Test void reportsWhenTheSignInAnswerHasNoAccessToken() {
         tokenBody = "{\"expires_in\":3600}";
 
@@ -249,6 +317,10 @@ class GoogleCalendarServiceTest {
         assertTrue(result.problem().startsWith("Google refused the sign-in."));
     }
 
+    /*
+     * Checks: It reports when Google cannot be reached.
+     * How:    The result is not added and has no event id.
+     */
     @Test void reportsWhenGoogleCannotBeReached() {
         server.stop(0);
 
@@ -258,6 +330,10 @@ class GoogleCalendarServiceTest {
         assertNull(result.eventId());
     }
 
+    /*
+     * Checks: The problem text is readable when Google cannot be reached.
+     * How:    The problem is not null, not blank, and does not contain the word "null".
+     */
     @Test void explainsInWordsWhenGoogleCannotBeReached() {
         server.stop(0);
 
@@ -268,6 +344,10 @@ class GoogleCalendarServiceTest {
         assertFalse(result.problem().contains("null"));
     }
 
+    /*
+     * Checks: added() is true only when there is an event id.
+     * How:    A result with an id is added. A result with a problem and no id is not.
+     */
     @Test void theResultSaysAddedOnlyWhenThereIsAnEventId() {
         assertTrue(new GoogleCalendarService.CalendarResult("id", null).added());
         assertFalse(new GoogleCalendarService.CalendarResult(null, "problem").added());
@@ -275,6 +355,11 @@ class GoogleCalendarServiceTest {
 
     // --------------------------------------------------------- deleteEvent
 
+    /*
+     * Checks: An event can be deleted.
+     * How:    The fake Google saw a DELETE to the right event URL with the bearer token, and the
+     *   method returns true.
+     */
     @Test void deletesTheEvent() {
         boolean removed = service().deleteEvent("event-1");
 
@@ -285,6 +370,10 @@ class GoogleCalendarServiceTest {
         assertEquals("Bearer token-123", delete.authorization());
     }
 
+    /*
+     * Checks: An event that is already gone counts as removed.
+     * How:    Google answers that the event is gone (404 or 410). deleteEvent returns true.
+     */
     @Test void anEventThatIsAlreadyGoneCountsAsRemoved() {
         deleteStatus = 404;
         assertTrue(service().deleteEvent("event-1"));
@@ -293,18 +382,30 @@ class GoogleCalendarServiceTest {
         assertTrue(service().deleteEvent("event-1"));
     }
 
+    /*
+     * Checks: A refused delete returns false.
+     * How:    Google answers with an error, and deleteEvent returns false.
+     */
     @Test void reportsFailureWhenGoogleRefusesToDelete() {
         deleteStatus = 403;
 
         assertFalse(service().deleteEvent("event-1"));
     }
 
+    /*
+     * Checks: Delete does nothing without an event id.
+     * How:    null and blank return false and Google sees no request.
+     */
     @Test void deleteDoesNothingWithoutAnEventId() {
         assertFalse(service().deleteEvent(null));
         assertFalse(service().deleteEvent("  "));
         assertTrue(seen.isEmpty());
     }
 
+    /*
+     * Checks: Delete does nothing when not configured.
+     * How:    It returns false and Google sees no request.
+     */
     @Test void deleteDoesNothingWhenNotConfigured() {
         properties.getGoogleCalendar().setClientSecret("");
 
@@ -312,6 +413,10 @@ class GoogleCalendarServiceTest {
         assertTrue(seen.isEmpty());
     }
 
+    /*
+     * Checks: Delete returns false when the sign-in is refused.
+     * How:    The fake Google refuses the token request.
+     */
     @Test void deleteReportsFailureWhenTheSignInIsRefused() {
         tokenStatus = 401;
         tokenBody = "{\"error\":\"invalid_client\"}";
@@ -319,12 +424,20 @@ class GoogleCalendarServiceTest {
         assertFalse(service().deleteEvent("event-1"));
     }
 
+    /*
+     * Checks: Delete returns false when Google cannot be reached.
+     * How:    The fake Google is stopped, so the call fails and returns false.
+     */
     @Test void deleteReportsFailureWhenGoogleCannotBeReached() {
         server.stop(0);
 
         assertFalse(service().deleteEvent("event-1"));
     }
 
+    /*
+     * Checks: The event id is URL-encoded so it cannot change the address.
+     * How:    An id like a/b c becomes a%2Fb+c in the request path.
+     */
     @Test void theEventIdIsEncodedSoItCannotChangeTheAddress() {
         service().deleteEvent("a/b c");
 

@@ -109,6 +109,11 @@ class PhoneVerificationServiceTest {
 
     // ------------------------------------------------------------- status
 
+    /*
+     * Checks: The status shows the verified and the pending number.
+     * How:    Unit test with a small fake Twilio web server (no real SMS). The user has an old
+     *   verified number and a pending one. The status shows phoneVerified true and both numbers.
+     */
     @Test
     void getStatus_returnsTheVerifiedAndPendingNumbers() {
         user.setPhoneNumber(OLD_PHONE);
@@ -122,6 +127,11 @@ class PhoneVerificationServiceTest {
         assertEquals(PHONE, status.pendingPhoneNumber());
     }
 
+    /*
+     * Checks: Capital letters and spaces in the email are ignored.
+     * How:    A messy email finds the user. For a user with no phone, phoneVerified is false and the
+     *   number is null.
+     */
     @Test
     void getStatus_ignoresCapitalLettersAndSpacesInTheEmail() {
         userExists();
@@ -133,6 +143,10 @@ class PhoneVerificationServiceTest {
         assertNull(status.phoneNumber());
     }
 
+    /*
+     * Checks: The status for an unknown user gives not found.
+     * How:    It throws ResourceNotFoundException.
+     */
     @Test
     void getStatus_throwsError_whenUserDoesNotExist() {
         when(users.findByEmail("missing@mail.com")).thenReturn(Optional.empty());
@@ -143,6 +157,10 @@ class PhoneVerificationServiceTest {
 
     // ----------------------------------------------------- startVerification
 
+    /*
+     * Checks: Starting verification for an already verified number is refused.
+     * How:    It throws BusinessRuleException, the fake Twilio gets 0 requests and nothing is saved.
+     */
     @Test
     void startVerification_throwsError_whenThisNumberIsAlreadyVerified() {
         user.setPhoneNumber(PHONE);
@@ -155,6 +173,10 @@ class PhoneVerificationServiceTest {
         verify(users, never()).save(any());
     }
 
+    /*
+     * Checks: Starting again for the same pending number is refused.
+     * How:    The message says "already been sent" and Twilio gets no request.
+     */
     @Test
     void startVerification_throwsError_whenACodeWasAlreadySentToThisNumber() {
         pendingVerification();
@@ -168,6 +190,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: A number with five wrong attempts cannot start again.
+     * How:    The message says "maximum number of incorrect attempts" and Twilio gets no request.
+     */
     @Test
     void startVerification_throwsError_whenFiveWrongCodesWereUsedForThisNumber() {
         user.setPendingPhoneNumber(PHONE);
@@ -182,6 +208,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: A number that belongs to another account is refused.
+     * How:    It throws ConflictException, Twilio gets no request and nothing is saved.
+     */
     @Test
     void startVerification_throwsError_whenTheNumberBelongsToAnotherAccount() {
         userExists();
@@ -194,6 +224,12 @@ class PhoneVerificationServiceTest {
         verify(users, never()).save(any());
     }
 
+    /*
+     * Checks: The number is cleaned and Twilio is asked to send the code.
+     * How:    The user gets the pending number, a last-sent time, an expiry, counters 0, and no code
+     *   hash (Twilio keeps the code). The fake Twilio got one request with the right path and
+     *   the body "To=%2B14165551234&Channel=sms".
+     */
     @Test
     void startVerification_cleansTheNumberAndAsksTwilioToSendTheCode() {
         userExists();
@@ -217,6 +253,11 @@ class PhoneVerificationServiceTest {
         assertEquals("To=%2B14165551234&Channel=sms", sent.body);
     }
 
+    /*
+     * Checks: The Twilio login is sent as a form request.
+     * How:    The fake Twilio checks the Authorization header and the content type
+     *   application/x-www-form-urlencoded.
+     */
     @Test
     void startVerification_sendsTheTwilioLoginAsAForm() {
         userExists();
@@ -230,6 +271,11 @@ class PhoneVerificationServiceTest {
         assertEquals("application/x-www-form-urlencoded", sent.contentType);
     }
 
+    /*
+     * Checks: A new number restarts the counters.
+     * How:    The user had 3 attempts and 2 resends for another number. After starting, the pending
+     *   number is new and both counters are 0.
+     */
     @Test
     void startVerification_restartsTheCounters_forANewNumber() {
         user.setPendingPhoneNumber("+14165559999");
@@ -245,6 +291,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, user.getPhoneVerificationResendCount());
     }
 
+    /*
+     * Checks: The old verified number is kept while a new one is pending.
+     * How:    The old number is unchanged and the new number is only pending.
+     */
     @Test
     void startVerification_keepsTheOldVerifiedNumber_whileANewOneIsPending() {
         user.setPhoneNumber(OLD_PHONE);
@@ -256,6 +306,11 @@ class PhoneVerificationServiceTest {
         assertEquals(PHONE, user.getPendingPhoneNumber());
     }
 
+    /*
+     * Checks: If Twilio rejects the number, nothing is saved.
+     * How:    It throws ServiceUnavailableException ("could not send the verification text"). The
+     *   last-sent time is null and save() is never called.
+     */
     @Test
     void startVerification_throwsError_andSavesNothing_whenTwilioRejectsTheNumber() {
         twilio.sendStatus = 400;
@@ -271,6 +326,10 @@ class PhoneVerificationServiceTest {
         verify(users, never()).save(any());
     }
 
+    /*
+     * Checks: If Twilio is not configured, a clear error is returned.
+     * How:    The message says "not configured", no request is sent and nothing is saved.
+     */
     @Test
     void startVerification_throwsError_whenTwilioIsNotConfigured() {
         PhoneVerificationService unconfigured =
@@ -287,6 +346,10 @@ class PhoneVerificationServiceTest {
         verify(users, never()).save(any());
     }
 
+    /*
+     * Checks: If Twilio cannot be reached, a clear error is returned.
+     * How:    The message says "could not reach" and nothing is saved.
+     */
     @Test
     void startVerification_throwsError_whenTwilioCannotBeReached() {
         twilio.stop();
@@ -302,6 +365,10 @@ class PhoneVerificationServiceTest {
 
     // -------------------------------------------------------------- verify
 
+    /*
+     * Checks: Verifying without starting is refused.
+     * How:    The message contains "no active phone verification" and Twilio gets no request.
+     */
     @Test
     void verify_throwsError_whenNoVerificationWasStarted() {
         userExists();
@@ -314,6 +381,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: Verifying after five used attempts is refused.
+     * How:    The message says "maximum number of incorrect attempts" and Twilio gets no request.
+     */
     @Test
     void verify_throwsError_whenFiveAttemptsWereAlreadyUsed() {
         pendingVerification();
@@ -328,6 +399,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: An expired code is refused.
+     * How:    The expiry is one minute ago. The message says expired and Twilio gets no request.
+     */
     @Test
     void verify_throwsError_whenTheCodeHasExpired() {
         pendingVerification();
@@ -342,6 +417,11 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: A wrong code is counted and the message says how many tries are left.
+     * How:    The fake Twilio answers pending. The message says "4 attempt(s) remaining", attempts are
+     *   1, the phone number is still empty and the user is saved.
+     */
     @Test
     void verify_countsTheWrongCodeAndSaysHowManyAttemptsAreLeft() {
         pendingVerification();
@@ -358,6 +438,11 @@ class PhoneVerificationServiceTest {
         verify(users).save(user);
     }
 
+    /*
+     * Checks: The fifth wrong code stops the verification.
+     * How:    With 4 attempts, a wrong code gives "maximum of five incorrect attempts". The attempts
+     *   are 5 and the phone number is still empty.
+     */
     @Test
     void verify_stopsOnTheFifthWrongCode() {
         pendingVerification();
@@ -374,6 +459,11 @@ class PhoneVerificationServiceTest {
         assertNull(user.getPhoneNumber());
     }
 
+    /*
+     * Checks: When Twilio approves the code, the number is saved and the temporary data is cleared.
+     * How:    The user gets the verified number, no pending number, counters 0, and no last-sent time
+     *   or expiry. Twilio got a check request with the body "To=%2B14165551234&Code=123456".
+     */
     @Test
     void verify_savesTheNumberAndClearsEverything_whenTwilioApprovesTheCode() {
         pendingVerification();
@@ -398,6 +488,10 @@ class PhoneVerificationServiceTest {
         assertEquals("To=%2B14165551234&Code=123456", checked.body);
     }
 
+    /*
+     * Checks: The old verified number is replaced only after the right code.
+     * How:    After an approved check, the number is the new one.
+     */
     @Test
     void verify_replacesTheOldVerifiedNumber_onlyAfterTheCorrectCode() {
         user.setPhoneNumber(OLD_PHONE);
@@ -410,6 +504,10 @@ class PhoneVerificationServiceTest {
         assertEquals(PHONE, user.getPhoneNumber());
     }
 
+    /*
+     * Checks: The old verified number is kept when the code is wrong.
+     * How:    After a wrong code, the old number is unchanged and the new one is still pending.
+     */
     @Test
     void verify_keepsTheOldVerifiedNumber_whenTheCodeIsWrong() {
         user.setPhoneNumber(OLD_PHONE);
@@ -424,6 +522,10 @@ class PhoneVerificationServiceTest {
         assertEquals(PHONE, user.getPendingPhoneNumber());
     }
 
+    /*
+     * Checks: If Twilio has no open verification, it says expired and does not count an attempt.
+     * How:    The message says expired and the attempts stay 0.
+     */
     @Test
     void verify_throwsExpired_andDoesNotCountAnAttempt_whenTwilioHasNoOpenVerification() {
         pendingVerification();
@@ -439,6 +541,11 @@ class PhoneVerificationServiceTest {
         assertEquals(0, user.getPhoneVerificationAttempts());
     }
 
+    /*
+     * Checks: If Twilio fails, a service error is returned and no attempt is counted.
+     * How:    The message says "could not check the verification code", attempts stay 0 and the phone
+     *   number is empty.
+     */
     @Test
     void verify_throwsError_andDoesNotCountAnAttempt_whenTwilioFails() {
         pendingVerification();
@@ -455,6 +562,11 @@ class PhoneVerificationServiceTest {
         assertNull(user.getPhoneNumber());
     }
 
+    /*
+     * Checks: It is refused if another account took the number meanwhile.
+     * How:    The code is approved, but the number now belongs to another user. It throws
+     *   ConflictException and nothing is saved.
+     */
     @Test
     void verify_throwsError_whenAnotherAccountTookTheNumberInTheMeantime() {
         pendingVerification();
@@ -471,6 +583,10 @@ class PhoneVerificationServiceTest {
 
     // -------------------------------------------------------------- resend
 
+    /*
+     * Checks: Resend without starting is refused.
+     * How:    It throws BusinessRuleException and Twilio gets no request.
+     */
     @Test
     void resend_throwsError_whenNoVerificationWasStarted() {
         userExists();
@@ -481,6 +597,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: Resend before any code was sent is refused.
+     * How:    A pending number exists but no last-sent time. It throws BusinessRuleException.
+     */
     @Test
     void resend_throwsError_whenNoCodeWasSentYet() {
         user.setPendingPhoneNumber(PHONE);
@@ -492,6 +612,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: Resend after five wrong attempts is refused.
+     * How:    The message says "maximum number of incorrect attempts".
+     */
     @Test
     void resend_throwsError_whenFiveAttemptsWereAlreadyUsed() {
         pendingVerification();
@@ -505,6 +629,10 @@ class PhoneVerificationServiceTest {
         assertTrue(error.getMessage().contains("maximum number of incorrect attempts"));
     }
 
+    /*
+     * Checks: A fourth resend is refused.
+     * How:    The message says "maximum number of resend requests" and Twilio gets no request.
+     */
     @Test
     void resend_throwsError_afterTheThirdResend() {
         pendingVerification();
@@ -520,6 +648,10 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: Resend within 60 seconds is refused.
+     * How:    The message starts with "Please wait" and Twilio gets no request.
+     */
     @Test
     void resend_throwsError_whenTheFirstWaitOf60SecondsIsNotOver() {
         pendingVerification();
@@ -534,6 +666,11 @@ class PhoneVerificationServiceTest {
         assertEquals(0, twilio.requests.size());
     }
 
+    /*
+     * Checks: The second resend needs a longer wait.
+     * How:    With 1 resend done and the last send 70 seconds ago, the message starts with "Please
+     *   wait".
+     */
     @Test
     void resend_waitsLongerForTheSecondResend() {
         pendingVerification();
@@ -549,6 +686,11 @@ class PhoneVerificationServiceTest {
         assertTrue(error.getMessage().startsWith("Please wait"));
     }
 
+    /*
+     * Checks: After the wait, resend asks Twilio for a new code and counts it.
+     * How:    The resend count is 1. The fake Twilio got one send request with the right body, and the
+     *   user was saved.
+     */
     @Test
     void resend_sendsANewCodeAndCountsIt_whenTheWaitIsOver() {
         pendingVerification();
@@ -564,6 +706,10 @@ class PhoneVerificationServiceTest {
         verify(users, atLeastOnce()).save(user);
     }
 
+    /*
+     * Checks: A failed resend is not counted.
+     * How:    Twilio fails. It throws ServiceUnavailableException and the resend count stays 0.
+     */
     @Test
     void resend_doesNotCountTheResend_whenTheTextCannotBeSent() {
         pendingVerification();

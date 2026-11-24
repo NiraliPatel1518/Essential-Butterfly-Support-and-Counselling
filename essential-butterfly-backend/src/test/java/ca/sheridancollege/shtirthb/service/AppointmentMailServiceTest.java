@@ -77,6 +77,12 @@ class AppointmentMailServiceTest {
         return out.toString(java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    /*
+     * Checks: The invitation email goes to the client only.
+     * How:    Mockito fake mail sender. sendInvitation returns true, and the captured message has one
+     *   recipient (the client), the configured sender, and the subject "Your Essential Butterfly
+     *   appointment".
+     */
     @Test void sendsTheInvitationToTheClient() throws Exception {
         boolean sent = service("noreply@example.org")
                 .sendInvitation("Ann", "ann@example.com", START, END, "https://meet.example.org/abc");
@@ -90,6 +96,11 @@ class AppointmentMailServiceTest {
         assertEquals("Your Essential Butterfly appointment", message.getSubject());
     }
 
+    /*
+     * Checks: The email says when and where to join.
+     * How:    The text contains the greeting, the date, the start and end time, the time zone and the
+     *   meeting link.
+     */
     @Test void theMailSaysWhenAndWhereToJoin() throws Exception {
         service("noreply@example.org")
                 .sendInvitation("Ann", "ann@example.com", START, END, "https://meet.example.org/abc");
@@ -105,6 +116,11 @@ class AppointmentMailServiceTest {
         assertTrue(text.contains("Your appointment with Essential Butterfly is confirmed."));
     }
 
+    /*
+     * Checks: The email HTML cannot be used to inject code.
+     * How:    We use a name with a script tag and a link with quotes. The HTML must show them escaped
+     *   (&lt;script&gt;, &amp;, &quot;), not as real markup.
+     */
     @Test void theHtmlPartCannotBeUsedToInjectMarkup() throws Exception {
         service("noreply@example.org")
                 .sendInvitation("<script>alert(1)</script>", "ann@example.com", START, END,
@@ -117,6 +133,10 @@ class AppointmentMailServiceTest {
         assertTrue(text.contains("x=1&amp;y=&quot;2&quot;"));
     }
 
+    /*
+     * Checks: Nothing is sent if the sender address is missing.
+     * How:    A null and a blank sender address both return false, and send() is never called.
+     */
     @Test void doesNotSendWhenTheSenderAddressIsNotConfigured() {
         assertFalse(service(null).sendInvitation("Ann", "ann@example.com", START, END, "https://x.org"));
         assertFalse(service("  ").sendInvitation("Ann", "ann@example.com", START, END, "https://x.org"));
@@ -124,6 +144,10 @@ class AppointmentMailServiceTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Nothing is sent if the client has no email.
+     * How:    A null and a blank email both return false, and send() is never called.
+     */
     @Test void doesNotSendWhenTheClientHasNoEmailAddress() {
         assertFalse(service("noreply@example.org").sendInvitation("Ann", null, START, END, "https://x.org"));
         assertFalse(service("noreply@example.org").sendInvitation("Ann", " ", START, END, "https://x.org"));
@@ -131,6 +155,10 @@ class AppointmentMailServiceTest {
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: A mail server failure returns false instead of crashing.
+     * How:    The fake sender throws RuntimeException. sendInvitation returns false.
+     */
     @Test void reportsFailureInsteadOfThrowingWhenTheMailServerIsDown() {
         doThrow(new RuntimeException("SMTP down")).when(mailSender).send(any(MimeMessage.class));
 
@@ -140,6 +168,10 @@ class AppointmentMailServiceTest {
         assertFalse(sent);
     }
 
+    /*
+     * Checks: If the message cannot be built, false is returned.
+     * How:    createMimeMessage throws. sendInvitation returns false.
+     */
     @Test void reportsFailureWhenTheMessageCannotBeBuilt() {
         when(mailSender.createMimeMessage()).thenThrow(new IllegalStateException("no session"));
 
@@ -147,6 +179,10 @@ class AppointmentMailServiceTest {
                 .sendInvitation("Ann", "ann@example.com", START, END, "https://x.org"));
     }
 
+    /*
+     * Checks: A missing name or link does not break the email.
+     * How:    We pass null for the name and the link. sendInvitation still returns true.
+     */
     @Test void aMissingNameOrLinkDoesNotBreakTheHtml() {
         boolean sent = service("noreply@example.org")
                 .sendInvitation(null, "ann@example.com", START, END, null);

@@ -2,14 +2,16 @@ package ca.sheridancollege.shtirthb.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import ca.sheridancollege.shtirthb.config.AppProperties;
 import ca.sheridancollege.shtirthb.exception.AppExceptions;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -20,11 +22,18 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 /*
  * Keeps the Memory Wall pictures in a private AWS S3 bucket. Used only while
- * app.memory-wall.storage is "s3" (see docs/operations/memory-wall-s3.md).
+ * app.memory-wall.storage is "s3" (MEMORY_WALL_STORAGE=s3); otherwise
+ * LocalPhotoStorage is used and this class is never created
+ * (see docs/operations/memory-wall-s3.md).
+ *
+ * The database keeps only the key (for example "memory-wall/3f2c....jpg"),
+ * and the same key is used as the S3 object name, so switching between the
+ * folder and S3 needs no database change.
  *
  * Credentials are found by the AWS SDK itself: the EC2 instance profile
- * (LabInstanceProfile in AWS Academy) or the AWS_ACCESS_KEY_ID,
- * AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN environment variables.
+ * (LabInstanceProfile in AWS Academy), the ECS task role, or the
+ * AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN environment
+ * variables. No key is ever stored in the code.
  */
 @Component
 @ConditionalOnProperty(
@@ -39,12 +48,31 @@ public class S3PhotoStorage implements PhotoStorage {
     private final S3Client s3;
     private final String bucket;
 
-    public S3PhotoStorage(
-            @Value("${MEMORY_WALL_S3_BUCKET}") String bucket,
-            @Value("${MEMORY_WALL_S3_REGION:us-east-1}") String region) {
+    // Bucket and region come from app.memory-wall.s3-bucket / s3-region
+    // (MEMORY_WALL_S3_BUCKET / MEMORY_WALL_S3_REGION).
+    @Autowired
+    public S3PhotoStorage(AppProperties properties) {
 
-        this.bucket = bucket;
-        this.s3 = S3Client.builder().region(Region.of(region)).build();
+        this(
+                S3Client.builder()
+                        .region(Region.of(properties.getMemoryWall().getS3Region().trim()))
+                        .httpClient(UrlConnectionHttpClient.create())
+                        .build(),
+                properties.getMemoryWall().getS3Bucket());
+    }
+
+    // Used by the tests with a mocked client.
+    S3PhotoStorage(S3Client s3, String bucket) {
+
+        if (bucket == null || bucket.isBlank()) {
+            // Fail at start-up, not on the first upload.
+            throw new IllegalStateException(
+                    "MEMORY_WALL_STORAGE is s3 but MEMORY_WALL_S3_BUCKET is not set.");
+        }
+
+        this.s3 = s3;
+        this.bucket = bucket.trim();
+        logger.info("Memory Wall photos are stored in S3 bucket {}", this.bucket);
     }
 
     @Override

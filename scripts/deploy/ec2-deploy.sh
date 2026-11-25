@@ -8,8 +8,10 @@
 # What it does, in order:
 #   0. Safety checks - stops before changing anything if the server is
 #      not in the expected state.
-#   1. Backs up the database (pg_dump) - BEFORE the new backend starts,
-#      because Flyway applies any new migration when the backend starts.
+#   1. Backs up the database the backend really uses (pg_dump) - BEFORE
+#      the new backend starts, because Flyway applies any new migration
+#      when the backend starts. That is the local "db" container, or Amazon
+#      RDS once SPRING_DATASOURCE_URL in docker-compose.aws.yml points there.
 #   2. Checks out the exact commit that passed CI.
 #   3. Builds the new images. If the build fails, the old containers keep
 #      running and the site stays up.
@@ -30,7 +32,6 @@ APP_DIR="${APP_DIR:-$HOME/app}"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/backups}"
 KEEP_BACKUPS="${KEEP_BACKUPS:-14}"
 DB_CONTAINER="essential-butterfly-db"
-DB_NAME="essential_butterfly"
 HEALTH_TRIES="${HEALTH_TRIES:-36}"   # 36 x 5 s = 3 minutes
 
 COMPOSE=(sudo docker compose -f docker-compose.yml -f docker-compose.aws.yml)
@@ -58,8 +59,27 @@ if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
     fail "Tracked files were edited on the server (listed above). Commit them to GitHub or undo them, then deploy again."
 fi
 
-db_running="$(sudo docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null || echo false)"
-[[ "$db_running" == "true" ]] || fail "The database container is not running. Fix that first; nothing was changed."
+# Which database does the backend use? Read it from the merged Compose
+# configuration (docker-compose.yml + docker-compose.aws.yml).
+compose_config="$("${COMPOSE[@]}" config 2>/dev/null)" \
+    || fail "docker compose config failed; check docker-compose.aws.yml. Nothing was changed."
+url_pattern='SPRING_DATASOURCE_URL:[[:space:]]*["'"'"']?jdbc:postgresql://([^:/"'"'"'[:space:]]+)(:([0-9]+))?/([A-Za-z0-9_]+)'
+[[ "$compose_config" =~ $url_pattern ]] \
+    || fail "Could not read SPRING_DATASOURCE_URL from the Compose files. Nothing was changed."
+DB_HOST="${BASH_REMATCH[1]}"
+DB_PORT="${BASH_REMATCH[3]:-5432}"
+DB_NAME="${BASH_REMATCH[4]}"
+user_pattern='SPRING_DATASOURCE_USERNAME:[[:space:]]*["'"'"']?([A-Za-z0-9_]+)'
+DB_USER="postgres"
+[[ "$compose_config" =~ $user_pattern ]] && DB_USER="${BASH_REMATCH[1]}"
+
+if [[ "$DB_HOST" == "db" ]]; then
+    echo "Database: local container ($DB_CONTAINER)"
+    db_running="$(sudo docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null || echo false)"
+    [[ "$db_running" == "true" ]] || fail "The database container is not running. Fix that first; nothing was changed."
+else
+    echo "Database: $DB_HOST (Amazon RDS)"
+fi
 
 PREV="$(git rev-parse HEAD)"
 echo "Currently deployed: $PREV"
@@ -73,8 +93,23 @@ mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/db-$(date -u +%Y%m%dT%H%M%SZ)-${PREV:0:7}.sql.gz"
 
-sudo docker exec "$DB_CONTAINER" pg_dump -U postgres -d "$DB_NAME" \
-    | gzip > "$BACKUP_FILE" \
+dump_database() {
+    if [[ "$DB_HOST" == "db" ]]; then
+        sudo docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME"
+    else
+        # A throw-away postgres:17 container (the same image as the local
+        # database, so no new download) runs pg_dump against RDS. The
+        # password is read from the secret file inside the container, so it
+        # never appears in a command line or a log.
+        sudo docker run --rm \
+            -v "$APP_DIR/secrets/postgres_password.txt:/run/secrets/pw:ro" \
+            -e PGHOST="$DB_HOST" -e PGPORT="$DB_PORT" -e PGUSER="$DB_USER" \
+            -e PGDATABASE="$DB_NAME" -e PGSSLMODE=require -e PGCONNECT_TIMEOUT=15 \
+            postgres:17 \
+            sh -c 'PGPASSWORD="$(tr -d "\r\n" < /run/secrets/pw)" exec pg_dump'
+    fi
+}
+dump_database | gzip > "$BACKUP_FILE" \
     || { rm -f "$BACKUP_FILE"; fail "pg_dump failed; nothing was changed."; }
 
 # The backup is only accepted when the gzip file is intact AND pg_dump's

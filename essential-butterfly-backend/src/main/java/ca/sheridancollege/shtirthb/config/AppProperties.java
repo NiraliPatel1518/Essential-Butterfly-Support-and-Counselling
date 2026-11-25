@@ -104,6 +104,11 @@ public class AppProperties {
         // Folder used when storage is "local".
         private String storageDirectory = "data/memory-wall";
 
+        // Bucket and region used when storage is "s3".
+        private String s3Bucket = "";
+
+        private String s3Region = "us-east-1";
+
         // At most this many photos can be uploaded in total.
         private int maxPhotos = 150;
 
@@ -129,6 +134,22 @@ public class AppProperties {
 
         public void setStorageDirectory(String storageDirectory) {
             this.storageDirectory = storageDirectory;
+        }
+
+        public String getS3Bucket() {
+            return s3Bucket;
+        }
+
+        public void setS3Bucket(String s3Bucket) {
+            this.s3Bucket = s3Bucket;
+        }
+
+        public String getS3Region() {
+            return s3Region;
+        }
+
+        public void setS3Region(String s3Region) {
+            this.s3Region = s3Region;
         }
 
         public int getMaxPhotos() {

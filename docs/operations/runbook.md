@@ -136,6 +136,37 @@ An incident is anything that stops visitors or Casey from using the site, or tha
 
 ## 8. Planned (not built yet)
 - Move the JWT signing key and the default admin account out of the source code and into secrets.
-- Integration tests that call the API in the running containers, and an automatic deploy step after publishing.
+- Integration tests that call the API in the running containers.
 - Automatic database backups and a health-check endpoint.
 - Send password reset links by email.
+
+## 9. Automatic deploy (CD) to EC2
+
+Every push to `main` goes through **CI/CD Pipeline** (tests, Docker build, integration test). When it passes, **Deploy to EC2** (`.github/workflows/deploy.yml`) connects to the server over SSH and runs `scripts/deploy/ec2-deploy.sh` for that exact commit. The script:
+
+1. Checks the server is in the expected state (secret files present, database running, no files edited by hand). Otherwise it stops without changing anything.
+2. Backs up the database to `~/backups/` on the server (the newest 14 are kept). This happens before the new backend starts, because Flyway applies new migrations on start.
+3. Checks out the commit, builds the images and replaces **only** `backend` and `frontend`, then restarts `gateway`. The `db` container, the volumes, Caddy and the files `secrets/`, `.env`, `Caddyfile`, `docker-compose.aws.yml` are never touched.
+4. Checks `/` and `/api/features`. If they do not answer within 3 minutes it rolls back to the previous commit by itself.
+
+Settings (GitHub → Settings → Secrets and variables → Actions):
+
+| Name | Kind | Value |
+|---|---|---|
+| `EC2_HOST` | Secret | The Elastic IP of the server |
+| `EC2_SSH_KEY` | Secret | Full contents of `labsuser.pem` (AWS Academy → AWS Details → Download PEM) |
+| `EC2_HOST_KEY` | Secret | Output of `cat /etc/ssh/ssh_host_ed25519_key.pub` on the server |
+| `AUTO_DEPLOY` | Variable | `true` to deploy automatically after CI. Anything else = manual only |
+| `SITE_URL` | Variable | Public address, e.g. `https://example.com` (optional, used for a final check) |
+
+**Deploy by hand / go back to an older version:** Actions → Deploy to EC2 → Run workflow → enter `main` or a commit id that is on `main`.
+
+**The lab must be running.** When the AWS Academy lab is stopped, the deploy fails with "Cannot reach the server". Start the lab and use *Re-run jobs*.
+
+**Do not edit tracked files on the server.** Change them in GitHub instead. The deploy refuses to run while the server has local edits.
+
+**Restore a backup** (only if a release damaged data):
+```
+gunzip -c ~/backups/<file>.sql.gz | sudo docker exec -i essential-butterfly-db psql -U postgres -d essential_butterfly_restore
+```
+Restore into a new database first and check it before replacing anything.

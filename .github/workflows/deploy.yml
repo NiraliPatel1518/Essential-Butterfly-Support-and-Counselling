@@ -1,0 +1,127 @@
+name: Deploy to EC2
+
+# Runs in two ways:
+#  1. Automatically, after "CI/CD Pipeline" finishes successfully for a
+#     push to main - only when the repository variable AUTO_DEPLOY is
+#     "true" (Settings -> Secrets and variables -> Actions -> Variables).
+#     It deploys the exact commit that CI tested.
+#  2. By hand: Actions tab -> "Deploy to EC2" -> "Run workflow". You can
+#     give a commit id that is on main (for example to go back to an
+#     older version). Branches that are not merged into main are refused.
+#
+# The server-side steps are in scripts/deploy/ec2-deploy.sh.
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit id on main to deploy (leave as 'main' for the latest)"
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+# Only one deploy at a time; a newer one waits for the running one.
+concurrency:
+  group: production-ec2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       vars.AUTO_DEPLOY == 'true')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Work out which commit to deploy
+        id: target
+        env:
+          EVENT: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_REF: ${{ github.event.inputs.ref }}
+        run: |
+          if [ "$EVENT" = "workflow_run" ]; then
+            sha="$RUN_SHA"
+          else
+            sha="$(git rev-parse --verify "origin/${INPUT_REF}^{commit}" 2>/dev/null \
+                || git rev-parse --verify "${INPUT_REF}^{commit}")"
+          fi
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$sha is not on main. Only code merged into main can be deployed."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Deploying $sha"
+
+      - name: Check deploy settings
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST_KEY: ${{ secrets.EC2_HOST_KEY }}
+        run: |
+          missing=0
+          for name in EC2_HOST EC2_SSH_KEY EC2_HOST_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not set."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Set up SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST_KEY: ${{ secrets.EC2_HOST_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pin the server's identity so we never send anything to the wrong machine.
+          printf '%s %s\n' "$EC2_HOST" "$EC2_HOST_KEY" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy on the server
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          if ! ssh -i ~/.ssh/deploy_key -o ConnectTimeout=20 -o BatchMode=yes \
+               -o StrictHostKeyChecking=yes "ubuntu@${EC2_HOST}" true; then
+            echo "::error::Cannot reach the server. Is the AWS Academy lab started and the instance running?"
+            exit 1
+          fi
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 \
+              "ubuntu@${EC2_HOST}" "bash -s -- $SHA" < scripts/deploy/ec2-deploy.sh
+
+      - name: Check the public website
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "Repository variable SITE_URL is not set - skipping the public check."
+            exit 0
+          fi
+          curl -fsS --max-time 15 -o /dev/null "$SITE_URL/"
+          curl -fsS --max-time 15 -o /dev/null "$SITE_URL/api/features"
+          echo "$SITE_URL is up."
+
+      - name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

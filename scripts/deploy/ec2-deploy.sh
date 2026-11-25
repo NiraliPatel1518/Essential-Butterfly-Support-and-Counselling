@@ -77,8 +77,19 @@ sudo docker exec "$DB_CONTAINER" pg_dump -U postgres -d "$DB_NAME" \
     | gzip > "$BACKUP_FILE" \
     || { rm -f "$BACKUP_FILE"; fail "pg_dump failed; nothing was changed."; }
 
-zcat "$BACKUP_FILE" | head -n 5 | grep -q "PostgreSQL database dump" \
-    || { rm -f "$BACKUP_FILE"; fail "The backup file looks wrong; nothing was changed."; }
+# The backup is only accepted when the gzip file is intact AND pg_dump's
+# last line "PostgreSQL database dump complete" is in it, which proves the
+# whole dump was written. "tail" reads the full file, so this check cannot
+# be broken by a "broken pipe" (a pipe that stops reading early fails
+# under "set -o pipefail" on a large file).
+backup_ok() {
+    local footer
+    gzip -t "$BACKUP_FILE" 2>/dev/null || return 1
+    footer="$(zcat "$BACKUP_FILE" | tail -n 5)" || return 1
+    [[ "$footer" == *"PostgreSQL database dump complete"* ]]
+}
+backup_ok \
+    || { rm -f "$BACKUP_FILE"; fail "The database backup is incomplete or damaged; nothing was changed."; }
 chmod 600 "$BACKUP_FILE"
 echo "Backup saved: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 

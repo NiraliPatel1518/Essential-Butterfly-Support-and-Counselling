@@ -89,26 +89,54 @@ jobs:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_HOST_KEY: ${{ secrets.EC2_HOST_KEY }}
         run: |
+          # Clean up copy/paste mistakes: spaces, line breaks, Windows "\r",
+          # a pasted "http(s)://" or a trailing "/".
+          host="$(printf '%s' "$EC2_HOST" | tr -d '[:space:]')"
+          host="${host#http://}"; host="${host#https://}"; host="${host%/}"
+          if ! [[ "$host" =~ ^[A-Za-z0-9.-]+$ ]]; then
+            echo "::error::Secret EC2_HOST is not a valid address. It must be only the Elastic IP, e.g. 184.193.202.252"
+            exit 1
+          fi
+          host_key="$(printf '%s' "$EC2_HOST_KEY" | tr -d '\r' | awk '{print $1, $2}')"
+          echo "DEPLOY_HOST=$host" >> "$GITHUB_ENV"
+
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$EC2_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "::error::Secret EC2_SSH_KEY is not a valid private key. Paste the whole labsuser.pem, including the BEGIN and END lines."
+            exit 1
+          fi
           # Pin the server's identity so we never send anything to the wrong machine.
-          printf '%s %s\n' "$EC2_HOST" "$EC2_HOST_KEY" > ~/.ssh/known_hosts
+          printf '%s %s\n' "$host" "$host_key" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy on the server
         env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
           SHA: ${{ steps.target.outputs.sha }}
         run: |
-          if ! ssh -i ~/.ssh/deploy_key -o ConnectTimeout=20 -o BatchMode=yes \
-               -o StrictHostKeyChecking=yes "ubuntu@${EC2_HOST}" true; then
-            echo "::error::Cannot reach the server. Is the AWS Academy lab started and the instance running?"
+          set +e
+          out="$(ssh -i ~/.ssh/deploy_key -o ConnectTimeout=20 -o BatchMode=yes \
+                 -o StrictHostKeyChecking=yes "ubuntu@${DEPLOY_HOST}" true 2>&1)"
+          code=$?
+          set -e
+          if [ $code -ne 0 ]; then
+            echo "$out"
+            case "$out" in
+              *"timed out"*|*"No route"*|*"Connection refused"*)
+                echo "::error::Server not reachable. Is the AWS Academy lab started, the instance running, and port 22 open?" ;;
+              *"Permission denied"*)
+                echo "::error::Login rejected. EC2_SSH_KEY does not match the server (it must be labsuser.pem)." ;;
+              *"Host key verification failed"*|*"REMOTE HOST IDENTIFICATION"*)
+                echo "::error::Server identity does not match EC2_HOST_KEY. Re-copy it from /etc/ssh/ssh_host_ed25519_key.pub." ;;
+              *)
+                echo "::error::Could not connect to the server (see the message above)." ;;
+            esac
             exit 1
           fi
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
               -o ServerAliveInterval=30 \
-              "ubuntu@${EC2_HOST}" "bash -s -- $SHA" < scripts/deploy/ec2-deploy.sh
+              "ubuntu@${DEPLOY_HOST}" "bash -s -- $SHA" < scripts/deploy/ec2-deploy.sh
 
       - name: Check the public website
         env:

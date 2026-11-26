@@ -148,7 +148,12 @@ jobs:
           fi
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
               -o ServerAliveInterval=30 \
-              "ubuntu@${DEPLOY_HOST}" "bash -s -- $SHA" < "$deploy_script"
+              "ubuntu@${DEPLOY_HOST}" "bash -s -- $SHA" < "$deploy_script" | tee deploy-output.txt
+          # A deploy only counts when the script reached its very last line.
+          if ! grep -qx 'DEPLOY-RESULT: OK' deploy-output.txt; then
+            echo "::error::The deploy script ended before finishing (no DEPLOY-RESULT line). Treating the deploy as failed."
+            exit 1
+          fi
 
       - name: Check the public website
         env:

@@ -95,7 +95,7 @@ function Navbar() {
         <Link
           to="/"
           className="brand"
-          aria-label="Essential Butterfly Support and Counselling, home"
+          
         >
           <img
             src="/images/butterfly-mark.png"

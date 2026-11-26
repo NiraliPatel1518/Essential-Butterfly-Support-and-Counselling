@@ -165,6 +165,8 @@ Settings (GitHub → Settings → Secrets and variables → Actions):
 
 **Do not edit tracked files on the server.** Change them in GitHub instead. The deploy refuses to run while the server has local edits.
 
+**Which database is backed up:** the one the backend uses. Before the RDS move that is the `db` container; after it (`docs/operations/aws-s3-rds-migration.md`) it is Amazon RDS, and the deploy log says `Database: ... (Amazon RDS)`. RDS also keeps its own automatic daily backups.
+
 **Restore a backup** (only if a release damaged data):
 ```
 gunzip -c ~/backups/<file>.sql.gz | sudo docker exec -i essential-butterfly-db psql -U postgres -d essential_butterfly_restore

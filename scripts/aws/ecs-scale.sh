@@ -28,9 +28,15 @@ show_status() {
 case "${1:-status}" in
     on)
         aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count 1 > /dev/null
-        echo "Starting 1 task; waiting until it is healthy (3-6 minutes)..."
-        aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE" \
-            || echo "Not stable yet after 10 minutes; check the ECS console." >&2
+        echo "Starting 1 task; waiting until the load balancer reports it healthy (3-6 minutes)..."
+        healthy=""
+        for ((i = 1; i <= 40; i++)); do
+            healthy="$(awst elbv2 describe-target-health --target-group-arn "$TG_ARN" \
+                --query "length(TargetHealthDescriptions[?TargetHealth.State=='healthy'])")" || healthy=""
+            [[ "${healthy:-0}" -ge 1 ]] && break
+            sleep 15
+        done
+        if [[ "${healthy:-0}" -ge 1 ]]; then echo "Healthy."; else echo "Not healthy after 10 minutes; check the ECS console (service Events) and CloudWatch logs." >&2; fi
         show_status ;;
     off)
         aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count 0 > /dev/null

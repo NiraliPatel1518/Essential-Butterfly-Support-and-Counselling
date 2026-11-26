@@ -1,0 +1,14 @@
+# Used only by builds whose context is the repository root
+# (deploy/ecs/web.Dockerfile). Keeps secrets and bulky folders out of the
+# build context; docker-compose builds use their own folders and are not
+# affected.
+secrets/
+.env
+.env.*
+.git/
+**/node_modules/
+**/dist/
+essential-butterfly-backend/
+docs/
+*.dump
+*.sql.gz

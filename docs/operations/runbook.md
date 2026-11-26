@@ -172,3 +172,8 @@ Settings (GitHub → Settings → Secrets and variables → Actions):
 gunzip -c ~/backups/<file>.sql.gz | sudo docker exec -i essential-butterfly-db psql -U postgres -d essential_butterfly_restore
 ```
 Restore into a new database first and check it before replacing anything.
+
+## 10. Amazon ECS
+
+When the repository variable `DEPLOY_TARGET` is `ecs`, the site runs on Amazon ECS (Fargate) behind a load balancer and CloudFront, and CD builds the images on the EC2 server, pushes them to ECR and rolls them out on ECS (`scripts/deploy/ecs-deploy.sh`). Setup, switching, turning the site off/on to save credit, going back to EC2 and troubleshooting: [aws-ecs.md](aws-ecs.md).
+

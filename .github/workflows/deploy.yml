@@ -9,7 +9,9 @@ name: Deploy to EC2
 #     give a commit id that is on main (for example to go back to an
 #     older version). Branches that are not merged into main are refused.
 #
-# The server-side steps are in scripts/deploy/ec2-deploy.sh.
+# The server-side steps are in scripts/deploy/ec2-deploy.sh (Docker Compose
+# on the server) or scripts/deploy/ecs-deploy.sh (Amazon ECS), chosen by the
+# repository variable DEPLOY_TARGET.
 
 on:
   workflow_run:
@@ -35,7 +37,7 @@ jobs:
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -114,7 +116,17 @@ jobs:
       - name: Deploy on the server
         env:
           SHA: ${{ steps.target.outputs.sha }}
+          # "ecs": the server builds the images and updates Amazon ECS
+          # (scripts/deploy/ecs-deploy.sh). Anything else: the site runs on
+          # the server itself with Docker Compose (scripts/deploy/ec2-deploy.sh).
+          DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
         run: |
+          if [ "$DEPLOY_TARGET" = "ecs" ]; then
+            deploy_script=scripts/deploy/ecs-deploy.sh
+          else
+            deploy_script=scripts/deploy/ec2-deploy.sh
+          fi
+          echo "Deploy target: ${DEPLOY_TARGET:-ec2} ($deploy_script)"
           set +e
           out="$(ssh -i ~/.ssh/deploy_key -o ConnectTimeout=20 -o BatchMode=yes \
                  -o StrictHostKeyChecking=yes "ubuntu@${DEPLOY_HOST}" true 2>&1)"
@@ -136,7 +148,7 @@ jobs:
           fi
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
               -o ServerAliveInterval=30 \
-              "ubuntu@${DEPLOY_HOST}" "bash -s -- $SHA" < scripts/deploy/ec2-deploy.sh
+              "ubuntu@${DEPLOY_HOST}" "bash -s -- $SHA" < "$deploy_script"
 
       - name: Check the public website
         env:

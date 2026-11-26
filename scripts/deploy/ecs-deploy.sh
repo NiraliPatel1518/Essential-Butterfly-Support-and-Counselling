@@ -25,6 +25,13 @@
 # =====================================================================
 set -Eeuo pipefail
 
+# Everything is inside main(), which is only called on the last line. GitHub
+# pipes this script to "bash -s" over SSH, and bash reads such a script while
+# running it; a command that reads standard input could otherwise swallow
+# the rest of the script and the deploy would stop silently. With main(),
+# bash has read the whole file before the first command runs.
+main() {
+
 SHA="${1:?usage: ecs-deploy.sh <commit-sha>}"
 APP_DIR="${APP_DIR:-$HOME/app}"
 ECS_CONFIG="${ECS_CONFIG:-$HOME/ecs-config.env}"
@@ -38,7 +45,7 @@ fail() { printf '\nDEPLOY STOPPED: %s\n' "$*" >&2; exit 1; }
 
 mkdir -p "$WORK_DIR"; chmod 700 "$WORK_DIR"
 aws() {
-    sudo docker run --rm -i -e AWS_DEFAULT_REGION="$AWS_REGION" -e AWS_PAGER="" \
+    sudo docker run --rm -e AWS_DEFAULT_REGION="$AWS_REGION" -e AWS_PAGER="" \
         -v "$WORK_DIR:/work" -w /work "$AWS_CLI_IMAGE" "$@"
 }
 awst() {
@@ -152,6 +159,7 @@ if [[ "$desired" == "0" ]]; then
     deploy_done=true
     log "Deployed $SHA"
     echo "The service is turned OFF (0 tasks); the new version starts with: bash scripts/aws/ecs-scale.sh on"
+    echo "DEPLOY-RESULT: OK"
     exit 0
 fi
 
@@ -213,3 +221,8 @@ done
 sudo docker image prune -f > /dev/null 2>&1 || true
 
 log "Deployed $SHA to ECS"
+
+echo "DEPLOY-RESULT: OK"
+}
+
+main "$@" < /dev/null

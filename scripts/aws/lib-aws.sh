@@ -22,7 +22,7 @@ log()  { printf '\n==> %s\n' "$*"; }
 fail() { printf '\nSTOPPED: %s\n' "$*" >&2; exit 1; }
 
 aws() {
-    sudo docker run --rm -i \
+    sudo docker run --rm \
         -e AWS_DEFAULT_REGION="$AWS_REGION" -e AWS_PAGER="" \
         -v "$WORK_DIR:/work" -w /work \
         "$AWS_CLI_IMAGE" "$@"

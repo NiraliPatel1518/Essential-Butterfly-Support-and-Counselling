@@ -27,6 +27,13 @@
 # =====================================================================
 set -Eeuo pipefail
 
+# Everything is inside main(), which is only called on the last line. GitHub
+# pipes this script to "bash -s" over SSH, and bash reads such a script while
+# running it; a command that reads standard input could otherwise swallow
+# the rest of the script and the deploy would stop silently. With main(),
+# bash has read the whole file before the first command runs.
+main() {
+
 SHA="${1:?usage: ec2-deploy.sh <commit-sha>}"
 APP_DIR="${APP_DIR:-$HOME/app}"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/backups}"
@@ -191,6 +198,7 @@ if site_is_healthy; then
     log "Deployed $SHA"
     sudo docker image prune -f >/dev/null || true   # removes only unused, untagged images
     "${COMPOSE[@]}" ps
+    echo "DEPLOY-RESULT: OK"
     exit 0
 fi
 
@@ -204,3 +212,8 @@ if site_is_healthy; then
     fail "The new version failed its health check. Rolled back to $PREV - the site is up. Database backup: $BACKUP_FILE"
 fi
 fail "Roll back did not become healthy either. Check the server now. Database backup: $BACKUP_FILE"
+
+echo "DEPLOY-RESULT: OK"
+}
+
+main "$@" < /dev/null

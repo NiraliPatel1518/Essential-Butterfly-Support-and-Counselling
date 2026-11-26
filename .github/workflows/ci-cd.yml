@@ -17,6 +17,7 @@ jobs:
   build-test:
     name: Build Backend and Run Tests
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,6 +36,7 @@ jobs:
   frontend-test:
     name: Build and Test Frontend
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -62,6 +64,10 @@ jobs:
     name: Docker Build and Integration Tests
     runs-on: ubuntu-latest
     needs: [build-test, frontend-test]
+
+    env:
+      A11Y_BASE_URL: http://localhost:5173
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -70,26 +76,21 @@ jobs:
         run: |
           mkdir -p secrets
 
-          # PostgreSQL
+          # These values are for the temporary CI environment only.
           printf '%s' 'ci-only-postgres-password' > secrets/postgres_password.txt
 
-          # Gmail
           printf '%s' 'ci@example.com' > secrets/gmail_username.txt
           printf '%s' 'ci-placeholder-gmail-password' > secrets/gmail_app_password.txt
 
-          # JWT
           printf '%s' 'ci-only-jwt-secret-ci-only-jwt-secret-ci-only-jwt-secret' > secrets/jwt_secret.txt
 
-          # Admin account
           printf '%s' 'ci-admin@example.com' > secrets/admin_email.txt
           printf '%s' 'ci-only-admin-password' > secrets/admin_password.txt
 
-          # Twilio
           printf '%s' 'AC00000000000000000000000000000000' > secrets/twilio_account_sid.txt
           printf '%s' 'ci-placeholder-twilio-auth-token' > secrets/twilio_auth_token.txt
           printf '%s' 'VA00000000000000000000000000000000' > secrets/twilio_verify_service_sid.txt
 
-          # Google Calendar (disabled during CI)
           touch secrets/google_calendar_client_id.txt
           touch secrets/google_calendar_client_secret.txt
           touch secrets/google_calendar_refresh_token.txt
@@ -121,7 +122,6 @@ jobs:
           echo "Waiting for Spring Boot backend to start..."
 
           for i in {1..30}; do
-
             if ! docker compose ps --status running --services | grep -qx backend; then
               echo "Backend container is not running."
               docker compose logs --no-color backend
@@ -144,7 +144,7 @@ jobs:
       - name: Check frontend
         run: |
           for i in {1..30}; do
-            if curl -fsS --max-time 5 http://localhost:5173/ >/dev/null; then
+            if curl -fsS --max-time 5 "$A11Y_BASE_URL/" >/dev/null; then
               echo "Frontend is responding."
               exit 0
             fi
@@ -153,6 +153,30 @@ jobs:
 
           echo "Frontend did not become available."
           exit 1
+
+      - name: Set up Node.js for accessibility scan
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install accessibility scan dependencies
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Accessibility Scan
+        working-directory: ./frontend
+        run: npm run test:a11y
+
+      - name: Save accessibility report
+        if: ${{ always() && hashFiles('frontend/test-results/accessibility.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: frontend/test-results/accessibility.json
 
       - name: Show container status
         if: always()
@@ -171,6 +195,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-test, frontend-test, docker-integration]
     if: github.event_name != 'pull_request' && needs.build-test.result == 'success' && needs.frontend-test.result == 'success' && needs.docker-integration.result == 'success'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

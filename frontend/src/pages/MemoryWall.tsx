@@ -1,199 +1,204 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
-import { ApiError, fetchWall, publicImageUrl } from "../api/memoryWallApi";
-import type { PublicPhoto, WallMonth } from "../api/memoryWallApi";
+import { useEffect, useState } from "react";
+import { fetchWall, publicImageUrl } from "../api/memoryWallApi";
+import type { WallMonth } from "../api/memoryWallApi";
 import "./MemoryWall.css";
 
-// The public Memory Wall: published photos, grouped by month of upload.
-function MemoryWall() {
+const SLIDE_DURATION_MS = 7000;
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function prefersReducedMotion() {
+  return window.matchMedia?.(REDUCED_MOTION)?.matches ?? false;
+}
+
+export default function MemoryWall() {
   const [months, setMonths] = useState<WallMonth[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  // index into the flat list of every photo, or -1 when no photo is open
-  const [openIndex, setOpenIndex] = useState(-1);
+  const [index, setIndex] = useState(0);
+  const [playing, setPlaying] = useState(() => !prefersReducedMotion());
+  const [hovered, setHovered] = useState(false);
+  const [pageVisible, setPageVisible] = useState(() => !document.hidden);
+  const [announcement, setAnnouncement] = useState("");
 
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
-
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
     setLoading(true);
-    setError("");
+    setError(false);
 
-    try {
-      setMonths(await fetchWall());
-    } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "We could not load the Memory Wall right now. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    fetchWall()
+      .then((result) => {
+        if (!active) return;
+        setMonths(result);
+        setIndex(0);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [attempt]);
+
+  useEffect(() => {
+    const preference = window.matchMedia?.(REDUCED_MOTION);
+
+    function updateMotionPreference() {
+      if (preference?.matches) setPlaying(false);
     }
+
+    function updateVisibility() {
+      setPageVisible(!document.hidden);
+    }
+
+    preference?.addEventListener?.("change", updateMotionPreference);
+    document.addEventListener("visibilitychange", updateVisibility);
+
+    return () => {
+      preference?.removeEventListener?.("change", updateMotionPreference);
+      document.removeEventListener("visibilitychange", updateVisibility);
+    };
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const flat = useMemo(
-    () =>
-      months.flatMap((month) =>
-        month.photos.map((photo) => ({ photo, month: month.label }))
-      ),
-    [months]
-  );
-
-  const current = openIndex >= 0 ? flat[openIndex] : undefined;
+  // Only use photos returned by the public Memory Wall API.
+  const photos = months.flatMap((month) => month.photos);
+  const count = photos.length;
+  const current = photos[index];
+  const rotating = count > 1 && playing && !hovered && pageVisible;
 
   useEffect(() => {
-    const dialog = dialogRef.current;
+    if (!rotating) return;
 
-    if (!dialog || typeof dialog.showModal !== "function") return;
+    const timer = window.setInterval(() => {
+      setIndex((previous) => (previous + 1) % count);
+    }, SLIDE_DURATION_MS);
 
-    if (current && !dialog.open) {
-      dialog.showModal();
+    return () => window.clearInterval(timer);
+  }, [rotating, count]);
+
+  function photoTitle(photo: (typeof photos)[number], position: number) {
+    if ("title" in photo && typeof photo.title === "string" && photo.title.trim()) {
+      return photo.title.trim();
     }
-  }, [current]);
+    return photo.altText?.trim() || `Community memory ${position + 1}`;
+  }
 
-  const openPhoto = (photo: PublicPhoto, button: HTMLElement) => {
-    openerRef.current = button;
-    setOpenIndex(flat.findIndex((item) => item.photo.id === photo.id));
-  };
-
-  const step = (direction: number) => {
-    if (flat.length === 0) return;
-
-    setOpenIndex((index) => (index + direction + flat.length) % flat.length);
-  };
-
-  // Escape is handled by the dialog itself; the arrow keys move between photos.
-  const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      step(1);
-    } else if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      step(-1);
-    }
-  };
-
-  const afterClose = () => {
-    setOpenIndex(-1);
-    openerRef.current?.focus();
-  };
+  function choosePhoto(position: number) {
+    setPlaying(false);
+    setIndex(position);
+    setAnnouncement(
+      `Photo ${position + 1} of ${count}: ${photoTitle(photos[position], position)}`
+    );
+  }
 
   return (
-    <main className="wall-page">
+    <main className={`wall-page${current ? " wall-page--has-photos" : ""}`}>
       <header className="wall-header">
-        <p className="wall-eyebrow">ESSENTIAL BUTTERFLY</p>
+        <p className="wall-eyebrow">Essential Butterfly</p>
         <h1>Memory Wall</h1>
-        <p>
-          Happy moments shared by the families and community we are proud to
-          support. Select any photo to see it larger.
-        </p>
+        <p className="wall-intro">Moments shared by our families and community.</p>
       </header>
 
-      {loading && <p role="status">Loading the Memory Wall…</p>}
-
-      {error && (
-        <p className="wall-error" role="alert">
-          {error}{" "}
-          <button type="button" onClick={() => void load()}>
+      {loading ? (
+        <p className="wall-message" role="status">Loading memories…</p>
+      ) : error ? (
+        <div className="wall-message">
+          <p role="alert">We couldn’t load the photos right now.</p>
+          <button
+            type="button"
+            className="wall-retry"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
             Try again
           </button>
+        </div>
+      ) : !current ? (
+        <p className="wall-message">
+          No photos have been published yet. Please check back soon.
         </p>
-      )}
-
-      {!loading && !error && months.length === 0 && (
-        <p className="wall-empty">
-          New memories are on their way. Please check back soon.
-        </p>
-      )}
-
-      {months.map((month) => (
+      ) : (
         <section
-          key={month.key}
-          className="wall-month"
-          aria-labelledby={`wall-month-${month.key}`}
+          className="memory-feature"
+          aria-label="Community memories"
+          aria-roledescription="carousel"
+          onPointerEnter={(event) => {
+            if (event.pointerType === "mouse") setHovered(true);
+          }}
+          onPointerLeave={() => setHovered(false)}
+          onFocusCapture={(event) => {
+            if (
+              !event.currentTarget.contains(event.relatedTarget) &&
+              event.target.matches(":focus-visible")
+            ) {
+              setPlaying(false);
+            }
+          }}
         >
-          <h2 id={`wall-month-${month.key}`}>
-            Happy moments in {month.label}
-          </h2>
+          <figure className="memory-feature-card">
+            <div className="memory-feature-stage">
+              <img
+                key={current.id}
+                className="memory-feature-photo"
+                src={publicImageUrl(current.id)}
+                alt={current.altText || ""}
+              />
+            </div>
 
-          <ul className="wall-grid">
-            {month.photos.map((photo) => (
-              <li key={photo.id}>
-                <button
-                  type="button"
-                  className="wall-photo"
-                  aria-label={`Enlarge photo: ${photo.altText}. Uploaded ${photo.uploadedOn}.`}
-                  onClick={(event) => openPhoto(photo, event.currentTarget)}
-                >
-                  <img
-                    src={publicImageUrl(photo.id)}
-                    alt={photo.altText}
-                    loading="lazy"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+            <figcaption className="memory-feature-caption">
+              <p className="memory-feature-kicker">
+                Community memory · {index + 1} of {count}
+              </p>
+              <h2>{photoTitle(current, index)}</h2>
+              {current.uploadedOn && (
+                <p className="memory-feature-date">Uploaded {current.uploadedOn}</p>
+              )}
+            </figcaption>
+          </figure>
 
-      <dialog
-        ref={dialogRef}
-        className="wall-dialog"
-        aria-labelledby="wall-dialog-title"
-        onClose={afterClose}
-        onKeyDown={onKeyDown}
-      >
-        {current && (
-          <div>
-            <h2 id="wall-dialog-title" className="wall-dialog-title">
-              Memory Wall photo
-            </h2>
-
-            <img
-              className="wall-dialog-image"
-              src={publicImageUrl(current.photo.id)}
-              alt={current.photo.altText}
-            />
-
-            <p className="wall-dialog-caption">
-              {current.photo.altText}
-              <span>
-                {" "}
-                · Uploaded {current.photo.uploadedOn}
-              </span>
-            </p>
-
-            <p className="wall-dialog-count" aria-live="polite">
-              Photo {openIndex + 1} of {flat.length}
-            </p>
-
-            <div className="wall-dialog-actions">
-              <button type="button" onClick={() => step(-1)} disabled={flat.length < 2}>
-                ← Previous
-              </button>
-              <button type="button" onClick={() => step(1)} disabled={flat.length < 2}>
-                Next →
-              </button>
+          {count > 1 && (
+            <div className="memory-feature-toolbar">
               <button
                 type="button"
-                className="wall-dialog-close"
-                onClick={() => dialogRef.current?.close()}
+                className="memory-feature-play"
+                aria-label={playing ? "Pause slideshow" : "Play slideshow"}
+                title={playing ? "Pause slideshow" : "Play slideshow"}
+                onClick={() => setPlaying((value) => !value)}
               >
-                Close
+                <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
               </button>
+
+              <div
+                className="memory-feature-dots"
+                role="group"
+                aria-label="Choose a photo"
+              >
+                {photos.map((photo, position) => (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    className="memory-feature-dot"
+                    aria-label={`Show photo ${position + 1}: ${photoTitle(photo, position)}`}
+                    aria-current={position === index ? "true" : undefined}
+                    onClick={() => choosePhoto(position)}
+                  >
+                    <span aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </dialog>
+          )}
+
+          {/* Announce a visitor's selection, not every automatic change. */}
+          <span className="wall-sr-only" role="status" aria-atomic="true">
+            {announcement}
+          </span>
+        </section>
+      )}
     </main>
   );
 }
-
-export default MemoryWall;

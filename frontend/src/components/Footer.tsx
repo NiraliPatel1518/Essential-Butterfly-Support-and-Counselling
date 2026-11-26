@@ -30,8 +30,7 @@ function Footer() {
     <footer className="site-footer">
       <div className="footer-main">
         <div className="footer-brand">
-          <Link to="/" className="footer-logo" aria-label="Essential Butterfly home">
-            <span className="footer-mark-frame"><img className="footer-butterfly" src="/images/butterfly-mark.png" alt="" /></span>
+<Link to="/" className="footer-logo">            <span className="footer-mark-frame"><img className="footer-butterfly" src="/images/butterfly-mark.png" alt="" /></span>
             <span className="footer-brand-text"><strong>Essential Butterfly</strong><small>Support &amp; Counselling</small></span>
           </Link>
           <p>Counselling, coaching, tutoring and respite supports designed to build skills, reduce challenges and grow with confidence.</p>

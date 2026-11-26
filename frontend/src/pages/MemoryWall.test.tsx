@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MemoryWall from "./MemoryWall";
 import { renderPage } from "../test/helpers";
@@ -21,6 +21,8 @@ const SEPTEMBER: WallMonth = {
   photos: [{ id: 3, altText: "A butterfly on a flower", uploadedAt: "2026-09-20T10:00:00", uploadedOn: "September 20, 2026" }],
 };
 
+const SLIDE_MS = 7000;
+
 function stubWall(reply: () => Promise<unknown>) {
   const fetchMock = vi.fn(() => reply());
   vi.stubGlobal("fetch", fetchMock);
@@ -30,29 +32,43 @@ function stubWall(reply: () => Promise<unknown>) {
 async function show(months: WallMonth[] = [OCTOBER, SEPTEMBER]) {
   const fetchMock = stubWall(() => jsonResponse(months));
   renderPage("/memory-wall", <MemoryWall />);
-  await waitFor(() => expect(screen.queryByText("Loading the Memory Wall…")).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText("Loading memories…")).not.toBeInTheDocument());
   return fetchMock;
 }
 
-async function openPhoto(name: RegExp) {
-  await userEvent.click(screen.getByRole("button", { name }));
-  return screen.findByRole("dialog", { name: "Memory Wall photo" });
+// Catches the slideshow timer (the 7 second interval) so a test can fire it by hand.
+function catchSlideTimer() {
+  const realSetInterval = window.setInterval.bind(window);
+  const callbacks: Array<() => void> = [];
+  vi.spyOn(window, "setInterval").mockImplementation(((callback: () => void, delay?: number) => {
+    if (delay === SLIDE_MS) {
+      callbacks.push(callback);
+      return callbacks.length;
+    }
+    return realSetInterval(callback, delay);
+  }) as typeof window.setInterval);
+  return {
+    count: () => callbacks.length,
+    fire: () => act(() => callbacks[callbacks.length - 1]()),
+  };
 }
 
-beforeEach(() => {
-  // jsdom has no real modal dialog, so a small stand-in opens and closes it.
-  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
-    this.setAttribute("open", "");
-  };
-  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
-    this.removeAttribute("open");
-    this.dispatchEvent(new Event("close"));
-  };
-});
+function preferReducedMotion() {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  Reflect.deleteProperty(window, "matchMedia");
 });
 
 describe("MemoryWall page: the wall", () => {
@@ -60,11 +76,11 @@ describe("MemoryWall page: the wall", () => {
     stubWall(() => jsonResponse([OCTOBER]));
     renderPage("/memory-wall", <MemoryWall />);
 
-    expect(screen.getByRole("heading", { name: "Memory Wall" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Loading the Memory Wall…");
+    expect(screen.getByRole("heading", { name: "Memory Wall", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading memories…");
 
-    await screen.findByRole("heading", { name: /October 2026/ });
-    expect(screen.queryByText("Loading the Memory Wall…")).not.toBeInTheDocument();
+    await screen.findByRole("region", { name: "Community memories" });
+    expect(screen.queryByText("Loading memories…")).not.toBeInTheDocument();
   });
 
   it("loads the public wall without a sign-in token", async () => {
@@ -75,42 +91,31 @@ describe("MemoryWall page: the wall", () => {
     expect(init?.headers).toBeUndefined();
   });
 
-  it("groups photos under a heading for each month", async () => {
-    await show();
-
-    expect(screen.getByRole("heading", { name: "Happy moments in October 2026" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Happy moments in September 2026" })).toBeInTheDocument();
-
-    const october = screen.getByRole("heading", { name: /October/ }).closest("section")!;
-    expect(within(october).getAllByRole("button")).toHaveLength(2);
-
-    const september = screen.getByRole("heading", { name: /September/ }).closest("section")!;
-    expect(within(september).getAllByRole("button")).toHaveLength(1);
-  });
-
-  it("shows each picture with its description as the alternative text", async () => {
+  it("shows the first photo with its description as the alternative text", async () => {
     await show();
 
     const image = screen.getByAltText("Children at the park");
 
     expect(image).toHaveAttribute("src", expect.stringMatching(/\/api\/memory-wall\/photos\/1\/image$/));
-    expect(image).toHaveAttribute("loading", "lazy");
-    expect(screen.getByAltText("A birthday cake")).toBeInTheDocument();
-    expect(screen.getByAltText("A butterfly on a flower")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Children at the park", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText(/Uploaded October 12, 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Community memory · 1 of 3/)).toBeInTheDocument();
   });
 
-  it("gives every photo button a clear spoken name", async () => {
+  it("puts the photos of every month in one slideshow", async () => {
     await show();
 
-    expect(
-      screen.getByRole("button", { name: "Enlarge photo: Children at the park. Uploaded October 12, 2026." })
-    ).toBeInTheDocument();
+    const dots = within(screen.getByRole("group", { name: "Choose a photo" })).getAllByRole("button");
+
+    expect(dots).toHaveLength(3);
+    expect(screen.queryByRole("heading", { name: /Happy moments/ })).not.toBeInTheDocument();
   });
 
   it("shows a friendly message when the wall is empty", async () => {
     await show([]);
 
-    expect(screen.getByText("New memories are on their way. Please check back soon.")).toBeInTheDocument();
+    expect(screen.getByText("No photos have been published yet. Please check back soon.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Community memories" })).not.toBeInTheDocument();
   });
 
   it("shows the problem and a Try again button when loading fails", async () => {
@@ -119,9 +124,9 @@ describe("MemoryWall page: the wall", () => {
 
     const alert = await screen.findByRole("alert");
 
-    expect(alert).toHaveTextContent("The Memory Wall is not available right now.");
-    expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
-    expect(screen.queryByText(/New memories are on their way/)).not.toBeInTheDocument();
+    expect(alert).toHaveTextContent("We couldn’t load the photos right now.");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.queryByText(/No photos have been published yet/)).not.toBeInTheDocument();
   });
 
   it("loads the wall again when Try again is pressed", async () => {
@@ -134,81 +139,122 @@ describe("MemoryWall page: the wall", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
 
-    expect(await screen.findByRole("heading", { name: /October 2026/ })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Community memories" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(attempts).toBe(2);
   });
 });
 
-describe("MemoryWall page: the large photo", () => {
-  it("opens the chosen photo with its caption, date and position", async () => {
+describe("MemoryWall page: choosing a photo", () => {
+  it("gives every photo button a clear spoken name and marks the one on show", async () => {
     await show();
 
-    const dialog = await openPhoto(/Enlarge photo: A birthday cake/);
+    const first = screen.getByRole("button", { name: "Show photo 1: Children at the park" });
 
-    expect(within(dialog).getByRole("img", { name: "A birthday cake" })).toBeInTheDocument();
-    expect(within(dialog).getByText(/A birthday cake/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Uploaded October 5, 2026/)).toBeInTheDocument();
-    expect(within(dialog).getByText("Photo 2 of 3")).toBeInTheDocument();
+    expect(first).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Show photo 2: A birthday cake" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("button", { name: "Show photo 3: A butterfly on a flower" })).toBeInTheDocument();
   });
 
-  it("the Next button moves on and the last photo goes back to the first", async () => {
+  it("shows the chosen photo with its caption, date and position", async () => {
     await show();
 
-    const dialog = await openPhoto(/Enlarge photo: Children at the park/);
-    expect(within(dialog).getByText("Photo 1 of 3")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Show photo 2: A birthday cake" }));
 
-    await userEvent.click(within(dialog).getByRole("button", { name: /Next/ }));
-    expect(within(dialog).getByText("Photo 2 of 3")).toBeInTheDocument();
-
-    await userEvent.click(within(dialog).getByRole("button", { name: /Next/ }));
-    expect(within(dialog).getByText("Photo 3 of 3")).toBeInTheDocument();
-    expect(within(dialog).getByRole("img", { name: "A butterfly on a flower" })).toBeInTheDocument();
-
-    await userEvent.click(within(dialog).getByRole("button", { name: /Next/ }));
-    expect(within(dialog).getByText("Photo 1 of 3")).toBeInTheDocument();
+    expect(screen.getByAltText("A birthday cake")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "A birthday cake", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText(/Uploaded October 5, 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Community memory · 2 of 3/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show photo 2: A birthday cake" })).toHaveAttribute("aria-current", "true");
   });
 
-  it("the Previous button on the first photo goes to the last", async () => {
+  it("tells screen reader users which photo they chose", async () => {
     await show();
 
-    const dialog = await openPhoto(/Enlarge photo: Children at the park/);
-    await userEvent.click(within(dialog).getByRole("button", { name: /Previous/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Show photo 3: A butterfly on a flower" }));
 
-    expect(within(dialog).getByText("Photo 3 of 3")).toBeInTheDocument();
+    const announcement = screen.getAllByRole("status").find((element) => element.textContent?.startsWith("Photo 3 of 3"));
+    expect(announcement).toHaveTextContent("Photo 3 of 3: A butterfly on a flower");
   });
 
-  it("the arrow keys move between photos", async () => {
-    await show();
-
-    const dialog = await openPhoto(/Enlarge photo: Children at the park/);
-
-    fireEvent.keyDown(dialog, { key: "ArrowRight" });
-    expect(within(dialog).getByText("Photo 2 of 3")).toBeInTheDocument();
-
-    fireEvent.keyDown(dialog, { key: "ArrowLeft" });
-    fireEvent.keyDown(dialog, { key: "ArrowLeft" });
-    expect(within(dialog).getByText("Photo 3 of 3")).toBeInTheDocument();
-  });
-
-  it("Previous and Next are off when there is only one photo", async () => {
+  it("has no photo controls when there is only one photo", async () => {
     await show([SEPTEMBER]);
 
-    const dialog = await openPhoto(/Enlarge photo: A butterfly/);
+    expect(screen.getByAltText("A butterfly on a flower")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Pause slideshow|Play slideshow/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Choose a photo" })).not.toBeInTheDocument();
+  });
+});
 
-    expect(within(dialog).getByText("Photo 1 of 1")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: /Previous/ })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: /Next/ })).toBeDisabled();
+describe("MemoryWall page: the slideshow", () => {
+  it("moves to the next photo by itself and goes back to the first after the last", async () => {
+    const timer = catchSlideTimer();
+    await show();
+    expect(timer.count()).toBeGreaterThan(0);
+
+    timer.fire();
+    expect(screen.getByText(/Community memory · 2 of 3/)).toBeInTheDocument();
+
+    timer.fire();
+    expect(screen.getByText(/Community memory · 3 of 3/)).toBeInTheDocument();
+
+    timer.fire();
+    expect(screen.getByText(/Community memory · 1 of 3/)).toBeInTheDocument();
   });
 
-  it("closes with the Close button and gives focus back to the photo", async () => {
+  it("stops moving when Pause is pressed and moves again after Play", async () => {
+    const timer = catchSlideTimer();
     await show();
 
-    const opener = screen.getByRole("button", { name: /Enlarge photo: A birthday cake/ });
-    const dialog = await openPhoto(/Enlarge photo: A birthday cake/);
+    await userEvent.click(screen.getByRole("button", { name: "Pause slideshow" }));
 
-    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.getByRole("button", { name: "Play slideshow" })).toBeInTheDocument();
+    expect(screen.getByText(/Community memory · 1 of 3/)).toBeInTheDocument();
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(opener).toHaveFocus();
+    const timersBefore = timer.count();
+    await userEvent.click(screen.getByRole("button", { name: "Play slideshow" }));
+
+    expect(screen.getByRole("button", { name: "Pause slideshow" })).toBeInTheDocument();
+
+    // The mouse is still over the slideshow, which holds it. Moving away lets it run again.
+    await userEvent.unhover(screen.getByRole("region", { name: "Community memories" }));
+    expect(timer.count()).toBeGreaterThan(timersBefore);
+  });
+
+  it("holds the slideshow while the mouse is over it", async () => {
+    const timer = catchSlideTimer();
+    await show();
+    const timersBefore = timer.count();
+
+    await userEvent.hover(screen.getByRole("region", { name: "Community memories" }));
+    await userEvent.unhover(screen.getByRole("region", { name: "Community memories" }));
+
+    expect(timer.count()).toBeGreaterThan(timersBefore);
+    expect(screen.getByRole("button", { name: "Pause slideshow" })).toBeInTheDocument();
+  });
+
+  it("stops the slideshow when the visitor chooses a photo", async () => {
+    await show();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show photo 2: A birthday cake" }));
+
+    expect(screen.getByRole("button", { name: "Play slideshow" })).toBeInTheDocument();
+  });
+
+  it("does not start by itself for visitors who prefer reduced motion", async () => {
+    preferReducedMotion();
+    const timer = catchSlideTimer();
+    await show();
+
+    expect(screen.getByRole("button", { name: "Play slideshow" })).toBeInTheDocument();
+    expect(timer.count()).toBe(0);
+    expect(screen.getByText(/Community memory · 1 of 3/)).toBeInTheDocument();
+  });
+
+  it("does not start a timer when there is only one photo", async () => {
+    const timer = catchSlideTimer();
+    await show([SEPTEMBER]);
+
+    expect(timer.count()).toBe(0);
   });
 });

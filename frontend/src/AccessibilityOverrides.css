@@ -92,7 +92,9 @@ button:disabled,
 .intake-guidance-card p,
 .intake-privacy-note,
 .contact-intro-text,
-.footer-brand p { color: #51445f; }
+.site-footer .footer-brand > p {
+  color: #ffffff;
+}
 
 .dashboard-table-wrapper {
   max-width: 100%;

@@ -163,6 +163,10 @@ class ContentAndResourcesFlowIntegrationTest {
 
     // ------------------------------------------------------ content pages
 
+    /*
+     * Checks: Pages start unpublished: visitors get 204 and the built-in page stays.
+     * How:    For the keys services, about and privacy, a visitor request gives 204 No Content.
+     */
     @Test
     @DisplayName("Pages start unpublished: visitors get 204 and the built-in page stays")
     void unpublishedPages_returnNoContent() throws Exception {
@@ -172,6 +176,10 @@ class ContentAndResourcesFlowIntegrationTest {
         }
     }
 
+    /*
+     * Checks: The admin sees the three pages created by the database migration.
+     * How:    The admin list has 3 items, and each of the keys services, about and privacy is present.
+     */
     @Test
     @DisplayName("Admin sees the three seeded pages")
     void adminListsTheSeededPages() throws Exception {
@@ -184,6 +192,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$[?(@.pageKey=='privacy')]").isNotEmpty());
     }
 
+    /*
+     * Checks: A saved draft is visible to the admin but never to visitors.
+     * How:    We save the about page as a draft. A visitor gets 204. The admin sees published false,
+     *   the draft title, and hasUnpublishedChanges true.
+     */
     @Test
     @DisplayName("A saved draft is visible to admin but never to visitors")
     void draft_doesNotLeakToVisitors() throws Exception {
@@ -200,6 +213,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$.hasUnpublishedChanges").value(true));
     }
 
+    /*
+     * Checks: Publishing makes the page public with its title and body.
+     * How:    We save with publish true. The visitor answer has the title, the body and a publishedAt
+     *   date, and the admin view shows published true.
+     */
     @Test
     @DisplayName("Publishing makes the page public with its title and body")
     void publish_makesThePagePublic() throws Exception {
@@ -218,6 +236,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$.hasUnpublishedChanges").value(false));
     }
 
+    /*
+     * Checks: Editing a published page keeps the live copy until it is published again.
+     * How:    We publish v1, then save v2 as a draft. Visitors still see v1, and the admin sees both
+     *   titles. Publishing v2 then replaces the live copy.
+     */
     @Test
     @DisplayName("Editing a published page keeps the live copy until it is published again")
     void editAfterPublish_keepsLiveCopyUntilRepublished() throws Exception {
@@ -239,6 +262,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$.title").value("About us v2"));
     }
 
+    /*
+     * Checks: The services page accepts a list of services.
+     * How:    We save and publish the services body that has a services list. Visitors get 200 with
+     *   the title.
+     */
     @Test
     @DisplayName("The services page accepts a services list")
     void servicesPage_acceptsServicesList() throws Exception {
@@ -249,6 +277,10 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$.title").value("Our services"));
     }
 
+    /*
+     * Checks: A services list is refused on any other page.
+     * How:    We send the services body to the about page. The answer is 400.
+     */
     @Test
     @DisplayName("A services list on another page is rejected with 400")
     void servicesList_onAnotherPage_isRejected() throws Exception {
@@ -259,6 +291,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: Bad page content is refused with 400.
+     * How:    A loop sends an empty title, an empty body, text that is not JSON, an unknown field, and
+     *   a 1501-character text. Every one gives 400.
+     */
     @Test
     @DisplayName("Missing title, empty body, bad JSON and over-long text return 400")
     void invalidPageContent_isRejected() throws Exception {
@@ -282,6 +319,10 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
+    /*
+     * Checks: An unknown page key gives 404 for the admin.
+     * How:    Both GET and PUT on /api/admin/content/unknown give 404.
+     */
     @Test
     @DisplayName("An unknown page key returns 404 for admin")
     void unknownPageKey_isNotFound() throws Exception {
@@ -296,6 +337,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: The content admin URLs need a token (401) and the admin role (403).
+     * How:    We try GET and PUT with no token (401) and with a client token (403). A visitor still
+     *   gets 204 on the public page, so nothing was changed.
+     */
     @Test
     @DisplayName("Content admin routes need a token (401) and the admin role (403)")
     void contentAdminRoutes_areProtected() throws Exception {
@@ -323,6 +369,11 @@ class ContentAndResourcesFlowIntegrationTest {
 
     // ---------------------------------------------------------- resources
 
+    /*
+     * Checks: A draft link resource is hidden from visitors until it is published.
+     * How:    We create a draft. The public list does not show it, and the admin list shows status
+     *   DRAFT. After a PUT with publish true, it becomes visible.
+     */
     @Test
     @DisplayName("A draft link resource is hidden from visitors until it is published")
     void linkResource_draftThenPublish() throws Exception {
@@ -351,6 +402,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$[?(@.title=='Coping guide')]").isNotEmpty());
     }
 
+    /*
+     * Checks: A published PDF can be downloaded with safe headers.
+     * How:    The download answers 200 with application/pdf, nosniff, a file name in the
+     *   Content-Disposition header, and the same bytes we uploaded.
+     */
     @Test
     @DisplayName("Publishing a document makes it downloadable with safe headers")
     void pdfResource_isDownloadable() throws Exception {
@@ -369,6 +425,10 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(content().bytes(PDF_BYTES));
     }
 
+    /*
+     * Checks: A draft document cannot be downloaded by visitors.
+     * How:    The download of an unpublished file gives 404.
+     */
     @Test
     @DisplayName("A draft document cannot be downloaded by visitors")
     void draftDocument_isNotDownloadable() throws Exception {
@@ -382,6 +442,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: An image needs alternative text. With it, the upload works.
+     * How:    Posting a PNG with no alt text gives 400. Creating it with an alt text works, and the
+     *   public list shows that alt text.
+     */
     @Test
     @DisplayName("An image needs alternative text; with it, the upload works")
     void image_needsAltText() throws Exception {
@@ -403,6 +468,10 @@ class ContentAndResourcesFlowIntegrationTest {
                         .value("A butterfly on a leaf"));
     }
 
+    /*
+     * Checks: A resource with a missing title, category or content is refused.
+     * How:    We send three bad forms: no title, no category, and no link or file. Each gives 400.
+     */
     @Test
     @DisplayName("Missing title, category or content returns 400")
     void missingRequiredFields_returns400() throws Exception {
@@ -425,6 +494,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: A duplicate title (any capitalisation) or a duplicate link gives 409.
+     * How:    We create one resource. Then the title UNIQUE TITLE, and then the same link with another
+     *   title, are each refused with 409.
+     */
     @Test
     @DisplayName("A duplicate title (any capitalisation) or link returns 409")
     void duplicates_returnConflict() throws Exception {
@@ -445,6 +519,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    /*
+     * Checks: Unsafe links are refused with 400 and recorded as a security event.
+     * How:    We try a javascript link, an http link, and a link with a user and password. Each gives
+     *   400, and the count of SECURITY_UNSAFE_LINK_REJECTED events in the audit log goes up.
+     */
     @Test
     @DisplayName("Unsafe links are rejected with 400 and logged as a security event")
     void unsafeLink_isRejectedAndLogged() throws Exception {
@@ -466,6 +545,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 "rejected links should be written to the audit log");
     }
 
+    /*
+     * Checks: A fake or dangerous file is refused with 400 and recorded.
+     * How:    A text file named fake.pdf and an executable are refused. The count of
+     *   SECURITY_UNSAFE_FILE_REJECTED events goes up.
+     */
     @Test
     @DisplayName("A fake or executable file is rejected with 400 and logged")
     void unsafeFile_isRejectedAndLogged() throws Exception {
@@ -495,6 +579,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 "rejected files should be written to the audit log");
     }
 
+    /*
+     * Checks: Removing a resource deletes it everywhere.
+     * How:    The delete gives 204. Then the download gives 404, and the resource is gone from the
+     *   public list.
+     */
     @Test
     @DisplayName("Removing a resource deletes it everywhere and its download returns 404")
     void remove_hidesTheResource() throws Exception {
@@ -519,6 +608,11 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(jsonPath("$[?(@.id==" + id + ")]").isEmpty());
     }
 
+    /*
+     * Checks: A removed title can be used again.
+     * How:    We create and delete a resource, then create another one with the same title and link.
+     *   It must work.
+     */
     @Test
     @DisplayName("A removed title can be used again")
     void removedTitle_canBeReused() throws Exception {
@@ -531,6 +625,10 @@ class ContentAndResourcesFlowIntegrationTest {
         createLinkResource("Reusable", "https://example.org/r1", false);
     }
 
+    /*
+     * Checks: Editing or removing a resource that does not exist gives 404.
+     * How:    We try id 999999.
+     */
     @Test
     @DisplayName("Editing or removing an unknown resource returns 404")
     void unknownResource_isNotFound() throws Exception {
@@ -549,6 +647,10 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /*
+     * Checks: The upload rules tell the form what is accepted.
+     * How:    The admin URL returns text that contains pdf.
+     */
     @Test
     @DisplayName("Upload rules tell the form what is accepted")
     void uploadRules_areAvailableToAdmin() throws Exception {
@@ -559,6 +661,10 @@ class ContentAndResourcesFlowIntegrationTest {
                         org.hamcrest.Matchers.containsString("pdf")));
     }
 
+    /*
+     * Checks: The resource admin URLs need a token (401) and the admin role (403).
+     * How:    We try the admin URLs with no token and with a client token.
+     */
     @Test
     @DisplayName("Resource admin routes need a token (401) and the admin role (403)")
     void resourceAdminRoutes_areProtected() throws Exception {
@@ -588,6 +694,10 @@ class ContentAndResourcesFlowIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /*
+     * Checks: The public resource list needs no login.
+     * How:    GET /api/resources with no token gives 200.
+     */
     @Test
     @DisplayName("The public resource list needs no login")
     void publicResourceList_needsNoLogin() throws Exception {
@@ -597,6 +707,11 @@ class ContentAndResourcesFlowIntegrationTest {
 
     // ---------------------------------------------------------- audit log
 
+    /*
+     * Checks: Database triggers record content and resource changes in the audit log.
+     * How:    We save a draft, publish, create a resource and delete it. The audit log text must
+     *   contain CONTENT_DRAFT_SAVED, CONTENT_PUBLISHED, RESOURCE_CREATED and RESOURCE_REMOVED.
+     */
     @Test
     @DisplayName("Database triggers record content and resource changes in the audit log")
     void changes_areWrittenToTheAuditLog() throws Exception {
@@ -617,6 +732,10 @@ class ContentAndResourcesFlowIntegrationTest {
         assertTrue(log.contains("RESOURCE_REMOVED"), log);
     }
 
+    /*
+     * Checks: The audit log limit is respected.
+     * How:    We make three saves and ask for limit 2. The list has exactly 2 entries.
+     */
     @Test
     @DisplayName("The audit log limit is respected")
     void auditLog_respectsLimit() throws Exception {

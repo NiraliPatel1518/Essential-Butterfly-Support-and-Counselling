@@ -60,6 +60,10 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
 
     // ---------- subscribers ----------
 
+    /*
+     * Checks: A subscriber is found by email, ignoring capital letters.
+     * How:    We save foo@mail.com and search FOO@MAIL.COM (found) and another email (not found).
+     */
     @Test
     void findsASubscriberByEmailIgnoringCase() {
         // Store the email in lowercase to satisfy the database constraint.
@@ -71,6 +75,10 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
         assertTrue(subscribers.findByEmailIgnoreCase("other@mail.com").isEmpty());
 }
 
+    /*
+     * Checks: A subscriber is found by the unsubscribe token.
+     * How:    We use the saved token to find the same email. A fake token finds nothing.
+     */
     @Test
     void findsASubscriberByUnsubscribeToken() {
         NewsletterSubscriber saved = subscribers.save(new NewsletterSubscriber("token@mail.com"));
@@ -82,6 +90,10 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
         assertTrue(subscribers.findByUnsubscribeToken("not-a-real-token").isEmpty());
     }
 
+    /*
+     * Checks: The database refuses two subscribers with the same email.
+     * How:    The second save throws DataIntegrityViolationException.
+     */
     @Test
     void databaseRejectsTwoSubscribersWithTheSameEmail() {
         subscribers.save(new NewsletterSubscriber("same@mail.com"));
@@ -90,6 +102,11 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
                 subscribers.saveAndFlush(new NewsletterSubscriber("same@mail.com")));
     }
 
+    /*
+     * Checks: The active list and count do not include people who unsubscribed.
+     * How:    We save three subscribers and unsubscribe one. The active count rises by 2, and the
+     *   active list shows last and first, newest first.
+     */
     @Test
     void activeListAndCountIgnoreUnsubscribedPeople() {
         long before = subscribers.countByActiveTrue();
@@ -109,6 +126,11 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
         assertEquals(List.of("last@mail.com", "first@mail.com"), emails);
     }
 
+    /*
+     * Checks: A subscriber can subscribe again and gets a new token.
+     * How:    We unsubscribe (active false), then resubscribe. The subscriber is active again and the
+     *   token is different from the old one.
+     */
     @Test
     void aSubscriberCanResubscribeWithANewToken() {
         NewsletterSubscriber subscriber = subscribers.save(new NewsletterSubscriber("back@mail.com"));
@@ -127,6 +149,11 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
 
     // ---------- campaigns ----------
 
+    /*
+     * Checks: A campaign is saved as a DRAFT and edits are kept.
+     * How:    We save, update the subject and content, clear the entity manager, and load it again.
+     *   The status is DRAFT and the new text is there.
+     */
     @Test
     void savesACampaignAsADraftAndKeepsEdits() {
         NewsletterCampaign saved = campaigns.save(new NewsletterCampaign("Subject", "Body"));
@@ -141,6 +168,11 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
         assertEquals("New body", loaded.getContent());
     }
 
+    /*
+     * Checks: Send results and retry results are saved.
+     * How:    recordOutcome(2 sent, 1 failed) gives PARTIAL with a sent time. Delivery rows count 2
+     *   SENT and 1 FAILED. After a retry outcome (3 sent, 0 failed) the status is SENT.
+     */
     @Test
     void savesSendResultsAndRetryResults() {
         NewsletterCampaign campaign = campaigns.save(new NewsletterCampaign("Results", "Body"));
@@ -175,6 +207,11 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
 
     // ---------- deliveries ----------
 
+    /*
+     * Checks: Deliveries can be found by campaign and by status.
+     * How:    We save SENT, FAILED, PENDING deliveries in one campaign and one in another. The queries
+     *   return the right counts for each campaign and status.
+     */
     @Test
     void findsDeliveriesByCampaignAndStatus() {
         NewsletterCampaign campaign = campaigns.save(new NewsletterCampaign("Delivery", "Body"));
@@ -206,6 +243,11 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
 
     // ---------- password reset tokens ----------
 
+    /*
+     * Checks: A password reset token is found by its hash and keeps its used flag.
+     * How:    We save a token for a client, mark it used, clear the entity manager and load it. The
+     *   type is CLIENT, the owner is right, and used is true. A different hash finds nothing.
+     */
     @Test
     void findsAResetTokenAndRemembersWhenItWasUsed() {
         ClientUser owner = subscribersOwner("token-owner@mail.com");
@@ -224,6 +266,10 @@ class NewsletterAndTokenRepositoriesIntegrationTest extends RepositoryIntegratio
         assertTrue(resetTokens.findByTokenHash("b".repeat(64)).isEmpty());
     }
 
+    /*
+     * Checks: The database refuses two reset tokens with the same hash.
+     * How:    The second save of the same 64-character hash throws DataIntegrityViolationException.
+     */
     @Test
     void databaseRejectsTwoResetTokensWithTheSameValue() {
         String duplicateHash = "c".repeat(64);

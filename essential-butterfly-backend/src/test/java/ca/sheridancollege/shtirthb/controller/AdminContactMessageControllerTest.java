@@ -20,6 +20,11 @@ class AdminContactMessageControllerTest {
     @Mock ContactMessageService service;
     @InjectMocks AdminContactMessageController controller;
 
+    /*
+     * Checks: The admin can list all contact messages.
+     * How:    The fake service returns an empty list. The answer is 200 with an empty body, and the
+     *   service is called once.
+     */
     @Test void listsAllMessages() {
         when(service.getAllMessages()).thenReturn(List.of());
         var response = controller.getAllMessages();
@@ -28,6 +33,11 @@ class AdminContactMessageControllerTest {
         verify(service).getAllMessages();
     }
 
+    /*
+     * Checks: The admin can open one contact message by id.
+     * How:    The fake service returns a message for id 12. The controller answers 200 with the same
+     *   object.
+     */
     @Test void getsMessageById() {
         ContactMessageResponse expected = mock(ContactMessageResponse.class);
         when(service.getMessageById(12L)).thenReturn(expected);

@@ -52,6 +52,11 @@ class ApplicationStartupIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    /*
+     * Checks: The whole application starts with a real database.
+     * How:    SpringBootTest starts everything. We then ask the context for three important beans
+     *   (AppProperties, the CORS source and the global exception handler). None may be null.
+     */
     @Test
     void theWholeApplicationStarts() {
         assertNotNull(context.getBean(AppProperties.class));
@@ -59,6 +64,10 @@ class ApplicationStartupIntegrationTest {
         assertNotNull(context.getBean(GlobalExceptionHandler.class));
     }
 
+    /*
+     * Checks: The test database is a real PostgreSQL, not a fake one.
+     * How:    We run select version() with JdbcTemplate. The answer must contain the word PostgreSQL.
+     */
     @Test
     void usesARealPostgreSqlDatabase() {
         String version = jdbc.queryForObject("select version()", String.class);
@@ -67,6 +76,11 @@ class ApplicationStartupIntegrationTest {
         assertTrue(version.contains("PostgreSQL"), version);
     }
 
+    /*
+     * Checks: The tables for all our data are created.
+     * How:    We list the tables in the public schema. admin_users must be there, and there must be at
+     *   least 11 tables.
+     */
     @Test
     void createsTheTablesForAllEntities() {
         List<String> tables = jdbc.queryForList(
@@ -77,6 +91,11 @@ class ApplicationStartupIntegrationTest {
         assertTrue(tables.size() >= 11, "Expected at least 11 tables but found " + tables);
     }
 
+    /*
+     * Checks: The default admin is created at start-up with a hashed password.
+     * How:    We find admin@test.com in the real database. The saved password must be different from
+     *   Admin@12345, and the BCrypt encoder must say it matches.
+     */
     @Test
     void createsTheDefaultAdminWithAHashedPassword() {
         AdminUser admin = adminUsers.findByEmail("admin@test.com").orElseThrow();
@@ -86,6 +105,11 @@ class ApplicationStartupIntegrationTest {
         assertTrue(passwordEncoder.matches("Admin@12345", admin.getPassword()));
     }
 
+    /*
+     * Checks: The database refuses two admins with the same email.
+     * How:    We save one admin, then a second one with the same email. The second save must throw
+     *   DataIntegrityViolationException (the database unique rule works).
+     */
     @Test
     void databaseRejectsTwoAdminsWithTheSameEmail() {
         adminUsers.saveAndFlush(new AdminUser("First", "same@example.com", "hash-one"));

@@ -157,6 +157,11 @@ class AuthFlowIntegrationTest {
 
     // ------------------------------------------------------------ client signup
 
+    /*
+     * Checks: Sign-up creates an unverified account and emails a code.
+     * How:    The saved client has emailVerified false, a code hash, and a password that is not the
+     *   plain text. The fake mail sender was called once.
+     */
     @Test
     void signup_createsAnUnverifiedAccountAndEmailsACode() throws Exception {
         signup(EMAIL, PASSWORD, PASSWORD).andExpect(status().isCreated());
@@ -168,6 +173,10 @@ class AuthFlowIntegrationTest {
         verify(mailSender).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: Sign-up with an email that is already used is refused.
+     * How:    The second sign-up gives 409 with "An account with this email already exists."
+     */
     @Test
     void signup_withAnEmailThatIsAlreadyUsed_isRejected() throws Exception {
         signup(EMAIL, PASSWORD, PASSWORD).andExpect(status().isCreated());
@@ -177,6 +186,10 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("An account with this email already exists."));
     }
 
+    /*
+     * Checks: Sign-up with different passwords is refused.
+     * How:    The answer is 400 with "Passwords do not match."
+     */
     @Test
     void signup_withPasswordsThatDoNotMatch_isRejected() throws Exception {
         signup(EMAIL, PASSWORD, "Different123")
@@ -184,6 +197,10 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Passwords do not match."));
     }
 
+    /*
+     * Checks: Sign-up with an invalid email is refused.
+     * How:    The answer is 400.
+     */
     @Test
     void signup_withAnInvalidEmail_isRejected() throws Exception {
         signup("not-an-email", PASSWORD, PASSWORD).andExpect(status().isBadRequest());
@@ -191,6 +208,10 @@ class AuthFlowIntegrationTest {
 
     // -------------------------------------------------------- email verification
 
+    /*
+     * Checks: Login before the email is verified is forbidden.
+     * How:    The answer is 403 with a message about verifying the email.
+     */
     @Test
     void login_beforeTheEmailIsVerified_isForbidden() throws Exception {
         signup(EMAIL, PASSWORD, PASSWORD).andExpect(status().isCreated());
@@ -200,6 +221,11 @@ class AuthFlowIntegrationTest {
                 .andExpect(messageContains("verify your email"));
     }
 
+    /*
+     * Checks: A wrong email code is refused and the account stays unverified.
+     * How:    We set a known code and send 000000. The answer says 4 attempts remain, and
+     *   emailVerified is still false.
+     */
     @Test
     void verifyEmail_withAWrongCode_isRejectedAndKeepsTheAccountUnverified() throws Exception {
         signup(EMAIL, PASSWORD, PASSWORD).andExpect(status().isCreated());
@@ -212,6 +238,10 @@ class AuthFlowIntegrationTest {
         assertFalse(clients.findByEmail(EMAIL).orElseThrow().isEmailVerified());
     }
 
+    /*
+     * Checks: The correct email code verifies the account.
+     * How:    We set the code 123456 and send it. The answer is 200 and emailVerified becomes true.
+     */
     @Test
     void verifyEmail_withTheCorrectCode_verifiesTheAccount() throws Exception {
         signup(EMAIL, PASSWORD, PASSWORD).andExpect(status().isCreated());
@@ -222,6 +252,10 @@ class AuthFlowIntegrationTest {
         assertTrue(clients.findByEmail(EMAIL).orElseThrow().isEmailVerified());
     }
 
+    /*
+     * Checks: Resending the code right after sign-up is refused because of the wait.
+     * How:    The answer is 409 with "Please wait".
+     */
     @Test
     void resendVerification_rightAfterSignup_isRejectedBecauseOfTheWait() throws Exception {
         signup(EMAIL, PASSWORD, PASSWORD).andExpect(status().isCreated());
@@ -233,6 +267,10 @@ class AuthFlowIntegrationTest {
 
     // -------------------------------------------------------------- client login
 
+    /*
+     * Checks: After verification, login returns a token that opens private pages.
+     * How:    The token has three parts (a JWT). With it, /api/auth/me returns the name Jane Doe.
+     */
     @Test
     void login_afterVerification_returnsATokenThatOpensPrivatePages() throws Exception {
         String token = clientToken();
@@ -243,6 +281,10 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.fullName").value("Jane Doe"));
     }
 
+    /*
+     * Checks: Login with a wrong password gives 401.
+     * How:    The account is verified, but the password is wrong.
+     */
     @Test
     void login_withAWrongPassword_isUnauthorized() throws Exception {
         verifiedClient();
@@ -250,16 +292,28 @@ class AuthFlowIntegrationTest {
         login(EMAIL, "WrongPassword1").andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: Login with an unknown email gives 401.
+     * How:    We use nobody@mail.com.
+     */
     @Test
     void login_withAnEmailThatDoesNotExist_isUnauthorized() throws Exception {
         login("nobody@mail.com", PASSWORD).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A private page without a token gives 401.
+     * How:    GET /api/auth/me with no token.
+     */
     @Test
     void privatePage_withoutAToken_isUnauthorized() throws Exception {
         mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A private page with a fake token gives 401.
+     * How:    We send fake.token.value as the bearer token.
+     */
     @Test
     void privatePage_withAFakeToken_isUnauthorized() throws Exception {
         mvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer("fake.token.value")))
@@ -268,6 +322,11 @@ class AuthFlowIntegrationTest {
 
     // --------------------------------------------------------------- admin login
 
+    /*
+     * Checks: A correct admin password asks for an email code and gives no token yet.
+     * How:    The answer has requiresOtp true, a challenge token and a masked email. One email was
+     *   sent.
+     */
     @Test
     void adminLogin_withTheCorrectPassword_asksForAnEmailCodeAndGivesNoToken() throws Exception {
         login("admin@test.com", "Admin@12345")
@@ -279,6 +338,11 @@ class AuthFlowIntegrationTest {
         verify(mailSender).send(any(MimeMessage.class));
     }
 
+    /*
+     * Checks: The correct admin email code returns a token for the admin area.
+     * How:    We read the challenge, set a known code, verify, and use the token on the admin profile
+     *   URL.
+     */
     @Test
     void adminLogin_withTheCorrectEmailCode_returnsATokenForTheAdminArea() throws Exception {
         String challenge = startAdminLogin();
@@ -293,6 +357,10 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.email").value("admin@test.com"));
     }
 
+    /*
+     * Checks: A wrong admin email code is refused.
+     * How:    The answer is 400 and says 4 attempts remain.
+     */
     @Test
     void adminLogin_withAWrongEmailCode_isRejected() throws Exception {
         String challenge = startAdminLogin();
@@ -303,16 +371,28 @@ class AuthFlowIntegrationTest {
                 .andExpect(messageContains("4 attempt(s) remaining"));
     }
 
+    /*
+     * Checks: A made-up challenge token is refused.
+     * How:    We send a fake challenge. The answer is 400.
+     */
     @Test
     void adminLogin_withAMadeUpChallenge_isRejected() throws Exception {
         verifyAdminCode("999.not-a-real-challenge", "123456").andExpect(status().isBadRequest());
     }
 
+    /*
+     * Checks: The admin area without a token gives 401.
+     * How:    GET the admin profile with no token.
+     */
     @Test
     void adminArea_withoutAToken_isUnauthorized() throws Exception {
         mvc.perform(get("/api/admin-account/profile")).andExpect(status().isUnauthorized());
     }
 
+    /*
+     * Checks: A client token cannot open the admin area.
+     * How:    The answer is 403.
+     */
     @Test
     void adminArea_withAClientToken_isForbidden() throws Exception {
         String token = clientToken();

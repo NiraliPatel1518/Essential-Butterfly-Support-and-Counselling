@@ -32,6 +32,11 @@ class AdminAccountControllerTest {
     @Mock Authentication authentication;
     @InjectMocks AdminAccountController controller;
 
+    /*
+     * Checks: The profile of the logged-in admin is returned.
+     * How:    The fake Authentication gives admin@test.com. The fake service returns a profile for
+     *   that email. The controller must answer 200 with the same profile object.
+     */
     @Test
     void getProfile_returnsTheProfileOfTheLoggedInAdmin() {
         var profile = new AdminProfileResponse("Admin", "admin@test.com");
@@ -44,6 +49,12 @@ class AdminAccountControllerTest {
         assertSame(profile, response.getBody());
     }
 
+    /*
+     * Checks: Asking to change the admin email uses the logged-in admin's email.
+     * How:    The controller answers 200 with a message that a code was sent to the new address, and
+     *   the service is called with the request and admin@test.com (not an email from the
+     *   request).
+     */
     @Test
     void requestEmailChange_sendsTheRequestForTheLoggedInAdmin() {
         AdminEmailChangeRequest request = new AdminEmailChangeRequest();
@@ -56,6 +67,11 @@ class AdminAccountControllerTest {
         verify(securityService).requestEmailChange(request, "admin@test.com");
     }
 
+    /*
+     * Checks: A conflict error from the service is passed on and not hidden.
+     * How:    The fake service throws ConflictException (a client already uses the email).
+     *   assertThrows checks the controller throws it too.
+     */
     @Test
     void requestEmailChange_passesTheConflictErrorOn() {
         AdminEmailChangeRequest request = new AdminEmailChangeRequest();
@@ -67,6 +83,11 @@ class AdminAccountControllerTest {
                 () -> controller.requestEmailChange(request, authentication));
     }
 
+    /*
+     * Checks: After the code is verified, a new admin token is returned for the new email.
+     * How:    The fake service returns an admin with new@test.com, and the fake JwtService returns
+     *   new-jwt. The controller answers 200 with that token.
+     */
     @Test
     void verifyEmailChange_returnsANewTokenForTheNewEmail() {
         AdminEmailOtpRequest request = new AdminEmailOtpRequest();
@@ -81,6 +102,11 @@ class AdminAccountControllerTest {
         assertEquals("new-jwt", response.getBody());
     }
 
+    /*
+     * Checks: A wrong code gives no token.
+     * How:    The fake service throws ValidationException. The controller throws it too, and
+     *   verifyNoInteractions proves JwtService was never used.
+     */
     @Test
     void verifyEmailChange_issuesNoTokenWhenTheCodeIsWrong() {
         AdminEmailOtpRequest request = new AdminEmailOtpRequest();
@@ -94,6 +120,10 @@ class AdminAccountControllerTest {
         verifyNoInteractions(jwtService);
     }
 
+    /*
+     * Checks: Resending the email-change code is done for the logged-in admin.
+     * How:    The answer is 200, and the service is called with admin@test.com.
+     */
     @Test
     void resendEmailChange_resendsForTheLoggedInAdmin() {
         when(authentication.getName()).thenReturn("admin@test.com");

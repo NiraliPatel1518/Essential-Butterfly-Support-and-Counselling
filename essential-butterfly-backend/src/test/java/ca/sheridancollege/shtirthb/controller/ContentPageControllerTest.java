@@ -26,6 +26,11 @@ class ContentPageControllerTest {
     @Mock Authentication authentication;
     @InjectMocks ContentPageController controller;
 
+    /*
+     * Checks: A published page is returned with status 200.
+     * How:    The fake service returns a page for the key "about". The controller returns the same
+     *   object.
+     */
     @Test void returnsThePublishedPageWithOkStatus() {
         ContentPagePublicResponse expected = mock(ContentPagePublicResponse.class);
         when(service.getPublished("about")).thenReturn(Optional.of(expected));
@@ -36,6 +41,11 @@ class ContentPageControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: A page that was never published gives 204 No Content.
+     * How:    The fake service returns Optional.empty for "services". The status is 204 and the body
+     *   is null.
+     */
     @Test void returnsNoContentWhenThePageWasNeverPublished() {
         when(service.getPublished("services")).thenReturn(Optional.empty());
 
@@ -45,6 +55,10 @@ class ContentPageControllerTest {
         assertNull(response.getBody());
     }
 
+    /*
+     * Checks: The admin can list every editable page.
+     * How:    The fake service returns a list, and the controller answers 200 with it.
+     */
     @Test void returnsEveryEditablePageForTheAdministrator() {
         List<ContentPageAdminResponse> pages = List.of(mock(ContentPageAdminResponse.class));
         when(service.getAdminPages()).thenReturn(pages);
@@ -55,6 +69,10 @@ class ContentPageControllerTest {
         assertSame(pages, response.getBody());
     }
 
+    /*
+     * Checks: The admin can open one editable page.
+     * How:    The fake service returns the page "privacy". The controller returns it with 200.
+     */
     @Test void returnsOneEditablePage() {
         ContentPageAdminResponse expected = mock(ContentPageAdminResponse.class);
         when(service.getAdminPage("privacy")).thenReturn(expected);
@@ -65,6 +83,11 @@ class ContentPageControllerTest {
         assertSame(expected, response.getBody());
     }
 
+    /*
+     * Checks: Saving a page uses the signed-in admin's email.
+     * How:    The service save is verified to be called with the page key, the request and
+     *   casey@example.com.
+     */
     @Test void savesThePageAsTheSignedInAdministrator() {
         ContentPageRequest request = mock(ContentPageRequest.class);
         ContentPageAdminResponse expected = mock(ContentPageAdminResponse.class);
@@ -78,6 +101,11 @@ class ContentPageControllerTest {
         verify(service).save("about", request, "casey@example.com");
     }
 
+    /*
+     * Checks: A save error from the service reaches the caller.
+     * How:    The service throws IllegalArgumentException with "Title is required.". The controller
+     *   throws the same message.
+     */
     @Test void saveErrorsFromTheServiceAreNotHidden() {
         ContentPageRequest request = mock(ContentPageRequest.class);
         when(authentication.getName()).thenReturn("casey@example.com");

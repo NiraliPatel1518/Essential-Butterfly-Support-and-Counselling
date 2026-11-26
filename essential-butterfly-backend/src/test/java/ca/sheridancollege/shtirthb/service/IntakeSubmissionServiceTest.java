@@ -57,6 +57,11 @@ class IntakeSubmissionServiceTest {
         return request;
     }
 
+    /*
+     * Checks: A valid intake is saved and linked to the logged-in client.
+     * How:    Mockito fake repositories. We capture the saved object and check the client, each form
+     *   field, status SUBMITTED and a created date.
+     */
     @Test
     void submitIntake_savesSubmission_linkedToLoggedInUser() {
         ClientUser user = verifiedClient();
@@ -87,6 +92,11 @@ class IntakeSubmissionServiceTest {
         assertNotNull(saved.getCreatedAt());
     }
 
+    /*
+     * Checks: An unknown account is refused.
+     * How:    findByEmail returns empty. The service throws ResourceNotFoundException ("User account
+     *   not found.") and saves nothing.
+     */
     @Test
     void submitIntake_throwsError_whenUserAccountNotFound() {
         when(clientUserRepository.findByEmail("ghost@mail.com"))
@@ -104,6 +114,11 @@ class IntakeSubmissionServiceTest {
                 .existsByClientUserAndStatusIn(any(), any());
     }
 
+    /*
+     * Checks: A second intake while one is pending is refused.
+     * How:    The repository says a NEW, SUBMITTED or IN_PROGRESS intake exists. The service throws
+     *   ConflictException and saves nothing.
+     */
     @Test
     void submitIntake_throwsError_whenPendingIntakeAlreadyExists() {
         ClientUser user = verifiedClient();
@@ -127,6 +142,11 @@ class IntakeSubmissionServiceTest {
         verify(intakeSubmissionRepository, never()).save(any());
     }
 
+    /*
+     * Checks: The pending check uses all three pending statuses before saving.
+     * How:    We verify existsByClientUserAndStatusIn was called with NEW, SUBMITTED, IN_PROGRESS, and
+     *   then save() was called.
+     */
     @Test
     void submitIntake_checksAllPendingStatusesBeforeSaving() {
         ClientUser user = verifiedClient();
@@ -146,6 +166,11 @@ class IntakeSubmissionServiceTest {
                 .save(any(IntakeSubmission.class));
     }
 
+    /*
+     * Checks: An unverified phone number is refused.
+     * How:    The client has no phone number. The service throws BusinessRuleException ("Please verify
+     *   your phone number...") before any check or save.
+     */
     @Test
     void submitIntake_throwsError_whenPhoneNumberIsNotVerified() {
         ClientUser user = new ClientUser("Alex Lee", "alex@mail.com", "ENCODED");

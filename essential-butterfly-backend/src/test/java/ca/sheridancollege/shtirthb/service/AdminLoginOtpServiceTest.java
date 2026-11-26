@@ -94,6 +94,10 @@ class AdminLoginOtpServiceTest {
 
     // ------------------------------------------------------------ start login
 
+    /*
+     * Checks: Starting the admin login for an unknown admin is refused.
+     * How:    Mockito fakes. findByEmail returns empty. It throws ResourceNotFoundException.
+     */
     @Test
     void startLoginVerification_throwsError_whenAdminDoesNotExist() {
         when(admins.findByEmail("admin@test.com")).thenReturn(Optional.empty());
@@ -102,6 +106,12 @@ class AdminLoginOtpServiceTest {
                 () -> service.startLoginVerification("admin@test.com"));
     }
 
+    /*
+     * Checks: Starting the login emails a code and returns a challenge.
+     * How:    The response says requiresOtp true, the challenge token starts with the admin id (7.),
+     *   and the masked email is ad***@test.com. The hashes are stored, counters are 0, the
+     *   expiry is about 10 minutes away, one mail is sent and the admin is saved.
+     */
     @Test
     void startLoginVerification_emailsACodeAndReturnsAChallenge() {
         mailWillBeSent();
@@ -122,6 +132,10 @@ class AdminLoginOtpServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: Capital letters and spaces in the email are ignored.
+     * How:    The email is cleaned before the lookup and the login starts.
+     */
     @Test
     void startLoginVerification_ignoresCapitalLettersAndSpacesInTheEmail() {
         mailWillBeSent();
@@ -132,6 +146,10 @@ class AdminLoginOtpServiceTest {
         assertTrue(response.requiresOtp());
     }
 
+    /*
+     * Checks: A very short email name is fully hidden in the mask.
+     * How:    a@test.com is shown as ***@test.com.
+     */
     @Test
     void startLoginVerification_hidesAVeryShortEmailCompletely() {
         mailWillBeSent();
@@ -143,6 +161,10 @@ class AdminLoginOtpServiceTest {
         assertEquals("***@test.com", response.maskedEmail());
     }
 
+    /*
+     * Checks: A blank sender address gives a service error.
+     * How:    It throws ServiceUnavailableException and nothing is saved.
+     */
     @Test
     void startLoginVerification_throwsError_whenSenderAddressIsNotConfigured() {
         service = newService("");
@@ -154,6 +176,10 @@ class AdminLoginOtpServiceTest {
         verify(admins, never()).save(any());
     }
 
+    /*
+     * Checks: A mail failure gives a service error.
+     * How:    The fake sender throws. It throws ServiceUnavailableException and nothing is saved.
+     */
     @Test
     void startLoginVerification_throwsError_whenEmailCannotBeSent() {
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
@@ -168,24 +194,40 @@ class AdminLoginOtpServiceTest {
 
     // ----------------------------------------------------- challenge is checked
 
+    /*
+     * Checks: A missing challenge token is refused.
+     * How:    Token null throws ValidationException.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenChallengeTokenIsMissing() {
         assertThrows(AppExceptions.ValidationException.class,
                 () -> service.verifyLoginOtp(otpRequest(null, "123456")));
     }
 
+    /*
+     * Checks: A challenge token without a dot is refused.
+     * How:    "nodot" throws ValidationException.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenChallengeTokenHasNoDot() {
         assertThrows(AppExceptions.ValidationException.class,
                 () -> service.verifyLoginOtp(otpRequest("nodot", "123456")));
     }
 
+    /*
+     * Checks: A challenge token whose id is not a number is refused.
+     * How:    "abc.secret" throws ValidationException.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenAdminIdInTheTokenIsNotANumber() {
         assertThrows(AppExceptions.ValidationException.class,
                 () -> service.verifyLoginOtp(otpRequest("abc.secret", "123456")));
     }
 
+    /*
+     * Checks: A challenge for an admin id that does not exist is refused.
+     * How:    findById returns empty. It throws ValidationException.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenNoAdminHasThatId() {
         when(admins.findById(7L)).thenReturn(Optional.empty());
@@ -194,6 +236,10 @@ class AdminLoginOtpServiceTest {
                 () -> service.verifyLoginOtp(otpRequest(TOKEN, "123456")));
     }
 
+    /*
+     * Checks: A challenge that was already used is refused.
+     * How:    The admin has no challenge hash saved. It throws ValidationException.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenTheChallengeWasAlreadyUsed() {
         // no challenge hash stored: the sign-in was already completed or cancelled
@@ -203,6 +249,11 @@ class AdminLoginOtpServiceTest {
                 () -> service.verifyLoginOtp(otpRequest(TOKEN, "123456")));
     }
 
+    /*
+     * Checks: A challenge token that does not match is refused.
+     * How:    The encoder says the token does not match the stored hash. It throws
+     *   ValidationException.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenTheChallengeTokenDoesNotMatch() {
         activeLogin();
@@ -215,6 +266,10 @@ class AdminLoginOtpServiceTest {
 
     // ------------------------------------------------------------ verify code
 
+    /*
+     * Checks: Verifying when no code is active is refused.
+     * How:    The message says to log in again.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenNoCodeIsActive() {
         admin.setLoginChallengeTokenHash("CH"); // no OTP hash
@@ -227,6 +282,10 @@ class AdminLoginOtpServiceTest {
         assertTrue(error.getMessage().contains("log in again"));
     }
 
+    /*
+     * Checks: An expired code is refused.
+     * How:    The expiry is one minute ago. The message says expired.
+     */
     @Test
     void verifyLoginOtp_throwsError_whenTheCodeHasExpired() {
         activeLogin();
@@ -240,6 +299,11 @@ class AdminLoginOtpServiceTest {
         assertTrue(error.getMessage().contains("expired"));
     }
 
+    /*
+     * Checks: After five used attempts, the sign-in is ended.
+     * How:    It throws ValidationException. The challenge hash and code hash become null and the
+     *   admin is saved.
+     */
     @Test
     void verifyLoginOtp_endsTheSignIn_whenFiveAttemptsWereAlreadyUsed() {
         activeLogin();
@@ -254,6 +318,11 @@ class AdminLoginOtpServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: A wrong code is counted and the message says how many tries are left.
+     * How:    The message says "4 attempt(s) remaining", the attempts are 1, the challenge is kept and
+     *   the admin is saved.
+     */
     @Test
     void verifyLoginOtp_countsTheWrongCodeAndSaysHowManyAttemptsAreLeft() {
         activeLogin();
@@ -270,6 +339,11 @@ class AdminLoginOtpServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: The fifth wrong code ends the sign-in.
+     * How:    With 4 attempts already, a wrong code gives "five incorrect attempts" and clears the
+     *   challenge and code hashes.
+     */
     @Test
     void verifyLoginOtp_endsTheSignIn_onTheFifthWrongCode() {
         activeLogin();
@@ -287,6 +361,11 @@ class AdminLoginOtpServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: The right code returns the admin and uses up the challenge.
+     * How:    The result is the admin. The challenge hash, code hash, expiry and last-sent time are
+     *   null, the counters are 0, and the admin is saved.
+     */
     @Test
     void verifyLoginOtp_returnsTheAdminAndUsesUpTheChallenge_whenCodeIsCorrect() {
         activeLogin();
@@ -308,6 +387,10 @@ class AdminLoginOtpServiceTest {
 
     // ----------------------------------------------------------------- resend
 
+    /*
+     * Checks: Resend is refused if the sign-in is no longer active.
+     * How:    There is no code hash. It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void resendLoginOtp_throwsError_whenTheSignInIsNoLongerActive() {
         admin.setLoginChallengeTokenHash("CH"); // no OTP hash
@@ -319,6 +402,11 @@ class AdminLoginOtpServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Resend after five wrong attempts ends the sign-in.
+     * How:    It throws BusinessRuleException, the challenge hash is cleared, the admin is saved and
+     *   no mail is sent.
+     */
     @Test
     void resendLoginOtp_endsTheSignIn_whenFiveAttemptsWereAlreadyUsed() {
         activeLogin();
@@ -333,6 +421,10 @@ class AdminLoginOtpServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: A fourth resend is refused.
+     * How:    The message says "maximum number of resend requests" and no mail is sent.
+     */
     @Test
     void resendLoginOtp_throwsError_afterTheThirdResend() {
         activeLogin();
@@ -348,6 +440,10 @@ class AdminLoginOtpServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Resend is refused when no code was ever sent.
+     * How:    lastSentAt is null. It throws BusinessRuleException and no mail is sent.
+     */
     @Test
     void resendLoginOtp_throwsError_whenNoCodeWasSentBefore() {
         activeLogin();
@@ -360,6 +456,10 @@ class AdminLoginOtpServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: Resend within 60 seconds is refused.
+     * How:    The message starts with "Please wait" and no mail is sent.
+     */
     @Test
     void resendLoginOtp_throwsError_whenTheFirstWaitOf60SecondsIsNotOver() {
         activeLogin();
@@ -374,6 +474,10 @@ class AdminLoginOtpServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: The second resend needs a longer wait.
+     * How:    With 1 resend done and the last send 80 seconds ago, resend is refused.
+     */
     @Test
     void resendLoginOtp_waitsLongerForTheSecondResend() {
         // after one resend the wait is 90 seconds, so 80 seconds is still too soon
@@ -388,6 +492,11 @@ class AdminLoginOtpServiceTest {
         verifyNoInteractions(mailSender);
     }
 
+    /*
+     * Checks: After the wait, resend sends a new code and counts it.
+     * How:    The resend count is 1, the hash is updated, the expiry is about 10 minutes away, one
+     *   mail is sent and the admin is saved.
+     */
     @Test
     void resendLoginOtp_sendsANewCodeAndCountsIt_whenTheWaitIsOver() {
         mailWillBeSent();
@@ -404,6 +513,11 @@ class AdminLoginOtpServiceTest {
         verify(admins).save(admin);
     }
 
+    /*
+     * Checks: A failed resend email is not counted.
+     * How:    The fake sender throws. It throws ServiceUnavailableException, the resend count stays 0
+     *   and nothing is saved.
+     */
     @Test
     void resendLoginOtp_doesNotCountTheResend_whenTheEmailCannotBeSent() {
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));

@@ -21,6 +21,12 @@ class AppPropertiesTest {
     private final ApplicationContextRunner runner =
             new ApplicationContextRunner().withUserConfiguration(TestConfig.class);
 
+    /*
+     * Checks: A new AppProperties object starts with safe, empty defaults.
+     * How:    We create the settings object with nothing configured. The CORS lists are empty,
+     *   credentials are allowed by default, and the secret, mail address and base URLs are null,
+     *   so nothing is open by accident.
+     */
     @Test
     void hasSafeDefaultsWhenNothingIsConfigured() {
         AppProperties properties = new AppProperties();
@@ -35,6 +41,12 @@ class AppPropertiesTest {
         assertNull(properties.getPublicBaseUrl());
     }
 
+    /*
+     * Checks: Every setting that starts with app. is read into the AppProperties object.
+     * How:    ApplicationContextRunner starts a tiny Spring context with test values such as
+     *   app.cors.allowed-origins and app.jwt.secret. We then read the bean and check each value,
+     *   including lists split by commas.
+     */
     @Test
     void bindsAllValuesFromTheAppPrefix() {
         runner.withPropertyValues(
@@ -62,6 +74,10 @@ class AppPropertiesTest {
         });
     }
 
+    /*
+     * Checks: AppProperties is created as exactly one Spring bean.
+     * How:    We start the small context and count the beans of this type. There must be exactly 1.
+     */
     @Test
     void isRegisteredAsABeanWhenEnabled() {
         runner.run(context ->

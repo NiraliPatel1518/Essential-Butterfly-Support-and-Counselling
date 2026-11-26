@@ -46,6 +46,12 @@ class AuditTrailServiceTest {
 
     // -------------------------------------------------------------- actAs
 
+    /*
+     * Checks: actAs sets the database actor to the admin's id.
+     * How:    Mock EntityManager and query. For an admin with id 5 we expect the SQL
+     *   set_config('app.actor', ...) with the value ADMIN:5. This is how the database triggers
+     *   know who made a change.
+     */
     @Test void actAsSetsTheActorToTheAdministratorsId() {
         adminKnown("casey@example.com", 5L);
 
@@ -56,6 +62,10 @@ class AuditTrailServiceTest {
         verify(query).getSingleResult();
     }
 
+    /*
+     * Checks: An unknown admin email gives the plain actor ADMIN.
+     * How:    findByEmail returns empty. The actor parameter is ADMIN.
+     */
     @Test void actAsFallsBackToPlainAdminForAnUnknownEmail() {
         when(adminUsers.findByEmail("who@example.com")).thenReturn(Optional.empty());
 
@@ -64,6 +74,10 @@ class AuditTrailServiceTest {
         verify(query).setParameter("actor", "ADMIN");
     }
 
+    /*
+     * Checks: No email gives the plain actor ADMIN.
+     * How:    actAs(null) sets ADMIN and never looks up the admin.
+     */
     @Test void actAsFallsBackToPlainAdminWithoutAnEmail() {
         service.actAs(null);
 
@@ -71,6 +85,10 @@ class AuditTrailServiceTest {
         verifyNoInteractions(adminUsers);
     }
 
+    /*
+     * Checks: actAsClient sets the actor to the client's id.
+     * How:    For client id 42 the actor is CLIENT:42.
+     */
     @Test void actAsClientSetsTheActorToTheClientsId() {
         service.actAsClient(42L);
 
@@ -80,6 +98,11 @@ class AuditTrailServiceTest {
 
     // -------------------------------------------------- recordSecurityEvent
 
+    /*
+     * Checks: A security event is recorded with the admin and the reason.
+     * How:    We check the query parameters action, entityType, actor (ADMIN:5) and reason, and that
+     *   executeUpdate() ran.
+     */
     @Test void recordsASecurityEventWithTheAdministratorAndReason() {
         adminKnown("casey@example.com", 5L);
 
@@ -93,18 +116,30 @@ class AuditTrailServiceTest {
         verify(query).executeUpdate();
     }
 
+    /*
+     * Checks: A security event is written into the audit_log table.
+     * How:    The SQL passed to the EntityManager contains "insert into audit_log".
+     */
     @Test void theSecurityEventInsertsIntoTheAuditLog() {
         service.recordSecurityEvent(null, "A", "B", "C");
 
         verify(entityManager).createNativeQuery(contains("insert into audit_log"));
     }
 
+    /*
+     * Checks: A long reason is cut to 300 characters.
+     * How:    A 500-character reason is stored as 300 characters.
+     */
     @Test void aLongReasonIsCutTo300Characters() {
         service.recordSecurityEvent(null, "A", "B", "x".repeat(500));
 
         verify(query).setParameter("reason", "x".repeat(300));
     }
 
+    /*
+     * Checks: A long action and entity type are cut to 60 characters.
+     * How:    100-character values are stored as 60 characters.
+     */
     @Test void aLongActionAndEntityTypeAreCutTo60Characters() {
         service.recordSecurityEvent(null, "a".repeat(100), "b".repeat(100), "reason");
 
@@ -112,12 +147,20 @@ class AuditTrailServiceTest {
         verify(query).setParameter("entityType", "b".repeat(60));
     }
 
+    /*
+     * Checks: A missing reason is saved as empty text.
+     * How:    A null reason becomes "".
+     */
     @Test void aMissingReasonIsSavedAsEmptyText() {
         service.recordSecurityEvent(null, "A", "B", null);
 
         verify(query).setParameter("reason", "");
     }
 
+    /*
+     * Checks: A security event with no admin is recorded as ADMIN.
+     * How:    A null email gives the actor ADMIN.
+     */
     @Test void aSecurityEventWithoutAnAdministratorIsRecordedAsAdmin() {
         service.recordSecurityEvent(null, "A", "B", "C");
 
@@ -126,6 +169,11 @@ class AuditTrailServiceTest {
 
     // ------------------------------------------------ recentContentActivity
 
+    /*
+     * Checks: Database rows are turned into response objects.
+     * How:    We give the service one row (as an Object array). Each field (id, time, action, entity
+     *   type, entity id, actor, details) is checked.
+     */
     @Test void turnsDatabaseRowsIntoResponses() {
         Object[] row = {7, "2026-11-10 14:30:00", "CONTENT_PUBLISHED", "website_content_pages", 3, "ADMIN:5", "{\"page_key\":\"about\"}"};
         when(query.getResultList()).thenReturn(List.<Object[]>of(row));
@@ -143,6 +191,10 @@ class AuditTrailServiceTest {
         assertEquals("{\"page_key\":\"about\"}", entry.details());
     }
 
+    /*
+     * Checks: A missing item id stays null.
+     * How:    A row with a null id and null details gives null in the response.
+     */
     @Test void keepsAMissingItemIdAsNull() {
         Object[] row = {8, "2026-11-10 14:30:00", "SECURITY_UNSAFE_LINK_REJECTED", "library_resources", null, "ADMIN", null};
         when(query.getResultList()).thenReturn(List.<Object[]>of(row));
@@ -153,6 +205,10 @@ class AuditTrailServiceTest {
         assertNull(entry.details());
     }
 
+    /*
+     * Checks: The order of the rows is kept.
+     * How:    Two rows go in, and come out in the same order.
+     */
     @Test void keepsTheOrderOfTheRows() {
         Object[] first = {2, "t2", "A", "library_resources", 1, "ADMIN", null};
         Object[] second = {1, "t1", "B", "library_resources", 1, "ADMIN", null};
@@ -164,12 +220,20 @@ class AuditTrailServiceTest {
         assertEquals(1L, result.get(1).id());
     }
 
+    /*
+     * Checks: An empty result gives an empty list.
+     * How:    The query returns no rows.
+     */
     @Test void returnsAnEmptyListWhenNothingWasRecorded() {
         when(query.getResultList()).thenReturn(List.of());
 
         assertTrue(service.recentContentActivity(50).isEmpty());
     }
 
+    /*
+     * Checks: The query only covers content pages, resources and Memory Wall photos, newest first.
+     * How:    The SQL must contain the three table names and "order by a.occurred_at desc".
+     */
     @Test void onlyAsksForContentPagesResourcesAndMemoryWallPhotos() {
         when(query.getResultList()).thenReturn(List.of());
 
@@ -182,6 +246,10 @@ class AuditTrailServiceTest {
                         && sql.contains("order by a.occurred_at desc")));
     }
 
+    /*
+     * Checks: A reasonable limit is passed on.
+     * How:    A limit of 25 is used as 25.
+     */
     @Test void passesTheRequestedLimitWhenItIsReasonable() {
         when(query.getResultList()).thenReturn(List.of());
 
@@ -190,6 +258,10 @@ class AuditTrailServiceTest {
         verify(query).setParameter("limit", 25);
     }
 
+    /*
+     * Checks: The limit never goes above 200.
+     * How:    A request for 5000 uses 200.
+     */
     @Test void neverAsksForMoreThan200Rows() {
         when(query.getResultList()).thenReturn(List.of());
 
@@ -198,6 +270,10 @@ class AuditTrailServiceTest {
         verify(query).setParameter("limit", 200);
     }
 
+    /*
+     * Checks: The limit never goes below 1.
+     * How:    0 and -10 both use 1.
+     */
     @Test void alwaysAsksForAtLeastOneRow() {
         when(query.getResultList()).thenReturn(List.of());
 

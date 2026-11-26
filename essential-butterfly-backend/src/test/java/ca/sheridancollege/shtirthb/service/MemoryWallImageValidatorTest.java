@@ -75,6 +75,11 @@ class MemoryWallImageValidatorTest {
 
     // ------------------------------------------------------ accepted photos
 
+    /*
+     * Checks: A PNG photo is accepted.
+     * How:    Unit test, no Spring. validate() gets a file named trip.png with real PNG bytes. The
+     *   result keeps the file name and has extension png.
+     */
     @Test
     void acceptsAPngPhoto() {
         MemoryWallImageValidator.ValidatedImage image =
@@ -87,6 +92,10 @@ class MemoryWallImageValidatorTest {
         verifyNoInteractions(auditTrail);
     }
 
+    /*
+     * Checks: A JPG photo is accepted.
+     * How:    Real JPEG bytes. The extension is jpg and the content type is image/jpeg.
+     */
     @Test
     void acceptsAJpgPhoto() {
         MemoryWallImageValidator.ValidatedImage image =
@@ -96,6 +105,10 @@ class MemoryWallImageValidatorTest {
         assertEquals("image/jpeg", image.contentType());
     }
 
+    /*
+     * Checks: A .jpeg photo is stored as jpg.
+     * How:    trip.jpeg gives extension jpg and image/jpeg.
+     */
     @Test
     void storesAJpegPhotoAsJpg() {
         MemoryWallImageValidator.ValidatedImage image =
@@ -106,6 +119,10 @@ class MemoryWallImageValidatorTest {
         assertEquals("trip.jpeg", image.fileName());
     }
 
+    /*
+     * Checks: A WEBP photo is accepted.
+     * How:    Real WEBP bytes. The extension is webp and the content type is image/webp.
+     */
     @Test
     void acceptsAWebpPhoto() {
         MemoryWallImageValidator.ValidatedImage image =
@@ -115,6 +132,10 @@ class MemoryWallImageValidatorTest {
         assertEquals("image/webp", image.contentType());
     }
 
+    /*
+     * Checks: Capital letters in the extension do not matter.
+     * How:    TRIP.PNG is accepted, the extension is png and the file name is kept.
+     */
     @Test
     void ignoresCapitalsInTheExtension() {
         MemoryWallImageValidator.ValidatedImage image =
@@ -124,6 +145,10 @@ class MemoryWallImageValidatorTest {
         assertEquals("TRIP.PNG", image.fileName());
     }
 
+    /*
+     * Checks: A dot inside the name is fine.
+     * How:    summer.2026.trip.png does not throw.
+     */
     @Test
     void acceptsADotInsideTheName() {
         validator.validate(file("summer.2026.trip.png", PNG), ADMIN);
@@ -131,6 +156,10 @@ class MemoryWallImageValidatorTest {
 
     // ----------------------------------------------------- missing or empty
 
+    /*
+     * Checks: No file is refused.
+     * How:    validate(null) throws ValidationException.
+     */
     @Test
     void refusesNoFile() {
         AppExceptions.ValidationException error = assertThrows(
@@ -140,12 +169,20 @@ class MemoryWallImageValidatorTest {
         assertEquals("Choose a photo to upload.", error.getMessage());
     }
 
+    /*
+     * Checks: An empty file is refused.
+     * How:    The message is "Choose a photo to upload."
+     */
     @Test
     void refusesAnEmptyFile() {
         assertEquals("Choose a photo to upload.",
                 rejected("trip.png", new byte[0]).getMessage());
     }
 
+    /*
+     * Checks: A file with no name is refused.
+     * How:    Parameterized: several blank or missing names each give the same refusal.
+     */
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
     void refusesAFileWithoutAName(String name) {
@@ -156,6 +193,10 @@ class MemoryWallImageValidatorTest {
 
     // ---------------------------------------------------------- file format
 
+    /*
+     * Checks: Formats that are not allowed are refused.
+     * How:    Parameterized: names such as photo.gif give the UNSUPPORTED_MESSAGE.
+     */
     @ParameterizedTest
     @ValueSource(strings = {"photo.gif", "photo.bmp", "photo.pdf", "photo.txt", "photo", "photo.", ".png"})
     void refusesFormatsThatAreNotAllowed(String name) {
@@ -164,6 +205,11 @@ class MemoryWallImageValidatorTest {
         verifyNoInteractions(auditTrail);
     }
 
+    /*
+     * Checks: A format that was switched off in the settings is refused.
+     * How:    The configuration only allows some formats. A switched-off format gives
+     *   UNSUPPORTED_MESSAGE.
+     */
     @Test
     void refusesAFormatThatTheAdminSwitchedOff() {
         properties.getMemoryWall().setAllowedFileExtensions(List.of("jpg"));
@@ -172,6 +218,11 @@ class MemoryWallImageValidatorTest {
                 rejected("trip.png", PNG).getMessage());
     }
 
+    /*
+     * Checks: Configured formats the validator cannot check are ignored.
+     * How:    The configuration lists an extra format. PNG still works, and the unknown format is
+     *   refused.
+     */
     @Test
     void ignoresConfiguredFormatsItCannotCheck() {
         properties.getMemoryWall().setAllowedFileExtensions(List.of("gif", " PNG "));
@@ -184,6 +235,10 @@ class MemoryWallImageValidatorTest {
 
     // -------------------------------------------------- contents vs the name
 
+    /*
+     * Checks: A text file named .png is refused.
+     * How:    The bytes are not a PNG, so the message is UNSUPPORTED_MESSAGE.
+     */
     @Test
     void refusesATextFileNamedPng() {
         AppExceptions.ValidationException error = rejected(
@@ -194,6 +249,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "File contents do not match the .png type");
     }
 
+    /*
+     * Checks: A PNG named .jpg is refused.
+     * How:    The bytes do not match the extension.
+     */
     @Test
     void refusesAPngNamedJpg() {
         rejected("photo.jpg", PNG);
@@ -202,6 +261,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "File contents do not match the .jpg type");
     }
 
+    /*
+     * Checks: A JPEG named .webp is refused.
+     * How:    The bytes do not match the extension.
+     */
     @Test
     void refusesAJpegNamedWebp() {
         rejected("photo.webp", JPEG);
@@ -210,6 +273,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "File contents do not match the .webp type");
     }
 
+    /*
+     * Checks: A RIFF file that is not WEBP is refused.
+     * How:    The file starts like a WEBP container but is not WEBP.
+     */
     @Test
     void refusesARiffFileThatIsNotWebp() {
         byte[] wave = {'R', 'I', 'F', 'F', 1, 2, 3, 4, 'W', 'A', 'V', 'E', 0, 0};
@@ -220,6 +287,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "File contents do not match the .webp type");
     }
 
+    /*
+     * Checks: A file too short to check is refused.
+     * How:    Only a few bytes, so the type cannot be confirmed.
+     */
     @Test
     void refusesAFileTooShortToCheck() {
         rejected("photo.png", new byte[] {(byte) 0x89, 'P'});
@@ -228,6 +299,11 @@ class MemoryWallImageValidatorTest {
 
     // ------------------------------------------------------- unsafe names
 
+    /*
+     * Checks: Programs and web pages are refused and logged.
+     * How:    Parameterized: names such as setup.exe or page.html give UNSUPPORTED_MESSAGE, and a
+     *   security event is recorded in the (mock) audit trail.
+     */
     @ParameterizedTest
     @ValueSource(strings = {
             "setup.exe", "run.bat", "script.js", "page.html", "drawing.svg",
@@ -241,6 +317,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "Executable or web-page extension in file name");
     }
 
+    /*
+     * Checks: A dangerous extension hidden in the name is refused.
+     * How:    Parameterized: names like photo.html.png are refused.
+     */
     @ParameterizedTest
     @ValueSource(strings = {"photo.exe.png", "photo.png.exe", "photo.php.jpg", "photo.html.webp"})
     void refusesADangerousExtensionHiddenInTheName(String name) {
@@ -250,6 +330,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "Executable or web-page extension in file name");
     }
 
+    /*
+     * Checks: Dangerous extensions in capital letters are refused.
+     * How:    For example SETUP.EXE is refused.
+     */
     @Test
     void refusesDangerousExtensionsInCapitals() {
         rejected("PHOTO.EXE.PNG", PNG);
@@ -258,6 +342,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "Executable or web-page extension in file name");
     }
 
+    /*
+     * Checks: Path tricks and control characters in the name are refused.
+     * How:    Parameterized: names with ../, slashes or control characters give UNSUPPORTED_MESSAGE.
+     */
     @ParameterizedTest
     @ValueSource(strings = {
             "../photo.png", "folder/photo.png", "folder\\photo.png",
@@ -271,6 +359,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "Unsafe file name");
     }
 
+    /*
+     * Checks: A name longer than 255 characters is refused.
+     * How:    A 256-character name is refused.
+     */
     @Test
     void refusesANameLongerThan255Characters() {
         rejected("a".repeat(252) + ".png", PNG);
@@ -279,6 +371,10 @@ class MemoryWallImageValidatorTest {
                 ADMIN, EVENT, ENTITY, "Unsafe file name");
     }
 
+    /*
+     * Checks: A name of exactly 255 characters is accepted.
+     * How:    251 letters plus .png does not throw.
+     */
     @Test
     void acceptsANameOfExactly255Characters() {
         validator.validate(file("a".repeat(251) + ".png", PNG), ADMIN);
@@ -286,6 +382,10 @@ class MemoryWallImageValidatorTest {
 
     // ----------------------------------------------------------------- size
 
+    /*
+     * Checks: A photo over the size limit is refused.
+     * How:    A file bigger than the limit throws PayloadTooLargeException.
+     */
     @Test
     void refusesAPhotoOverTheSizeLimit() {
         properties.getMemoryWall().setMaxFileSizeBytes(20);
@@ -300,6 +400,10 @@ class MemoryWallImageValidatorTest {
         verifyNoInteractions(auditTrail);
     }
 
+    /*
+     * Checks: A photo exactly at the size limit is accepted.
+     * How:    The limit is set to the size of the test file. It does not throw.
+     */
     @Test
     void acceptsAPhotoExactlyAtTheSizeLimit() {
         properties.getMemoryWall().setMaxFileSizeBytes(PNG.length);
@@ -307,6 +411,10 @@ class MemoryWallImageValidatorTest {
         validator.validate(file("ok.png", PNG), ADMIN);
     }
 
+    /*
+     * Checks: The size is checked before the contents.
+     * How:    A big file with bad contents throws PayloadTooLargeException, not the content error.
+     */
     @Test
     void checksTheSizeBeforeTheContents() {
         properties.getMemoryWall().setMaxFileSizeBytes(5);
@@ -321,6 +429,10 @@ class MemoryWallImageValidatorTest {
 
     // ------------------------------------------------------ unreadable file
 
+    /*
+     * Checks: A file that cannot be read gives a service error.
+     * How:    A fake file whose getBytes() throws IOException gives ServiceUnavailableException.
+     */
     @Test
     void reportsAFileThatCannotBeRead() {
         MockMultipartFile unreadable = new MockMultipartFile("file", "trip.png", "image/png", PNG) {
@@ -339,11 +451,19 @@ class MemoryWallImageValidatorTest {
 
     // --------------------------------------------------------- format lists
 
+    /*
+     * Checks: The accepted formats are listed in plain words.
+     * How:    acceptedFormats() is "JPEG, PNG or WEBP".
+     */
     @Test
     void listsTheAcceptedFormatsInPlainWords() {
         assertEquals("JPEG, PNG or WEBP", validator.acceptedFormats());
     }
 
+    /*
+     * Checks: A single format is listed alone.
+     * How:    The result is "PNG".
+     */
     @Test
     void listsASingleFormatOnItsOwn() {
         properties.getMemoryWall().setAllowedFileExtensions(List.of("png"));
@@ -351,6 +471,10 @@ class MemoryWallImageValidatorTest {
         assertEquals("PNG", validator.acceptedFormats());
     }
 
+    /*
+     * Checks: Two formats are joined with "or".
+     * How:    The result is "PNG or WEBP".
+     */
     @Test
     void listsTwoFormatsWithOr() {
         properties.getMemoryWall().setAllowedFileExtensions(List.of("png", "webp"));
@@ -358,6 +482,10 @@ class MemoryWallImageValidatorTest {
         assertEquals("PNG or WEBP", validator.acceptedFormats());
     }
 
+    /*
+     * Checks: JPEG and JPG are not both listed.
+     * How:    The result is only "JPEG".
+     */
     @Test
     void doesNotRepeatJpegAndJpg() {
         properties.getMemoryWall().setAllowedFileExtensions(List.of("jpg", "jpeg"));
@@ -365,11 +493,19 @@ class MemoryWallImageValidatorTest {
         assertEquals("JPEG", validator.acceptedFormats());
     }
 
+    /*
+     * Checks: The allowed extensions are listed.
+     * How:    The list is jpg, jpeg, png, webp.
+     */
     @Test
     void listsTheAllowedExtensions() {
         assertEquals(List.of("jpg", "jpeg", "png", "webp"), validator.allowedExtensionList());
     }
 
+    /*
+     * Checks: The extension list follows the configuration.
+     * How:    With only png allowed, the list is [png].
+     */
     @Test
     void theExtensionListFollowsTheConfiguration() {
         properties.getMemoryWall().setAllowedFileExtensions(List.of(" PNG ", "gif"));
@@ -377,6 +513,10 @@ class MemoryWallImageValidatorTest {
         assertEquals(List.of("png"), validator.allowedExtensionList());
     }
 
+    /*
+     * Checks: A safe photo never writes to the audit trail.
+     * How:    After a valid photo, the (mock) audit trail is never used.
+     */
     @Test
     void neverWritesToTheAuditTrailForASafePhoto() {
         validator.validate(file("trip.png", PNG), ADMIN);

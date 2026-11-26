@@ -28,6 +28,11 @@ class PhoneVerificationControllerTest {
     @Mock Authentication authentication;
     @InjectMocks PhoneVerificationController controller;
 
+    /*
+     * Checks: The phone verification status of the logged-in client is returned.
+     * How:    The fake Authentication gives jane@mail.com. The service returns a status for that
+     *   email, and the controller returns it with 200.
+     */
     @Test
     void getStatus_returnsTheStatusOfTheLoggedInClient() {
         var status = new PhoneVerificationStatusResponse(true, "+14165551234", null);
@@ -40,6 +45,11 @@ class PhoneVerificationControllerTest {
         assertSame(status, response.getBody());
     }
 
+    /*
+     * Checks: Sending the code starts verification for the logged-in client.
+     * How:    The answer says a verification code has been sent, and the service is called with the
+     *   request and jane@mail.com.
+     */
     @Test
     void sendCode_startsVerificationForTheLoggedInClient() {
         PhoneNumberRequest request = new PhoneNumberRequest();
@@ -52,6 +62,10 @@ class PhoneVerificationControllerTest {
         verify(phoneVerificationService).startVerification(request, "jane@mail.com");
     }
 
+    /*
+     * Checks: An error such as "phone already verified" is passed on.
+     * How:    The service throws BusinessRuleException and the controller throws it too.
+     */
     @Test
     void sendCode_passesTheServiceErrorOn() {
         PhoneNumberRequest request = new PhoneNumberRequest();
@@ -63,6 +77,11 @@ class PhoneVerificationControllerTest {
                 () -> controller.sendCode(request, authentication));
     }
 
+    /*
+     * Checks: The entered code is checked for the logged-in client.
+     * How:    The answer says verified successfully, and the service verify is called with
+     *   jane@mail.com.
+     */
     @Test
     void verify_checksTheCodeForTheLoggedInClient() {
         VerifyPhoneRequest request = new VerifyPhoneRequest();
@@ -75,6 +94,10 @@ class PhoneVerificationControllerTest {
         verify(phoneVerificationService).verify(request, "jane@mail.com");
     }
 
+    /*
+     * Checks: A wrong code error is passed on.
+     * How:    The service throws ValidationException and the controller throws it too.
+     */
     @Test
     void verify_passesTheWrongCodeErrorOn() {
         VerifyPhoneRequest request = new VerifyPhoneRequest();
@@ -86,6 +109,10 @@ class PhoneVerificationControllerTest {
                 () -> controller.verify(request, authentication));
     }
 
+    /*
+     * Checks: Resending the code is done for the logged-in client.
+     * How:    The answer is 200, and service.resend is called with jane@mail.com.
+     */
     @Test
     void resend_resendsForTheLoggedInClient() {
         when(authentication.getName()).thenReturn("jane@mail.com");

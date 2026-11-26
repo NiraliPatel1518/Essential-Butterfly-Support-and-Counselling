@@ -28,6 +28,11 @@ class AdminAuthControllerTest {
     @Mock JwtService jwtService;
     @InjectMocks AdminAuthController controller;
 
+    /*
+     * Checks: A correct login code returns an admin token.
+     * How:    The fake service returns the verified admin. The fake JwtService returns jwt-token for
+     *   admin@test.com with role ADMIN. The controller answers 200 with that token.
+     */
     @Test
     void verifyLoginOtp_returnsAnAdminTokenForTheVerifiedAdmin() {
         AdminLoginOtpRequest request = new AdminLoginOtpRequest();
@@ -41,6 +46,11 @@ class AdminAuthControllerTest {
         assertEquals("jwt-token", response.getBody());
     }
 
+    /*
+     * Checks: A wrong login code gives no token.
+     * How:    The service throws ValidationException. The controller throws it, and
+     *   verifyNoInteractions proves no token was made.
+     */
     @Test
     void verifyLoginOtp_issuesNoTokenWhenTheCodeIsWrong() {
         AdminLoginOtpRequest request = new AdminLoginOtpRequest();
@@ -53,6 +63,11 @@ class AdminAuthControllerTest {
         verifyNoInteractions(jwtService);
     }
 
+    /*
+     * Checks: Resending the login code calls the service and confirms.
+     * How:    The answer is 200 with a message that a new verification code has been sent, and the
+     *   service is verified to be called.
+     */
     @Test
     void resendLoginOtp_callsTheServiceAndConfirms() {
         AdminLoginResendRequest request = new AdminLoginResendRequest();
@@ -64,6 +79,11 @@ class AdminAuthControllerTest {
         verify(securityService).resendLoginOtp(request);
     }
 
+    /*
+     * Checks: The wait-time error is passed on when a code is requested too fast.
+     * How:    The service throws BusinessRuleException ("Please wait 30 second(s)..."). The controller
+     *   throws it too.
+     */
     @Test
     void resendLoginOtp_passesTheWaitTimeErrorOn() {
         AdminLoginResendRequest request = new AdminLoginResendRequest();

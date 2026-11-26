@@ -155,20 +155,39 @@ if [[ "$desired" == "0" ]]; then
     exit 0
 fi
 
-echo "Waiting for the new task to pass the health check (usually 3-6 minutes)..."
-if ! aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"; then
-    echo "Still not stable after 10 minutes." >&2
-fi
+echo "Waiting for ECS to finish the rollout (new task healthy behind the load balancer; usually 3-8 minutes)..."
+# ECS's own rollout state is the truth: COMPLETED = the new version is
+# healthy and serving; FAILED = the circuit breaker gave up and rolled back.
+# ("aws ecs wait services-stable" is not used: it can return as soon as the
+# task is running, before the load balancer health check has passed.)
+deadline=$((SECONDS + ${ROLLOUT_TIMEOUT:-1200}))
+rollout=""; primary_td=""
+while :; do
+    primary="$(awst ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+        --query "services[0].deployments[?status=='PRIMARY'] | [0].[taskDefinition,rolloutState]")" || primary=""
+    primary_td="$(printf '%s' "$primary" | cut -f1)"
+    rollout="$(printf '%s' "$primary" | cut -f2)"
+    if [[ "$primary_td" == "$TASK_DEF_ARN" && "$rollout" == "COMPLETED" ]]; then
+        echo "Rollout COMPLETED."
+        break
+    fi
+    if [[ "$rollout" == "FAILED" || ( -n "$primary_td" && "$primary_td" != "$TASK_DEF_ARN" ) ]]; then
+        rollout="${rollout:-FAILED} (rolled back)"
+        break
+    fi
+    if (( SECONDS >= deadline )); then
+        rollout="${rollout:-unknown} after $(( ${ROLLOUT_TIMEOUT:-1200} / 60 )) minutes"
+        break
+    fi
+    echo "  $(date -u +%H:%M:%S)  rollout: ${rollout:-starting}"
+    sleep 20
+done
 
-primary="$(awst ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
-    --query "services[0].deployments[?status=='PRIMARY'] | [0].[taskDefinition,rolloutState]")"
-primary_td="$(printf '%s' "$primary" | cut -f1)"
-rollout="$(printf '%s' "$primary" | cut -f2)"
-if [[ "$primary_td" != "$TASK_DEF_ARN" || "$rollout" != "COMPLETED" ]]; then
+if [[ "$rollout" != "COMPLETED" ]]; then
     echo "Last ECS events:" >&2
     aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
         --query 'services[0].events[0:8].[createdAt,message]' --output text >&2 || true
-    fail "The new version did not become healthy (rollout: ${rollout:-unknown}). ECS keeps the previous task running until a new one is healthy, and its circuit breaker rolls back a failed release, so the site stays up. Backend logs: CloudWatch > Log groups > $LOG_GROUP. Database backup: $BACKUP_FILE"
+    fail "The new version did not become healthy (rollout: $rollout). ECS keeps the previous task running until a new one is healthy, and its circuit breaker rolls back a failed release, so the site stays up. Backend logs: CloudWatch > Log groups > $LOG_GROUP. Database backup: $BACKUP_FILE"
 fi
 deploy_done=true
 

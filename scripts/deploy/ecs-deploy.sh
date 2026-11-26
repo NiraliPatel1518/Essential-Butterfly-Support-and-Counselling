@@ -173,11 +173,18 @@ fi
 deploy_done=true
 
 # ---------------------------------------------------------------------
-log "Checking $SITE_URL"
-if curl -fsS --max-time 15 -o /dev/null "$SITE_URL/api/features"; then
-    echo "The public address answers."
+if [[ "${EDGE:-cloudfront}" == "ec2" ]]; then
+    # Caddy on this server sends the traffic to the load balancer; check the
+    # load balancer itself (only this server is allowed to reach it).
+    check_url="http://$ALB_DNS"
 else
-    echo "WARNING: $SITE_URL does not answer yet (a new CloudFront address can take 15 minutes). ECS itself reports the new version healthy."
+    check_url="$SITE_URL"
+fi
+log "Checking $check_url"
+if curl -fsS --max-time 15 -o /dev/null "$check_url/api/features"; then
+    echo "The new version answers through the load balancer."
+else
+    echo "WARNING: $check_url does not answer yet. ECS itself reports the new version healthy."
 fi
 
 # Keep the build machine's disk small: drop older local copies of the images.

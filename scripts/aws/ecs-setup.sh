@@ -33,6 +33,13 @@ COMPOSE=(sudo docker compose -f docker-compose.yml -f docker-compose.aws.yml)
 
 cd "$APP_DIR" || fail "$APP_DIR not found."
 
+# The public address chosen by an earlier run (see step 7).
+saved_edge=""; saved_site_url=""
+if [[ -f "$ECS_CONFIG" ]]; then
+    saved_edge="$(sed -n 's/^EDGE="\(.*\)"$/\1/p' "$ECS_CONFIG")"
+    saved_site_url="$(sed -n 's/^SITE_URL="\(.*\)"$/\1/p' "$ECS_CONFIG")"
+fi
+
 # ---------------------------------------------------------------------
 log "0. Reading the current setup"
 compose_config="$("${COMPOSE[@]}" config 2>/dev/null)" || fail "docker compose config failed."
@@ -188,13 +195,12 @@ allow_in() {    # group-id ip-permissions (ignores "already exists")
         [[ "$err" == *Duplicate* ]] || fail "Could not add the rule to $1: $err"
     fi
 }
-ALB_SG="$(ensure_sg "$NAME-alb" "Load balancer: HTTP from CloudFront only")"
+ALB_SG="$(ensure_sg "$NAME-alb" "Load balancer: HTTP from CloudFront only")"  # description is fixed once created
 TASK_SG="$(ensure_sg "$NAME-tasks" "ECS tasks: HTTP from the load balancer only")"
 CF_PREFIX_LIST="$(awst ec2 describe-managed-prefix-lists \
     --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing \
     --query 'PrefixLists[0].PrefixListId')"
 [[ -n "$CF_PREFIX_LIST" ]] || fail "CloudFront prefix list not found."
-allow_in "$ALB_SG"  "IpProtocol=tcp,FromPort=80,ToPort=80,PrefixListIds=[{PrefixListId=$CF_PREFIX_LIST,Description=CloudFront}]"
 allow_in "$TASK_SG" "IpProtocol=tcp,FromPort=80,ToPort=80,UserIdGroupPairs=[{GroupId=$ALB_SG,Description=Load-balancer}]"
 echo "Load balancer $ALB_SG, tasks $TASK_SG"
 save_config ALB_SG "$ALB_SG"; save_config TASK_SG "$TASK_SG"
@@ -233,11 +239,68 @@ echo "Load balancer $ALB_DNS"
 save_config ALB_ARN "$ALB_ARN"; save_config ALB_DNS "$ALB_DNS"; save_config TG_ARN "$TG_ARN"
 
 # ---------------------------------------------------------------------
-log "7. CloudFront (HTTPS address)"
-CF_ID="$(awst cloudfront list-distributions \
-    --query "DistributionList.Items[?Comment=='$NAME'].Id | [0]")"
-if [[ -z "$CF_ID" ]]; then
-    cat > "$WORK_DIR/cloudfront.json" <<EOF
+log "7. Public HTTPS address"
+# Two ways, chosen once and remembered in ~/ecs-config.env:
+#
+#  a) Caddy on this EC2 server keeps the current HTTPS address and passes
+#     the traffic to the load balancer (used in AWS Academy, where CloudFront
+#     is not allowed):
+#         PUBLIC_URL=https://184-193-202-252.sslip.io bash scripts/aws/ecs-setup.sh
+#  b) CloudFront in front of the load balancer:
+#         CLOUDFRONT_DOMAIN=dxxxx.cloudfront.net bash scripts/aws/ecs-setup.sh
+#     or, if LabRole may use CloudFront, no variable at all.
+if [[ -n "${PUBLIC_URL:-}" ]]; then
+    PUBLIC_URL="${PUBLIC_URL%/}"
+    [[ "$PUBLIC_URL" =~ ^https://[a-z0-9.-]+$ ]] \
+        || fail "PUBLIC_URL must look like https://184-193-202-252.sslip.io (got '$PUBLIC_URL')."
+    EDGE="ec2"; SITE_URL="$PUBLIC_URL"
+    # The load balancer accepts traffic only from this server. Caddy reaches
+    # the internet-facing load balancer through its public address, so the
+    # traffic arrives from this server's public (Elastic) IP.
+    imds_token="$(curl -fsS -X PUT http://169.254.169.254/latest/api/token \
+        -H 'X-aws-ec2-metadata-token-ttl-seconds: 60')" || fail "Could not read the instance metadata."
+    EC2_PUBLIC_IP="$(curl -fsS -H "X-aws-ec2-metadata-token: $imds_token" \
+        http://169.254.169.254/latest/meta-data/public-ipv4)" || fail "This server has no public IP."
+    [[ "$EC2_PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Unexpected public IP '$EC2_PUBLIC_IP'."
+    allow_in "$ALB_SG" "IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges=[{CidrIp=$EC2_PUBLIC_IP/32,Description=Caddy-on-EC2}]"
+    # An earlier run may have opened the load balancer to CloudFront; close it.
+    aws ec2 revoke-security-group-ingress --group-id "$ALB_SG" \
+        --ip-permissions "IpProtocol=tcp,FromPort=80,ToPort=80,PrefixListIds=[{PrefixListId=$CF_PREFIX_LIST}]" \
+        > /dev/null 2>&1 || true
+    save_config EC2_PUBLIC_IP "$EC2_PUBLIC_IP"
+    echo "HTTPS stays on this server (Caddy): $SITE_URL -> load balancer (allowed only from $EC2_PUBLIC_IP)"
+elif [[ -n "${CLOUDFRONT_DOMAIN:-}" ]]; then
+    CLOUDFRONT_DOMAIN="${CLOUDFRONT_DOMAIN#https://}"; CLOUDFRONT_DOMAIN="${CLOUDFRONT_DOMAIN%%/*}"
+    [[ "$CLOUDFRONT_DOMAIN" =~ ^d[a-z0-9]+\.cloudfront\.net$ ]] \
+        || fail "CLOUDFRONT_DOMAIN must look like dxxxxxxxxxxxx.cloudfront.net (got '$CLOUDFRONT_DOMAIN')."
+    allow_in "$ALB_SG" "IpProtocol=tcp,FromPort=80,ToPort=80,PrefixListIds=[{PrefixListId=$CF_PREFIX_LIST,Description=CloudFront}]"
+    EDGE="cloudfront"; SITE_URL="https://$CLOUDFRONT_DOMAIN"
+    echo "Using the CloudFront distribution created in the console."
+elif [[ -n "$saved_edge" && -n "$saved_site_url" ]]; then
+    EDGE="$saved_edge"; SITE_URL="$saved_site_url"
+    echo "Using the address chosen earlier ($EDGE)."
+else
+    cf_error_file="$WORK_DIR/cloudfront-error.txt"
+    if ! CF_ID="$(awst cloudfront list-distributions \
+            --query "DistributionList.Items[?Comment=='$NAME'].Id | [0]" 2>"$cf_error_file")"; then
+        if grep -q "AccessDenied" "$cf_error_file"; then
+            cat >&2 <<EOM
+
+LabRole is not allowed to use CloudFront in this AWS Academy lab.
+Keep HTTPS on this server instead (Caddy passes traffic to the load
+balancer). Run this script again with the site's current address:
+
+    PUBLIC_URL=https://184-193-202-252.sslip.io bash scripts/aws/ecs-setup.sh
+
+Everything created so far is kept; the running site is not affected.
+EOM
+            fail "Choose how the site is reached (see above)."
+        fi
+        cat "$cf_error_file" >&2
+        fail "Could not check CloudFront (error above)."
+    fi
+    if [[ -z "$CF_ID" ]]; then
+        cat > "$WORK_DIR/cloudfront.json" <<EOF
 {
   "CallerReference": "$NAME-$(date +%s)",
   "Comment": "$NAME",
@@ -274,14 +337,17 @@ if [[ -z "$CF_ID" ]]; then
   }
 }
 EOF
-    CF_ID="$(awst cloudfront create-distribution --distribution-config file://cloudfront.json \
-        --query 'Distribution.Id')" \
-        || fail "CloudFront could not be created (see the error above). Send it to the team; nothing else is affected."
+        CF_ID="$(awst cloudfront create-distribution --distribution-config file://cloudfront.json \
+            --query 'Distribution.Id')" \
+            || fail "CloudFront could not be created (see the error above). Nothing else is affected."
+    fi
+    CF_DOMAIN="$(awst cloudfront get-distribution --id "$CF_ID" --query 'Distribution.DomainName')"
+    save_config CF_ID "$CF_ID"
+    allow_in "$ALB_SG" "IpProtocol=tcp,FromPort=80,ToPort=80,PrefixListIds=[{PrefixListId=$CF_PREFIX_LIST,Description=CloudFront}]"
+    EDGE="cloudfront"; SITE_URL="https://$CF_DOMAIN"
 fi
-CF_DOMAIN="$(awst cloudfront get-distribution --id "$CF_ID" --query 'Distribution.DomainName')"
-SITE_URL="https://$CF_DOMAIN"
-echo "CloudFront $CF_ID  ->  $SITE_URL"
-save_config CF_ID "$CF_ID"; save_config CF_DOMAIN "$CF_DOMAIN"; save_config SITE_URL "$SITE_URL"
+echo "Public address: $SITE_URL"
+save_config EDGE "$EDGE"; save_config SITE_URL "$SITE_URL"
 
 # ---------------------------------------------------------------------
 log "8. ECS cluster"
@@ -301,13 +367,10 @@ bash "$APP_DIR/scripts/deploy/ecs-deploy.sh" "$(git rev-parse HEAD)"
 cat <<EOF
 
 =====================================================================
-ECS is set up. The new address is:
+ECS is set up and running ($EDGE). Public address: $SITE_URL
 
-    $SITE_URL
-
-CloudFront can need 5-15 more minutes before that address works.
-The EC2 site is still running. Test the new address, then follow
-"Switch to ECS" in docs/operations/aws-ecs.md.
+The site is still served by the EC2 containers until you switch:
+follow "D. Switch to ECS" in docs/operations/aws-ecs.md.
 
 Turn the site off/on to save credit:  bash scripts/aws/ecs-scale.sh off|on
 =====================================================================

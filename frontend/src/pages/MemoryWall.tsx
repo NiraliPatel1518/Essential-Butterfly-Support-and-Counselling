@@ -1,88 +1,59 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
-import { ApiError, fetchWall, publicImageUrl } from "../api/memoryWallApi";
-import type { PublicPhoto, WallMonth } from "../api/memoryWallApi";
+import { useEffect, useRef, useState } from "react";
+import { fetchWall, publicImageUrl } from "../api/memoryWallApi";
+import type { WallMonth } from "../api/memoryWallApi";
 import "./MemoryWall.css";
 
-// The public Memory Wall: published photos, grouped by month of upload.
-function MemoryWall() {
+export default function MemoryWall() {
   const [months, setMonths] = useState<WallMonth[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  // index into the flat list of every photo, or -1 when no photo is open
-  const [openIndex, setOpenIndex] = useState(-1);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [index, setIndex] = useState(0);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
     setLoading(true);
-    setError("");
+    setError(false);
 
-    try {
-      setMonths(await fetchWall());
-    } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "We could not load the Memory Wall right now. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    fetchWall()
+      .then((result) => {
+        if (active) setMonths(result);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+    return () => {
+      active = false;
+    };
+  }, [attempt]);
 
-  const flat = useMemo(
-    () =>
-      months.flatMap((month) =>
-        month.photos.map((photo) => ({ photo, month: month.label }))
-      ),
-    [months]
-  );
+  // Keep the published photos in the order returned by the Memory Wall API.
+  const photos = months.flatMap((month) => month.photos);
+  const current = photos[index];
 
-  const current = openIndex >= 0 ? flat[openIndex] : undefined;
-
-  useEffect(() => {
+  function openSlideshow() {
     const dialog = dialogRef.current;
+    if (!dialog || dialog.open || photos.length === 0) return;
 
-    if (!dialog || typeof dialog.showModal !== "function") return;
+    setIndex(0);
+    dialog.showModal();
+    closeButtonRef.current?.focus();
+  }
 
-    if (current && !dialog.open) {
-      dialog.showModal();
-    }
-  }, [current]);
-
-  const openPhoto = (photo: PublicPhoto, button: HTMLElement) => {
-    openerRef.current = button;
-    setOpenIndex(flat.findIndex((item) => item.photo.id === photo.id));
-  };
-
-  const step = (direction: number) => {
-    if (flat.length === 0) return;
-
-    setOpenIndex((index) => (index + direction + flat.length) % flat.length);
-  };
-
-  // Escape is handled by the dialog itself; the arrow keys move between photos.
-  const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      step(1);
-    } else if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      step(-1);
-    }
-  };
-
-  const afterClose = () => {
-    setOpenIndex(-1);
-    openerRef.current?.focus();
-  };
+  function moveSlide(direction: number) {
+    if (photos.length < 2) return;
+    setIndex((previous) =>
+      (previous + direction + photos.length) % photos.length
+    );
+  }
 
   return (
     <main className="wall-page">
@@ -90,110 +61,99 @@ function MemoryWall() {
         <p className="wall-eyebrow">ESSENTIAL BUTTERFLY</p>
         <h1>Memory Wall</h1>
         <p>
-          Happy moments shared by the families and community we are proud to
-          support. Select any photo to see it larger.
+          Explore moments shared by our families and community.
+          Open the slideshow to browse the photos at your own pace.
         </p>
       </header>
 
-      {loading && <p role="status">Loading the Memory Wall…</p>}
-
-      {error && (
-        <p className="wall-error" role="alert">
-          {error}{" "}
-          <button type="button" onClick={() => void load()}>
+      {loading ? (
+        <p role="status">Loading memories…</p>
+      ) : error ? (
+        <div className="wall-error">
+          <p role="alert">We couldn’t load the photos. Please try again.</p>
+          <button type="button" onClick={() => setAttempt((value) => value + 1)}>
             Try again
           </button>
-        </p>
-      )}
-
-      {!loading && !error && months.length === 0 && (
+        </div>
+      ) : photos.length === 0 ? (
         <p className="wall-empty">
-          New memories are on their way. Please check back soon.
+          No photos have been published yet. Please check back soon.
         </p>
+      ) : (
+        <div className="wall-launch">
+          <p>
+            {photos.length} published {photos.length === 1 ? "photo" : "photos"}
+          </p>
+          <button
+            ref={openButtonRef}
+            type="button"
+            className="wall-launch-button"
+            aria-haspopup="dialog"
+            onClick={openSlideshow}
+          >
+            Open slideshow
+          </button>
+        </div>
       )}
-
-      {months.map((month) => (
-        <section
-          key={month.key}
-          className="wall-month"
-          aria-labelledby={`wall-month-${month.key}`}
-        >
-          <h2 id={`wall-month-${month.key}`}>
-            Happy moments in {month.label}
-          </h2>
-
-          <ul className="wall-grid">
-            {month.photos.map((photo) => (
-              <li key={photo.id}>
-                <button
-                  type="button"
-                  className="wall-photo"
-                  aria-label={`Enlarge photo: ${photo.altText}. Uploaded ${photo.uploadedOn}.`}
-                  onClick={(event) => openPhoto(photo, event.currentTarget)}
-                >
-                  <img
-                    src={publicImageUrl(photo.id)}
-                    alt={photo.altText}
-                    loading="lazy"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
 
       <dialog
         ref={dialogRef}
         className="wall-dialog"
-        aria-labelledby="wall-dialog-title"
-        onClose={afterClose}
-        onKeyDown={onKeyDown}
+        aria-labelledby="wall-slideshow-title"
+        onClose={() => openButtonRef.current?.focus()}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            moveSlide(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
       >
+        <h2 id="wall-slideshow-title" className="wall-dialog-title">
+          Memory Wall slideshow
+        </h2>
+
+        <div className="wall-dialog-actions">
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="wall-dialog-close"
+            onClick={() => dialogRef.current?.close()}
+          >
+            Close slideshow
+          </button>
+        </div>
+
         {current && (
-          <div>
-            <h2 id="wall-dialog-title" className="wall-dialog-title">
-              Memory Wall photo
-            </h2>
+          <>
+            <figure className="wall-slide">
+              <img
+                className="wall-dialog-image"
+                src={publicImageUrl(current.id)}
+                alt={current.altText}
+              />
+              <figcaption className="wall-dialog-caption">
+                {current.altText}
+                <span> · Uploaded {current.uploadedOn}</span>
+              </figcaption>
+            </figure>
 
-            <img
-              className="wall-dialog-image"
-              src={publicImageUrl(current.photo.id)}
-              alt={current.photo.altText}
-            />
-
-            <p className="wall-dialog-caption">
-              {current.photo.altText}
-              <span>
-                {" "}
-                · Uploaded {current.photo.uploadedOn}
-              </span>
+            <p className="wall-dialog-count" role="status" aria-atomic="true">
+              Photo {index + 1} of {photos.length}
             </p>
 
-            <p className="wall-dialog-count" aria-live="polite">
-              Photo {openIndex + 1} of {flat.length}
-            </p>
-
-            <div className="wall-dialog-actions">
-              <button type="button" onClick={() => step(-1)} disabled={flat.length < 2}>
-                ← Previous
-              </button>
-              <button type="button" onClick={() => step(1)} disabled={flat.length < 2}>
-                Next →
-              </button>
-              <button
-                type="button"
-                className="wall-dialog-close"
-                onClick={() => dialogRef.current?.close()}
-              >
-                Close
-              </button>
-            </div>
-          </div>
+            {photos.length > 1 && (
+              <div className="wall-dialog-actions">
+                <button type="button" onClick={() => moveSlide(-1)}>
+                  ← Previous
+                </button>
+                <button type="button" onClick={() => moveSlide(1)}>
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </dialog>
     </main>
   );
 }
-
-export default MemoryWall;

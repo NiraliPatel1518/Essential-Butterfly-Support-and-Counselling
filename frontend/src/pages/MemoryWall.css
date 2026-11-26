@@ -1,3 +1,19 @@
+
+.wall-header {
+  padding: clamp(1rem, 4vw, 3rem);
+  border-radius: 1rem;
+  background: #faf6ff linear-gradient(115deg, #faf6ff, #fff);
+  background-image: linear-gradient(105deg, rgba(255,255,255,.98), rgba(255,255,255,.86)), url('/images/white-snapdragons.jpeg');
+  background-size: cover;
+  background-position: center;
+}
+.wall-show { margin-block: 2rem; }
+.wall-controls { display: flex; flex-wrap: wrap; gap: .75rem; }
+.wall-controls button { min-height: 44px; padding: .55rem 1rem; color: white; background: #452560; border: 2px solid currentColor; border-radius: .5rem; font: inherit; }
+.wall-controls button:disabled { color: #555; background: #eee; }
+.wall-enlarge { display: block; width: 100%; padding: .5rem; border: 0; background: #f4eff7; cursor: zoom-in; }
+.wall-enlarge img { display: block; width: 100%; height: clamp(14rem, 52vh, 34rem); object-fit: contain; }
+.wall-show button:focus-visible { outline: 3px solid #371453; outline-offset: 3px; }
 .wall-page {
   width: min(1100px, calc(100% - 32px));
   min-height: 55vh;
@@ -155,4 +171,42 @@
   margin-left: auto;
   background: #54248f;
   color: #fff;
+}
+.wall-launch {
+  margin-block: 1.5rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  border: 1px solid #d8cbe5;
+  border-radius: 1rem;
+  background: linear-gradient(120deg, #f5effa, #fffaf3);
+  color: #302044;
+}
+
+.wall-launch p {
+  margin: 0 0 0.75rem;
+}
+
+.wall-launch-button {
+  min-height: 44px;
+  padding: 0.65rem 1.25rem;
+  border: 2px solid #54248f;
+  border-radius: 0.5rem;
+  background: #54248f;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wall-launch-button:focus-visible {
+  outline: 3px solid #1a5fb4;
+  outline-offset: 4px;
+}
+
+.wall-slide {
+  margin: 1rem 0;
+}
+
+.wall-dialog {
+  box-sizing: border-box;
+  max-width: calc(100% - 1rem);
 }
